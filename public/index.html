@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arduino IoT Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8 text-center text-gray-800">Arduino IoT Devices Dashboard</h1>
+        
+        <!-- Debug Console Toggle -->
+        <div class="mb-4 flex justify-end">
+            <button onclick="toggleConsole()" class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">
+                Toggle Debug Console
+            </button>
+        </div>
+
+        <!-- Debug Console -->
+        <div id="debug-console" class="mb-8 hidden">
+            <div class="bg-gray-900 text-green-400 p-4 rounded-lg shadow-lg font-mono text-sm overflow-auto" style="max-height: 400px">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-white font-bold">Debug Console</h3>
+                    <button onclick="clearConsole()" class="text-gray-400 hover:text-white">Clear</button>
+                </div>
+                <div id="console-output" class="whitespace-pre-wrap"></div>
+            </div>
+        </div>
+        
+        <!-- Loading and Error States -->
+        <div id="status" class="mb-8 text-center hidden">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+            <p class="text-gray-600 mt-2">Loading devices...</p>
+        </div>
+        
+        <div id="error" class="mb-8 hidden">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+                <strong class="font-bold">Error!</strong>
+                <span class="block sm:inline" id="error-message"></span>
+            </div>
+        </div>
+        
+        <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Devices will be populated here -->
+        </div>
+    </div>
+
+    <script>
+        const statusEl = document.getElementById('status');
+        const errorEl = document.getElementById('error');
+        const errorMessageEl = document.getElementById('error-message');
+        const devicesContainer = document.getElementById('devices');
+        const consoleOutput = document.getElementById('console-output');
+        const debugConsole = document.getElementById('debug-console');
+
+        // Debug Console Functions
+        function toggleConsole() {
+            debugConsole.classList.toggle('hidden');
+        }
+
+        function clearConsole() {
+            consoleOutput.innerHTML = '';
+        }
+
+        function logToConsole(data, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'text-red-400' : 
+                             type === 'warning' ? 'text-yellow-400' : 
+                             'text-green-400';
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = colorClass;
+            logEntry.innerHTML = `[${timestamp}] ${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}`;
+            
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+
+        function showLoading() {
+            statusEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+            devicesContainer.innerHTML = '';
+        }
+
+        function showError(message) {
+            statusEl.classList.add('hidden');
+            errorEl.classList.remove('hidden');
+            errorMessageEl.textContent = message;
+            logToConsole(message, 'error');
+        }
+
+        function hideLoading() {
+            statusEl.classList.add('hidden');
+        }
+
+        async function checkServerHealth() {
+            try {
+                const response = await fetch('http://localhost:3000/health');
+                if (!response.ok) throw new Error('Server health check failed');
+                return true;
+            } catch (error) {
+                console.error('Server health check failed:', error);
+                logToConsole('Server health check failed: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        async function fetchDevices() {
+            showLoading();
+            
+            try {
+                // First check if server is healthy
+                const isHealthy = await checkServerHealth();
+                if (!isHealthy) {
+                    throw new Error('Server is not responding. Please make sure the server is running.');
+                }
+
+                const response = await fetch('http://localhost:3000/api/devices');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const devices = await response.json();
+                
+                if (devices.error) {
+                    throw new Error(devices.message || devices.error);
+                }
+                
+                // Log raw device data to console
+                logToConsole('Received device data:');
+                logToConsole(devices);
+                
+                displayDevices(devices);
+                hideLoading();
+            } catch (error) {
+                console.error('Error fetching devices:', error);
+                showError(error.message || 'Failed to fetch devices. Please try again later.');
+            }
+        }
+
+        function formatPropertyValue(property) {
+            if (property.last_value === undefined || property.last_value === null) {
+                return 'N/A';
+            }
+
+            switch(property.type) {
+                case 'BOOL':
+                    return property.last_value ? 'True' : 'False';
+                case 'FLOAT':
+                    // Format float values to 2 decimal places
+                    return Number(property.last_value).toFixed(2);
+                case 'INT':
+                    return property.last_value.toString();
+                case 'STRING':
+                    return property.last_value;
+                default:
+                    return property.last_value;
+            }
+        }
+
+        function getPropertyInputType(property) {
+            switch(property.type) {
+                case 'BOOL':
+                    return 'checkbox';
+                case 'INT':
+                case 'FLOAT':
+                    return 'number';
+                default:
+                    return 'text';
+            }
+        }
+
+        function getPropertyStep(property) {
+            switch(property.type) {
+                case 'FLOAT':
+                    return '0.01';
+                case 'INT':
+                    return '1';
+                default:
+                    return 'any';
+            }
+        }
+
+        async function updatePropertyValue(deviceId, property) {
+            try {
+                if (!deviceId) {
+                    throw new Error('Device ID is required');
+                }
+
+                if (!property || !property.name) {
+                    throw new Error('Property name is required');
+                }
+
+                // Log the update attempt with all details
+                logToConsole({
+                    message: 'Attempting to update property',
+                    deviceId: deviceId,
+                    propertyName: property.name,
+                    currentValue: property.last_value,
+                    newValue: property.new_value,
+                    propertyType: property.type
+                }, 'info');
+
+                // Format the value based on type
+                let formattedValue;
+                switch(property.type) {
+                    case 'INT':
+                        formattedValue = parseInt(property.new_value);
+                        if (isNaN(formattedValue)) {
+                            throw new Error('Invalid integer value');
+                        }
+                        break;
+                    case 'FLOAT':
+                        formattedValue = parseFloat(property.new_value);
+                        if (isNaN(formattedValue)) {
+                            throw new Error('Invalid float value');
+                        }
+                        break;
+                    case 'BOOL':
+                        formattedValue = String(property.new_value).toLowerCase() === 'true';
+                        break;
+                    case 'STATUS':
+                    case 'CHARSTRING':
+                        // Handle string values (for STATUS and CHARSTRING)
+                        formattedValue = String(property.new_value).trim();
+                        if (!formattedValue) {
+                            throw new Error('Value cannot be empty');
+                        }
+                        break;
+                    default:
+                        formattedValue = property.new_value;
+                }
+
+                const requestBody = {
+                    propertiesValues: {
+                        input: true,
+                        properties: [{
+                            name: property.name,
+                            type: property.type === 'STATUS' || property.type === 'CHARSTRING' ? 'json' : 'infer',
+                            value: formattedValue,
+                            variable_name: property.variable_name || property.name
+                        }]
+                    }
+                };
+
+                // Log the complete request details
+                logToConsole({
+                    message: 'Sending request',
+                    url: `http://localhost:3000/api/devices/${deviceId}/properties`,
+                    body: requestBody
+                }, 'info');
+
+                const response = await fetch(`http://localhost:3000/api/devices/${encodeURIComponent(deviceId)}/properties`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    throw new Error('Received non-JSON response from server');
+                }
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.details || errorData.error || response.statusText);
+                }
+
+                const result = await response.json();
+                logToConsole({
+                    message: 'Update successful',
+                    deviceId: deviceId,
+                    propertyName: property.name,
+                    response: result
+                }, 'info');
+
+                // Refresh the devices list to show the new value
+                fetchDevices();
+            } catch (error) {
+                logToConsole({
+                    message: 'Error updating property',
+                    error: error.message,
+                    deviceId: deviceId,
+                    propertyName: property?.name
+                }, 'error');
+                showError(`Failed to update property: ${error.message}`);
+            }
+        }
+
+        function handlePropertyUpdate(event, deviceId, property) {
+            if (event.key === 'Enter') {
+                const newValue = event.target.value;
+                property.new_value = newValue;
+                updatePropertyValue(deviceId, property);
+            }
+        }
+
+        function handlePropertyInputKeydown(event) {
+            if (event.key === 'Enter') {
+                const input = event.target;
+                const deviceId = input.dataset.deviceId;
+                
+                try {
+                    const property = JSON.parse(input.dataset.property);
+                    property.new_value = input.value;
+                    
+                    if (!deviceId) {
+                        throw new Error('Device ID is missing');
+                    }
+                    
+                    updatePropertyValue(deviceId, property);
+                } catch (error) {
+                    logToConsole(`Error handling property input: ${error.message}`, 'error');
+                    showError(`Failed to handle property input: ${error.message}`);
+                }
+            }
+        }
+
+        function handlePropertyInputChange(event) {
+            const input = event.target;
+            const deviceId = input.dataset.deviceId;
+            
+            try {
+                const property = JSON.parse(input.dataset.property);
+                property.new_value = input.type === 'checkbox' ? input.checked : input.value;
+                
+                if (!deviceId) {
+                    throw new Error('Device ID is missing');
+                }
+                
+                updatePropertyValue(deviceId, property);
+            } catch (error) {
+                logToConsole(`Error handling property input: ${error.message}`, 'error');
+                showError(`Failed to handle property input: ${error.message}`);
+            }
+        }
+
+        function getPropertyBgColor(propertyName) {
+            const colorMap = {
+                'temp': 'bg-blue-50',
+                'temperature': 'bg-blue-50',
+                'humidity': 'bg-green-50',
+                'flow': 'bg-purple-50',
+                'pressure': 'bg-yellow-50',
+                'level': 'bg-indigo-50',
+                'status': 'bg-gray-50'
+            };
+
+            for (const [key, color] of Object.entries(colorMap)) {
+                if (propertyName.toLowerCase().includes(key)) {
+                    return color;
+                }
+            }
+            return 'bg-gray-50';
+        }
+
+        function getPropertyTextColor(propertyName) {
+            const colorMap = {
+                'temp': 'text-blue-800',
+                'temperature': 'text-blue-800',
+                'humidity': 'text-green-800',
+                'flow': 'text-purple-800',
+                'pressure': 'text-yellow-800',
+                'level': 'text-indigo-800',
+                'status': 'text-gray-800'
+            };
+
+            for (const [key, color] of Object.entries(colorMap)) {
+                if (propertyName.toLowerCase().includes(key)) {
+                    return color;
+                }
+            }
+            return 'text-gray-800';
+        }
+
+        function displayDevices(devices) {
+            if (!Array.isArray(devices) || devices.length === 0) {
+                devicesContainer.innerHTML = `
+                    <div class="col-span-full text-center py-8">
+                        <p class="text-gray-500">No devices found</p>
+                    </div>
+                `;
+                logToConsole('No devices found', 'warning');
+                return;
+            }
+
+            // Log each device's data individually
+            devices.forEach(device => {
+                logToConsole(`Device ${device.name || device.id}:`);
+                logToConsole(device);
+            });
+
+            devicesContainer.innerHTML = devices.map(device => {
+                // Find the r_status event to determine connection status
+                const statusEvent = device.events?.find(event => event.name === 'r_status');
+                const isConnected = statusEvent?.value === 'CONNECTED';
+
+                return `
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 class="text-xl font-semibold text-gray-800">${device.name || 'Unnamed Device'}</h2>
+                        <span class="px-2 py-1 text-sm rounded ${isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}">
+                            ${isConnected ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        <p class="text-sm text-gray-600">ID: ${device.id || 'N/A'}</p>
+                        <p class="text-sm text-gray-600">Type: ${device.type || 'N/A'}</p>
+                        
+                        ${device.thing ? `
+                            <div class="mt-4 space-y-2">
+                                <h3 class="font-medium text-gray-700">Properties:</h3>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    ${device.thing.properties ? 
+                                        device.thing.properties.map(prop => `
+                                            <div class="${getPropertyBgColor(prop.name)} p-2 rounded">
+                                                <p class="${getPropertyTextColor(prop.name)}">${prop.name}</p>
+                                                ${prop.permission === 'READ_WRITE' ? `
+                                                    <div class="flex items-center space-x-2">
+                                                        ${prop.type === 'BOOL' ? `
+                                                            <label class="inline-flex items-center">
+                                                                <input 
+                                                                    type="checkbox"
+                                                                    class="form-checkbox h-5 w-5 text-blue-600"
+                                                                    ${prop.last_value ? 'checked' : ''}
+                                                                    data-device-id="${device.id}"
+                                                                    data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                                    onchange="handlePropertyInputChange(event)"
+                                                                />
+                                                                <span class="ml-2">${prop.last_value ? 'On' : 'Off'}</span>
+                                                            </label>
+                                                        ` : `
+                                                        <div class="flex space-x-2">
+                                                            <input 
+                                                                type="${getPropertyInputType(prop)}"
+                                                                class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                value="${prop.last_value || ''}"
+                                                                placeholder="Enter new value"
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                                onkeydown="handlePropertyInputKeydown(event)"
+                                                                step="${getPropertyStep(prop)}"
+                                                                ${prop.type === 'INT' || prop.type === 'FLOAT' ? `min="0"` : ''}
+                                                            />
+                                                            <button 
+                                                                onclick="handleUpdateButtonClick(event)"
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                                class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            >
+                                                                Update
+                                                            </button>
+                                                        </div>
+                                                        `}
+                                                    </div>
+                                                ` : `
+                                                    <p class="font-medium">${formatPropertyValue(prop)}</p>
+                                                `}
+                                                <p class="text-xs text-gray-500">Updated: ${new Date(prop.value_updated_at || prop.updated_at).toLocaleString()}</p>
+                                            </div>
+                                        `).join('') 
+                                        : '<p class="text-gray-500">No properties available</p>'
+                                    }
+                                </div>
+                            </div>
+                        ` : '<p class="text-gray-500">No thing data available</p>'}
+                        
+                        <p class="text-xs text-gray-500 mt-4">Device Last Updated: ${new Date(device.thing?.updated_at || device.created_at).toLocaleString()}</p>
+                    </div>
+                </div>
+            `}).join('');
+        }
+
+        function handleUpdateButtonClick(event) {
+            const button = event.target;
+            const deviceId = button.dataset.deviceId;
+            const input = button.previousElementSibling;
+            
+            try {
+                const property = JSON.parse(button.dataset.property);
+                property.new_value = input.value;
+                
+                if (!deviceId) {
+                    throw new Error('Device ID is missing');
+                }
+                
+                updatePropertyValue(deviceId, property);
+            } catch (error) {
+                logToConsole(`Error handling update button click: ${error.message}`, 'error');
+                showError(`Failed to handle update: ${error.message}`);
+            }
+        }
+
+        // Fetch devices immediately and then every 30 seconds
+        fetchDevices();
+        const interval = setInterval(fetchDevices, 30000);
+
+        // Cleanup interval when page is unloaded
+        window.addEventListener('unload', () => {
+            clearInterval(interval);
+        });
+    </script>
+</body>
+</html> 
