@@ -3,41 +3,155 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Arduino IoT Dashboard</title>
+    <title>IceAlert - Commercial & Residential Ice Machine Monitoring</title>
     <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100">
-    <div class="container mx-auto px-4 py-8">
-        <h1 class="text-3xl font-bold mb-8 text-center text-gray-800">Arduino IoT Devices Dashboard</h1>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        <!-- Debug Console Toggle -->
-        <div class="mb-4 flex justify-end">
-            <button onclick="toggleConsole()" class="bg-gray-800 text-white px-4 py-2 rounded hover:bg-gray-700">
-                Toggle Debug Console
-            </button>
-        </div>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
 
+        .device-card {
+            transition: all 0.2s ease-in-out;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .device-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .property-card {
+            transition: all 0.2s ease;
+        }
+
+        .property-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .connected-badge {
+            animation: pulse 2s infinite;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="glass-nav sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col space-y-3">
+                <!-- Top Row -->
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 3v18M12 3l4 4M12 3L8 7M12 21l4-4M12 21l-4-4M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" 
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800">IceAlert</h1>
+                            <p class="text-sm text-gray-600">Commercial & Residential Ice Machine Monitoring</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="stat-card text-center px-3 py-1 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-all shadow-sm" onclick="showActiveDevices()">
+                                <p class="text-xs font-medium text-blue-600">Active Devices</p>
+                                <p class="text-lg font-bold text-blue-700" id="activeDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-green-50 rounded-md cursor-pointer hover:bg-green-100 transition-colors" onclick="showConnectedDevices()">
+                                <p class="text-xs font-medium text-green-600">Connected</p>
+                                <p class="text-lg font-bold text-green-700" id="connectedDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-emerald-50 rounded-md cursor-pointer hover:bg-emerald-100 transition-colors" onclick="showGreatDevices()">
+                                <p class="text-xs font-medium text-emerald-600">Great</p>
+                                <p class="text-lg font-bold text-emerald-700" id="greatDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-yellow-50 rounded-md cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showWarningDevices()">
+                                <p class="text-xs font-medium text-yellow-600">Warning</p>
+                                <p class="text-lg font-bold text-yellow-700" id="warningDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-red-50 rounded-md cursor-pointer hover:bg-red-100 transition-colors" onclick="showCriticalDevices()">
+                                <p class="text-xs font-medium text-red-600">Critical</p>
+                                <p class="text-lg font-bold text-red-700" id="criticalDevicesCount">-</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleConsole()" class="bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 text-sm font-medium transition-colors">
+                            Debug Console
+            </button>
+                    </div>
+                </div>
+                <!-- Bottom Row -->
+                <div class="flex items-center justify-between border-t pt-2">
+                    <p class="text-sm text-gray-600">Real-time monitoring and alerts for ice machines and water systems</p>
+                    <div class="flex items-center text-sm text-gray-500">
+                        <span>Last Update: </span>
+                        <span id="lastUpdateTime" class="ml-1 text-gray-700">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6">
         <!-- Debug Console -->
-        <div id="debug-console" class="mb-8 hidden">
-            <div class="bg-gray-900 text-green-400 p-4 rounded-lg shadow-lg font-mono text-sm overflow-auto" style="max-height: 400px">
+        <div id="debug-console" class="mb-4 hidden">
+            <div class="bg-gray-900 text-green-400 p-4 rounded-lg shadow-lg font-mono text-sm overflow-auto border border-gray-700" style="max-height: 300px; backdrop-filter: blur(8px);">
                 <div class="flex justify-between items-center mb-2">
                     <h3 class="text-white font-bold">Debug Console</h3>
-                    <button onclick="clearConsole()" class="text-gray-400 hover:text-white">Clear</button>
+                    <button onclick="clearConsole()" class="text-gray-400 hover:text-white transition-colors">Clear</button>
                 </div>
                 <div id="console-output" class="whitespace-pre-wrap"></div>
             </div>
         </div>
         
         <!-- Loading and Error States -->
-        <div id="status" class="mb-8 text-center hidden">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p class="text-gray-600 mt-2">Loading devices...</p>
+        <div id="status" class="mb-4 text-center hidden">
+            <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                <p class="text-sm font-medium text-blue-600">Loading devices...</p>
+            </div>
         </div>
         
-        <div id="error" class="mb-8 hidden">
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <strong class="font-bold">Error!</strong>
-                <span class="block sm:inline" id="error-message"></span>
+        <div id="error" class="mb-4 hidden">
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg" role="alert">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="font-medium">Error</p>
+                        <p class="text-sm" id="error-message"></p>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -106,6 +220,11 @@
             }
         }
 
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdateTime').textContent = now.toLocaleTimeString();
+        }
+
         async function fetchDevices() {
             showLoading();
             
@@ -126,8 +245,22 @@
                     throw new Error(devices.message || devices.error);
                 }
                 
+                // Sort devices by name
+                devices.sort((a, b) => {
+                    // Extract numbers from device names (assuming format like "001", "002", etc.)
+                    const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
+                    const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
+                    return aNum - bNum;
+                });
+                
+                // Store the sorted devices data for modal use
+                window.lastDevicesData = devices;
+                
+                // Update last update time
+                updateLastUpdateTime();
+                
                 // Log raw device data to console
-                logToConsole('Received device data:');
+                logToConsole('Received device data (sorted):');
                 logToConsole(devices);
                 
                 displayDevices(devices);
@@ -183,12 +316,8 @@
 
         async function updatePropertyValue(deviceId, property) {
             try {
-                if (!deviceId) {
-                    throw new Error('Device ID is required');
-                }
-
-                if (!property || !property.name) {
-                    throw new Error('Property name is required');
+                if (!deviceId || !property) {
+                    throw new Error('Device ID and Property are required');
                 }
 
                 // Log the update attempt with all details
@@ -219,9 +348,8 @@
                     case 'BOOL':
                         formattedValue = String(property.new_value).toLowerCase() === 'true';
                         break;
-                    case 'STATUS':
                     case 'CHARSTRING':
-                        // Handle string values (for STATUS and CHARSTRING)
+                    case 'STATUS':
                         formattedValue = String(property.new_value).trim();
                         if (!formattedValue) {
                             throw new Error('Value cannot be empty');
@@ -231,42 +359,50 @@
                         formattedValue = property.new_value;
                 }
 
+                // Using V2 API endpoint format and structure
+                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                
                 const requestBody = {
                     propertiesValues: {
                         input: true,
                         properties: [{
                             name: property.name,
-                            type: property.type === 'STATUS' || property.type === 'CHARSTRING' ? 'json' : 'infer',
-                            value: formattedValue,
-                            variable_name: property.variable_name || property.name
+                            type: property.type,
+                            value: formattedValue
                         }]
                     }
                 };
 
-                // Log the complete request details
                 logToConsole({
-                    message: 'Sending request',
-                    url: `http://localhost:3000/api/devices/${deviceId}/properties`,
+                    message: 'Sending update request',
+                    url: apiUrl,
                     body: requestBody
                 }, 'info');
 
-                const response = await fetch(`http://localhost:3000/api/devices/${encodeURIComponent(deviceId)}/properties`, {
+                const response = await fetch(apiUrl, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-Organization': 'organization-id' // This should be replaced with actual organization ID
                     },
                     body: JSON.stringify(requestBody)
                 });
 
+                // Check if response is JSON
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    logToConsole({
+                        message: 'Received non-JSON response',
+                        response: text
+                    }, 'error');
                     throw new Error('Received non-JSON response from server');
                 }
 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.details || errorData.error || response.statusText);
+                    throw new Error(errorData.detail || errorData.message || response.statusText);
                 }
 
                 const result = await response.json();
@@ -377,50 +513,307 @@
         }
 
         function displayDevices(devices) {
+            // Update device counts
+            const activeDevices = devices.length;
+            const connectedDevices = devices.filter(device => 
+                device.events?.find(event => event.name === 'r_status')?.value === 'CONNECTED'
+            ).length;
+            
+            document.getElementById('activeDevicesCount').textContent = activeDevices;
+            document.getElementById('connectedDevicesCount').textContent = connectedDevices;
+
             if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
                     <div class="col-span-full text-center py-8">
-                        <p class="text-gray-500">No devices found</p>
+                        <div class="max-w-sm mx-auto">
+                            <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                            </svg>
+                            <p class="mt-4 text-gray-500 text-lg">No devices found</p>
+                            <p class="mt-2 text-gray-400 text-sm">Connect a device to get started</p>
+                        </div>
                     </div>
                 `;
                 logToConsole('No devices found', 'warning');
                 return;
             }
 
-            // Log each device's data individually
-            devices.forEach(device => {
-                logToConsole(`Device ${device.name || device.id}:`);
-                logToConsole(device);
+            // Log each device's data individually with more detail
+            devices.forEach((device, idx) => {
+                logToConsole(`Device ${idx + 1} (${device.name || device.id}):`);
+                if (device.thing && device.thing.properties) {
+                    logToConsole('Properties found:');
+                    device.thing.properties.forEach(prop => {
+                        logToConsole(`- ${prop.name}: ${prop.last_value} (${prop.type})`);
+                    });
+                } else {
+                    logToConsole('No properties found for this device');
+                }
             });
 
-            devicesContainer.innerHTML = devices.map(device => {
+            devicesContainer.innerHTML = devices.map((device, index) => {
                 // Find the r_status event to determine connection status
                 const statusEvent = device.events?.find(event => event.name === 'r_status');
                 const isConnected = statusEvent?.value === 'CONNECTED';
 
+                // Find key properties with more flexible matching
+                const properties = device.thing?.properties || [];
+                
+                // More flexible property matching for flow rate
+                const flowRate = properties.find(p => 
+                    p.name.toLowerCase().includes('flow') && 
+                    !p.name.toLowerCase().includes('threshold') &&
+                    !p.name.toLowerCase().includes('warning') &&
+                    !p.name.toLowerCase().includes('critical')
+                );
+                
+                // More flexible property matching for temperature
+                const temperature = properties.find(p => 
+                    (p.name.toLowerCase().includes('temp') || 
+                    p.name.toLowerCase().includes('temperature')) &&
+                    !p.name.toLowerCase().includes('threshold') &&
+                    p.type === 'TEMPERATURE'
+                );
+                
+                // More flexible property matching for humidity
+                const humidity = properties.find(p => 
+                    p.name.toLowerCase().includes('humid') && 
+                    !p.name.toLowerCase().includes('threshold') &&
+                    p.type === 'PERCENTAGE_RELATIVE_HUMIDITY'
+                );
+
+                // Log found properties for debugging
+                logToConsole(`Device ${index + 1} property matching results:`, 'info');
+                logToConsole({
+                    deviceName: device.name || device.id,
+                    foundProperties: {
+                        flowRate: flowRate ? `${flowRate.name} (${flowRate.type})` : 'Not found',
+                        temperature: temperature ? `${temperature.name} (${temperature.type})` : 'Not found',
+                        humidity: humidity ? `${humidity.name} (${humidity.type})` : 'Not found'
+                    }
+                });
+
+                // Calculate hours since last flow reading
+                const flowLastUpdate = flowRate ? new Date(flowRate.value_updated_at || flowRate.updated_at) : null;
+                const hoursSinceLastFlow = flowLastUpdate 
+                    ? Math.round((new Date() - flowLastUpdate) / (1000 * 60 * 60) * 10) / 10 
+                    : null;
+
                 return `
-                <div class="bg-white rounded-lg shadow-md p-6">
-                    <div class="flex justify-between items-start mb-4">
-                        <h2 class="text-xl font-semibold text-gray-800">${device.name || 'Unnamed Device'}</h2>
-                        <span class="px-2 py-1 text-sm rounded ${isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-200 text-gray-700'}">
+                <div class="device-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all">
+                    <div class="flex justify-between items-start mb-2">
+                        <div>
+                            <h2 class="text-base font-semibold text-gray-800">${device.name || 'Unnamed Device'}</h2>
+                            <p class="text-xs text-gray-500">ID: ${device.id.slice(0, 8)}...</p>
+                        </div>
+                        <span class="connected-badge px-1.5 py-0.5 text-xs font-medium rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
                             ${isConnected ? 'Connected' : 'Disconnected'}
                         </span>
                     </div>
                     
-                    <div class="space-y-3">
-                        <p class="text-sm text-gray-600">ID: ${device.id || 'N/A'}</p>
-                        <p class="text-sm text-gray-600">Type: ${device.type || 'N/A'}</p>
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <!-- Flow Rate -->
+                        <div class="property-card bg-gradient-to-br from-purple-50 to-purple-100 p-2 rounded-lg">
+                            <p class="text-purple-800 font-medium text-xs">Flow Rate</p>
+                            <p class="text-lg font-bold text-purple-900 leading-tight">${flowRate ? formatPropertyValue(flowRate) : 'N/A'}</p>
+                            ${flowRate ? `<p class="text-xs text-purple-600 truncate">${flowRate.name}</p>` : ''}
+                        </div>
+                        
+                        <!-- Temperature -->
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2 rounded-lg">
+                            <p class="text-blue-800 font-medium text-xs">Temperature</p>
+                            <p class="text-lg font-bold text-blue-900 leading-tight">${temperature ? formatPropertyValue(temperature) : 'N/A'}</p>
+                            ${temperature ? `<p class="text-xs text-blue-600 truncate">${temperature.name}</p>` : ''}
+                        </div>
+                        
+                        <!-- Humidity -->
+                        <div class="property-card bg-gradient-to-br from-green-50 to-green-100 p-2 rounded-lg">
+                            <p class="text-green-800 font-medium text-xs">Humidity</p>
+                            <p class="text-lg font-bold text-green-900 leading-tight">${humidity ? formatPropertyValue(humidity) : 'N/A'}</p>
+                            ${humidity ? `<p class="text-xs text-green-600 truncate">${humidity.name}</p>` : ''}
+                        </div>
+                        
+                        <!-- Hours Since Last Flow Reading -->
+                        <div class="property-card bg-gradient-to-br from-gray-50 to-gray-100 p-2 rounded-lg">
+                            <p class="text-gray-800 font-medium text-xs">Hours Since Last Flow</p>
+                            <p class="text-lg font-bold text-gray-900 leading-tight">${hoursSinceLastFlow !== null ? hoursSinceLastFlow : 'N/A'}</p>
+                            ${flowRate ? `<p class="text-xs text-gray-600 truncate">Last: ${new Date(flowLastUpdate).toLocaleTimeString()}</p>` : ''}
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end border-t pt-2">
+                        <button 
+                            onclick="showDeviceDetails(${index})"
+                            class="inline-flex items-center px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
+                        >
+                            <span>More Details</span>
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // Add the modal container if it doesn't exist
+            if (!document.getElementById('device-modal')) {
+                const modalContainer = document.createElement('div');
+                modalContainer.id = 'device-modal';
+                modalContainer.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
+                modalContainer.style.position = 'fixed';
+                modalContainer.style.top = '0';
+                modalContainer.style.left = '0';
+                modalContainer.style.right = '0';
+                modalContainer.style.bottom = '0';
+                modalContainer.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+                        <div class="flex justify-between items-start mb-4">
+                            <h2 id="modal-title" class="text-2xl font-bold text-gray-800"></h2>
+                            <button onclick="hideDeviceDetails()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="modal-content"></div>
+                    </div>
+                `;
+                document.body.appendChild(modalContainer);
+            }
+
+            // Add the active devices modal if it doesn't exist
+            if (!document.getElementById('active-devices-modal')) {
+                const activeDevicesModal = document.createElement('div');
+                activeDevicesModal.id = 'active-devices-modal';
+                activeDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
+                activeDevicesModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-gray-800">Active Devices</h2>
+                            <button onclick="hideActiveDevices()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="active-devices-list" class="space-y-2"></div>
+                    </div>
+                `;
+                document.body.appendChild(activeDevicesModal);
+            }
+
+            // Add the connected devices modal if it doesn't exist
+            if (!document.getElementById('connected-devices-modal')) {
+                const connectedDevicesModal = document.createElement('div');
+                connectedDevicesModal.id = 'connected-devices-modal';
+                connectedDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
+                connectedDevicesModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-gray-800">Connected Devices</h2>
+                            <button onclick="hideConnectedDevices()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="connected-devices-list" class="space-y-2"></div>
+                    </div>
+                `;
+                document.body.appendChild(connectedDevicesModal);
+            }
+
+            // Add the great devices modal if it doesn't exist
+            if (!document.getElementById('great-devices-modal')) {
+                const greatDevicesModal = document.createElement('div');
+                greatDevicesModal.id = 'great-devices-modal';
+                greatDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
+                greatDevicesModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-gray-800">Devices in Great Condition</h2>
+                            <button onclick="hideGreatDevices()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="great-devices-list" class="space-y-2"></div>
+                    </div>
+                `;
+                document.body.appendChild(greatDevicesModal);
+            }
+
+            // Add the warning devices modal if it doesn't exist
+            if (!document.getElementById('warning-devices-modal')) {
+                const warningDevicesModal = document.createElement('div');
+                warningDevicesModal.id = 'warning-devices-modal';
+                warningDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
+                warningDevicesModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-gray-800">Devices with Warnings</h2>
+                            <button onclick="hideWarningDevices()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="warning-devices-list" class="space-y-2"></div>
+                    </div>
+                `;
+                document.body.appendChild(warningDevicesModal);
+            }
+
+            // Add the critical devices modal if it doesn't exist
+            if (!document.getElementById('critical-devices-modal')) {
+                const criticalDevicesModal = document.createElement('div');
+                criticalDevicesModal.id = 'critical-devices-modal';
+                criticalDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
+                criticalDevicesModal.innerHTML = `
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-gray-800">Devices in Critical State</h2>
+                            <button onclick="hideCriticalDevices()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
+                        </div>
+                        <div id="critical-devices-list" class="space-y-2"></div>
+                    </div>
+                `;
+                document.body.appendChild(criticalDevicesModal);
+            }
+        }
+
+        function showDeviceDetails(deviceIndex) {
+            const device = window.lastDevicesData[deviceIndex];
+            const modal = document.getElementById('device-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalContent = document.getElementById('modal-content');
+
+            modalTitle.textContent = device.name || 'Device Details';
+            
+            // Generate the detailed view similar to the original display
+            modalContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <p class="text-gray-600">ID: ${device.id || 'N/A'}</p>
+                        <p class="text-gray-600">Type: ${device.type || 'N/A'}</p>
+                    </div>
                         
                         ${device.thing ? `
-                            <div class="mt-4 space-y-2">
-                                <h3 class="font-medium text-gray-700">Properties:</h3>
-                                <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="mt-4">
+                            <h3 class="font-medium text-gray-700 mb-2">Properties:</h3>
+                            <div class="grid grid-cols-2 gap-4">
                                     ${device.thing.properties ? 
                                         device.thing.properties.map(prop => `
-                                            <div class="${getPropertyBgColor(prop.name)} p-2 rounded">
-                                                <p class="${getPropertyTextColor(prop.name)}">${prop.name}</p>
+                                        <div class="${getPropertyBgColor(prop.name)} p-3 rounded">
+                                            <p class="${getPropertyTextColor(prop.name)} font-medium">${prop.name}</p>
                                                 ${prop.permission === 'READ_WRITE' ? `
-                                                    <div class="flex items-center space-x-2">
+                                                <div class="flex items-center space-x-2 mt-2">
                                                         ${prop.type === 'BOOL' ? `
                                                             <label class="inline-flex items-center">
                                                                 <input 
@@ -434,33 +827,33 @@
                                                                 <span class="ml-2">${prop.last_value ? 'On' : 'Off'}</span>
                                                             </label>
                                                         ` : `
-                                                        <div class="flex space-x-2">
-                                                            <input 
+                                                    <div class="flex space-x-2">
+                                                        <input 
                                                                 type="${getPropertyInputType(prop)}"
-                                                                class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                value="${prop.last_value || ''}"
-                                                                placeholder="Enter new value"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
+                                                            class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                            value="${prop.last_value || ''}"
+                                                            placeholder="Enter new value"
+                                                            data-device-id="${device.id}"
+                                                            data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                            onkeydown="handlePropertyInputKeydown(event)"
                                                                 step="${getPropertyStep(prop)}"
                                                                 ${prop.type === 'INT' || prop.type === 'FLOAT' ? `min="0"` : ''}
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                                class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
+                                                        />
+                                                        <button 
+                                                            onclick="handleUpdateButtonClick(event)"
+                                                            data-device-id="${device.id}"
+                                                            data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                            class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                        >
+                                                            Update
+                                                        </button>
+                                                    </div>
                                                         `}
                                                     </div>
                                                 ` : `
-                                                    <p class="font-medium">${formatPropertyValue(prop)}</p>
+                                                <p class="font-medium mt-2">${formatPropertyValue(prop)}</p>
                                                 `}
-                                                <p class="text-xs text-gray-500">Updated: ${new Date(prop.value_updated_at || prop.updated_at).toLocaleString()}</p>
+                                            <p class="text-xs text-gray-500 mt-2">Updated: ${new Date(prop.value_updated_at || prop.updated_at).toLocaleString()}</p>
                                             </div>
                                         `).join('') 
                                         : '<p class="text-gray-500">No properties available</p>'
@@ -471,8 +864,16 @@
                         
                         <p class="text-xs text-gray-500 mt-4">Device Last Updated: ${new Date(device.thing?.updated_at || device.created_at).toLocaleString()}</p>
                     </div>
-                </div>
-            `}).join('');
+            `;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideDeviceDetails() {
+            const modal = document.getElementById('device-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
         function handleUpdateButtonClick(event) {
@@ -493,6 +894,119 @@
                 logToConsole(`Error handling update button click: ${error.message}`, 'error');
                 showError(`Failed to handle update: ${error.message}`);
             }
+        }
+
+        function showActiveDevices() {
+            const devices = window.lastDevicesData || [];
+            const modal = document.getElementById('active-devices-modal');
+            const devicesList = document.getElementById('active-devices-list');
+
+            devicesList.innerHTML = devices.map(device => {
+                const statusEvent = device.events?.find(event => event.name === 'r_status');
+                const isConnected = statusEvent?.value === 'CONNECTED';
+                
+                return `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                        <div>
+                            <h3 class="font-medium text-gray-800">${device.name || 'Unnamed Device'}</h3>
+                            <p class="text-sm text-gray-500">
+                                ID: ${device.id}
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${isConnected ? 'Connected' : 'Disconnected'}
+                        </span>
+                    </div>
+                `;
+            }).join('') || '<p class="text-gray-500 text-center py-4">No active devices found</p>';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideActiveDevices() {
+            const modal = document.getElementById('active-devices-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showConnectedDevices() {
+            const devices = window.lastDevicesData || [];
+            const modal = document.getElementById('connected-devices-modal');
+            const devicesList = document.getElementById('connected-devices-list');
+
+            const connectedDevices = devices.filter(device => {
+                const statusEvent = device.events?.find(event => event.name === 'r_status');
+                return statusEvent?.value === 'CONNECTED';
+            });
+
+            devicesList.innerHTML = connectedDevices.length > 0 ? 
+                connectedDevices.map(device => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
+                        <div>
+                            <h3 class="font-medium text-gray-800">${device.name || 'Unnamed Device'}</h3>
+                            <p class="text-sm text-gray-500">
+                                ID: ${device.id}
+                            </p>
+                        </div>
+                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
+                            Connected
+                        </span>
+                </div>
+                `).join('') 
+                : '<p class="text-gray-500 text-center py-4">No connected devices found</p>';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideConnectedDevices() {
+            const modal = document.getElementById('connected-devices-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Placeholder functions for the new device status modals
+        function showGreatDevices() {
+            const modal = document.getElementById('great-devices-modal');
+            const devicesList = document.getElementById('great-devices-list');
+            devicesList.innerHTML = '<p class="text-gray-500 text-center py-4">Status detection coming soon</p>';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideGreatDevices() {
+            const modal = document.getElementById('great-devices-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showWarningDevices() {
+            const modal = document.getElementById('warning-devices-modal');
+            const devicesList = document.getElementById('warning-devices-list');
+            devicesList.innerHTML = '<p class="text-gray-500 text-center py-4">Status detection coming soon</p>';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideWarningDevices() {
+            const modal = document.getElementById('warning-devices-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function showCriticalDevices() {
+            const modal = document.getElementById('critical-devices-modal');
+            const devicesList = document.getElementById('critical-devices-list');
+            devicesList.innerHTML = '<p class="text-gray-500 text-center py-4">Status detection coming soon</p>';
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideCriticalDevices() {
+            const modal = document.getElementById('critical-devices-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
         // Fetch devices immediately and then every 30 seconds
