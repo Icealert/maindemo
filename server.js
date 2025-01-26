@@ -59,10 +59,10 @@ app.get('/api/devices', async (req, res) => {
 });
 
 // API endpoint to update device properties
-app.put('/api/devices/:id/properties', async (req, res) => {
+app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
         console.log('Received update request for device:', req.params.id);
-        console.log('Request body:', JSON.stringify(req.body, null, 2));
+        console.log('Original request body:', JSON.stringify(req.body, null, 2));
 
         // Get token first
         const token = await getToken();
@@ -79,61 +79,57 @@ app.put('/api/devices/:id/properties', async (req, res) => {
         
         // Get parameters from request
         var id = req.params.id;
-        const incomingProperty = req.body.propertiesValues.properties[0];
-
-        // Log the incoming property details
-        console.log('Incoming property details:', {
-            name: incomingProperty.name,
-            type: incomingProperty.type,
-            value: incomingProperty.value
-        });
-
-        // Construct the payload exactly as per Arduino documentation
-        const updatePayload = {
+        
+        // Create API payload exactly as shown in documentation
+        const updatepropertiesDevicesV2Payload = {
             input: true,
             properties: [{
-                name: incomingProperty.name,
-                type: "json",  // Ensure 'json' is used for the type field
-                value: incomingProperty.value
+                name: req.body.propertiesValues.properties[0].name,
+                type: "json",
+                value: req.body.propertiesValues.properties[0].value
             }]
         };
+        
+        console.log('Sending API payload:', JSON.stringify(updatepropertiesDevicesV2Payload, null, 2));
 
-        // Set up options with required headers
-        const opts = {
+        // Set up options with organization header if provided
+        const opts = req.headers['x-organization'] ? {
             'X-Organization': req.headers['x-organization']
-        };
+        } : undefined;
 
-        console.log('Sending update with payload:', JSON.stringify(updatePayload, null, 2));
-        console.log('Headers:', JSON.stringify(opts, null, 2));
-
-        console.log('Preparing to update database with new property value...');
-        // Add database update logic here
-        console.log('Database update logic executed.');
-
-        // Log the response from the API call
-        api.devicesV2UpdateProperties(id, updatePayload, opts).then(function(data) {
-            console.log('API called successfully. Response:', data);
+        // Make the API call
+        try {
+            const data = await api.devicesV2UpdateProperties(id, updatepropertiesDevicesV2Payload, opts);
+            console.log('API call successful. Response:', JSON.stringify(data, null, 2));
+            
             res.json({
                 success: true,
-                message: 'Properties updated successfully',
-                data: data
+                message: 'Property updated successfully',
+                data: data,
+                timestamp: new Date().toISOString(),
+                deviceId: id,
+                propertyName: req.body.propertiesValues.properties[0].name
             });
-        }, function(error) {
-            console.error('API call failed:', error);
-            if (error.response && error.response.body) {
-                console.error('Error response:', JSON.stringify(error.response.body, null, 2));
-            }
-            res.status(error.status || 500).json({
+        } catch (apiError) {
+            console.error('API call failed:', {
+                status: apiError.status,
+                statusText: apiError.statusText,
+                body: apiError.response?.body,
+                error: apiError.error
+            });
+
+            res.status(apiError.status || 500).json({
                 error: 'Failed to update properties',
-                details: error.response ? error.response.body : error.message
+                message: apiError.message,
+                details: apiError.response?.body || 'No additional details available'
             });
-        });
+        }
 
     } catch (error) {
         console.error('Setup error:', error);
         res.status(500).json({
             error: 'Failed to setup request',
-            details: error.message
+            message: error.message
         });
     }
 });
