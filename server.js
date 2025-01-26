@@ -59,81 +59,86 @@ app.get('/api/devices', async (req, res) => {
 });
 
 // API endpoint to update device properties
+// API endpoint to update device properties
 app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
-        console.log('Received update request for device:', req.params.id);
-        console.log('Original request body:', JSON.stringify(req.body, null, 2));
-
-        // Get token first
-        const token = await getToken();
-        
-        var ArduinoIotClient = require('@arduino/arduino-iot-client');
-        var defaultClient = ArduinoIotClient.ApiClient.instance;
-
-        // Configure OAuth2 access token for authorization: oauth2
-        var oauth2 = defaultClient.authentications['oauth2'];
-        oauth2.accessToken = token;
-
-        // Create an instance of the API class
-        var api = new ArduinoIotClient.DevicesV2Api();
-        
-        // Get parameters from request
-        var id = req.params.id;
-        
-        // Create API payload exactly as shown in documentation
-        const updatepropertiesDevicesV2Payload = {
-            input: true,
-            properties: [{
-                name: req.body.propertiesValues.properties[0].name,
-                type: "json",
-                value: req.body.propertiesValues.properties[0].value
-            }]
-        };
-        
-        console.log('Sending API payload:', JSON.stringify(updatepropertiesDevicesV2Payload, null, 2));
-
-        // Set up options with organization header if provided
-        const opts = req.headers['x-organization'] ? {
-            'X-Organization': req.headers['x-organization']
-        } : undefined;
-
-        // Make the API call
-        try {
-            const data = await api.devicesV2UpdateProperties(id, updatepropertiesDevicesV2Payload, opts);
-            console.log('API call successful. Response:', JSON.stringify(data, null, 2));
-            
-            res.json({
-                success: true,
-                message: 'Property updated successfully',
-                data: data,
-                timestamp: new Date().toISOString(),
-                deviceId: id,
-                propertyName: req.body.propertiesValues.properties[0].name
-            });
-        } catch (apiError) {
-            console.error('API call failed:', {
-                status: apiError.status,
-                statusText: apiError.statusText,
-                body: apiError.response?.body,
-                error: apiError.error
-            });
-
-            res.status(apiError.status || 500).json({
-                error: 'Failed to update properties',
-                message: apiError.message,
-                details: apiError.response?.body || 'No additional details available'
-            });
-        }
-
-    } catch (error) {
-        console.error('Setup error:', error);
-        res.status(500).json({
-            error: 'Failed to setup request',
-            message: error.message
+      console.log('Received update request for device:', req.params.id);
+      console.log('Original request body:', JSON.stringify(req.body, null, 2));
+  
+      // 1) Get token first
+      const token = await getToken();
+  
+      // 2) Set up the Arduino IoT client with OAuth2 token
+      const ArduinoIotClient = require('@arduino/arduino-iot-client');
+      const defaultClient = ArduinoIotClient.ApiClient.instance;
+      const oauth2 = defaultClient.authentications['oauth2'];
+      oauth2.accessToken = token;
+  
+      // 3) Create both APIs we need:
+      //    - DevicesV2Api (to fetch the device/thing info)
+      //    - PropertiesV2Api (to publish the new property value)
+      const devicesApi = new ArduinoIotClient.DevicesV2Api(defaultClient);
+      const propertiesApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
+      // Optional: remove the next line if you're not actually using ThingsV2Api
+      // const thingsApi = new ArduinoIotClient.ThingsV2Api(defaultClient);
+  
+      // 4) Extract parameters
+      const deviceId = req.params.id;
+      const propertyName = req.body.propertiesValues.properties[0].name;
+      const newValue = req.body.propertiesValues.properties[0].value;
+  
+      // (Optional) If you need the organization header
+      const opts = req.headers['x-organization']
+        ? { 'X-Organization': req.headers['x-organization'] }
+        : undefined;
+  
+      // 5) Fetch the device info to get the thingId and property list
+      const deviceInfo = await devicesApi.devicesV2Show(deviceId, opts);
+      const thingId = deviceInfo.thing.id;
+  
+      // Find the property that matches `propertyName`
+      const matchedProp = deviceInfo.thing.properties.find((p) => p.name === propertyName);
+      if (!matchedProp) {
+        return res.status(404).json({
+          error: 'Property not found',
+          message: `No property named "${propertyName}" found for device ID "${deviceId}."`
         });
+      }
+  
+      const propertyId = matchedProp.id;
+  
+      console.log(`Will publish new value for thingId=${thingId}, propertyId=${propertyId}`);
+      console.log('newValue =', newValue);
+  
+      // 6) Publish the new value to update last_value
+      const publishPayload = { value: newValue };
+      console.log('Publishing payload:', JSON.stringify(publishPayload, null, 2));
+  
+      const data = await propertiesApi.propertiesV2Publish(thingId, propertyId, publishPayload, opts);
+  
+      // 7) Respond to the client
+      console.log('Publish successful. Response:', JSON.stringify(data, null, 2));
+  
+      res.json({
+        success: true,
+        message: 'Property updated successfully',
+        data: data,
+        timestamp: new Date().toISOString(),
+        deviceId,
+        propertyName
+      });
+  
+    } catch (error) {
+      console.error('Update error:', error);
+  
+      const status = error.status || 500;
+      res.status(status).json({
+        error: 'Failed to update properties',
+        message: error.message
+      });
     }
-});
-
+  });
+  
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);

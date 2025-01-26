@@ -62,6 +62,43 @@
         .modal-content {
             background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
         }
+
+        @keyframes flash-red {
+            0%, 100% { 
+                color: #991B1B; 
+                background-color: #FEE2E2;
+            }
+            50% { 
+                color: #DC2626; 
+                background-color: #FEF2F2;
+            }
+        }
+
+        .temp-warning {
+            animation: flash-red 2s infinite;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        @keyframes flash-red-box {
+            0%, 100% { 
+                background: linear-gradient(to bottom right, #FEE2E2, #FEF2F2);
+                border-color: #DC2626;
+            }
+            50% { 
+                background: linear-gradient(to bottom right, #FEF2F2, #FEE2E2);
+                border-color: #991B1B;
+            }
+        }
+
+        .temp-warning-box, .flow-warning-box {
+            animation: flash-red-box 2s infinite;
+            border: 1px solid;
+        }
+
+        .temp-warning-box *, .flow-warning-box * {
+            color: #991B1B !important;
+        }
     </style>
 </head>
 <body>
@@ -106,7 +143,7 @@
                         </div>
                         <button onclick="toggleConsole()" class="bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 text-sm font-medium transition-colors">
                             Debug Console
-            </button>
+                        </button>
                     </div>
                 </div>
                 <!-- Bottom Row -->
@@ -314,6 +351,10 @@
             }
         }
 
+        function fahrenheitToCelsius(fahrenheit) {
+            return (fahrenheit - 32) * 5/9;
+        }
+
         async function updatePropertyValue(deviceId, property) {
             try {
                 if (!deviceId || !property) {
@@ -340,7 +381,12 @@
                         }
                         break;
                     case 'FLOAT':
-                        formattedValue = parseFloat(property.new_value);
+                        // Convert Fahrenheit to Celsius if this is a temperature property
+                        if (property.name.toLowerCase().includes('temp')) {
+                            formattedValue = fahrenheitToCelsius(parseFloat(property.new_value));
+                        } else {
+                            formattedValue = parseFloat(property.new_value);
+                        }
                         if (isNaN(formattedValue)) {
                             throw new Error('Invalid float value');
                         }
@@ -361,7 +407,8 @@
 
                 // Using V2 API endpoint format and structure
                 const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
-                
+
+                // Construct payload exactly as per Arduino V2 API docs
                 const requestBody = {
                     propertiesValues: {
                         input: true,
@@ -384,25 +431,14 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-Organization': 'organization-id' // This should be replaced with actual organization ID
+                        'X-Organization': property.organization_id || ''  // Add organization ID if available
                     },
                     body: JSON.stringify(requestBody)
                 });
 
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    logToConsole({
-                        message: 'Received non-JSON response',
-                        response: text
-                    }, 'error');
-                    throw new Error('Received non-JSON response from server');
-                }
-
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || errorData.message || response.statusText);
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
                 }
 
                 const result = await response.json();
@@ -512,22 +548,187 @@
             return 'text-gray-800';
         }
 
+        function celsiusToFahrenheit(celsius) {
+            if (celsius === undefined || celsius === null) return undefined;
+            return (celsius * 9/5) + 32;
+        }
+
+        function formatTemperature(celsius, maxThreshold = null) {
+            if (celsius === undefined || celsius === null) return 'N/A';
+            const fahrenheit = celsiusToFahrenheit(celsius);
+            const value = `${fahrenheit.toFixed(1)}°F`;
+            
+            if (maxThreshold !== null && celsius >= maxThreshold) {
+                return `<span class="temp-warning">${value}</span>`;
+            }
+            return value;
+        }
+
+        function getTemperatureCardClass(temp, maxThreshold) {
+            if (temp === undefined || temp === null || maxThreshold === undefined || maxThreshold === null) {
+                return 'bg-gradient-to-br from-blue-50 to-blue-100';
+            }
+            return temp >= maxThreshold ? 'temp-warning-box' : 'bg-gradient-to-br from-blue-50 to-blue-100';
+        }
+
+        function formatTimeDuration(milliseconds) {
+            if (!milliseconds) return 'N/A';
+            
+            const seconds = Math.floor(milliseconds / 1000);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainingSeconds = seconds % 60;
+            
+            return `${hours}h ${minutes}m ${remainingSeconds}s`;
+        }
+
+        // Store timers for cleanup
+        let timeSinceFlowTimers = [];
+
+        function clearTimeSinceFlowTimers() {
+            timeSinceFlowTimers.forEach(timer => clearInterval(timer));
+            timeSinceFlowTimers = [];
+        }
+
+        function getFlowCardClass(timeSinceFlowHours, criticalTime) {
+            if (timeSinceFlowHours === null || criticalTime === undefined || criticalTime === null) {
+                return 'bg-gradient-to-br from-green-50 to-green-100';
+            }
+            console.log('Time comparison:', { timeSinceFlowHours, criticalTime, isWarning: timeSinceFlowHours >= criticalTime });
+            return parseFloat(timeSinceFlowHours) >= parseFloat(criticalTime) ? 'flow-warning-box' : 'bg-gradient-to-br from-green-50 to-green-100';
+        }
+
+        function updateTimeSinceFlow(element, startTime) {
+            if (!startTime) {
+                element.textContent = 'N/A';
+                return null;
+            }
+
+            const criticalTime = parseFloat(element.dataset.criticalTime);
+            const cardElement = element.closest('.property-card');
+
+            const update = () => {
+                const timeSinceFlowMs = new Date() - new Date(startTime);
+                const timeSinceFlowHours = timeSinceFlowMs / (1000 * 60 * 60);
+                element.textContent = formatTimeDuration(timeSinceFlowMs);
+                
+                // Update warning state
+                cardElement.className = `property-card ${getFlowCardClass(timeSinceFlowHours, criticalTime)} p-2 rounded-lg`;
+                
+                // Log for debugging
+                console.log('Flow status:', {
+                    timeSinceFlowHours,
+                    criticalTime,
+                    isWarning: timeSinceFlowHours >= criticalTime
+                });
+            };
+
+            update(); // Initial update
+            const timer = setInterval(update, 1000); // Update every second
+            timeSinceFlowTimers.push(timer);
+            return timer;
+        }
+
+        function calculateDeviceStatus(device) {
+            // Find the r_status event to determine connection status
+            const statusEvent = device.events?.find(event => event.name === 'r_status');
+            const isConnected = statusEvent?.value === 'CONNECTED';
+
+            // Find key properties
+            const properties = device.thing?.properties || [];
+            
+            // Get cloud temperature
+            const cloudTemp = properties.find(p => 
+                p.name === 'cloudtemp'
+            )?.last_value;
+
+            // Get temperature threshold max
+            const tempThresholdMax = properties.find(p => 
+                p.name === 'tempThresholdMax'
+            )?.last_value;
+
+            // Get ultrasonic sensor value
+            const ultrasonic = properties.find(p => 
+                p.name === 'ultrasonic'
+            )?.last_value;
+
+            // Get flow related properties
+            const cloudFlowRate = properties.find(p => 
+                p.name === 'cloudflowrate'
+            );
+
+            const flowThresholdMin = properties.find(p => 
+                p.name === 'flowThresholdMin'
+            )?.last_value;
+
+            // Calculate time since last flow based on cloudflowrate's value_updated_at
+            const flowLastUpdate = cloudFlowRate?.value_updated_at;
+            const timeSinceFlowMs = flowLastUpdate ? 
+                (new Date() - new Date(flowLastUpdate)) : 
+                null;
+            
+            // Convert to hours for comparison with critical time
+            const timeSinceFlowHours = timeSinceFlowMs ? 
+                timeSinceFlowMs / (1000 * 60 * 60) : 
+                null;
+
+            const noFlowCriticalTime = parseFloat(properties.find(p => 
+                p.name === 'noFlowCriticalTime'
+            )?.last_value);
+
+            // Get alert email
+            const alertEmail = properties.find(p => 
+                p.name === 'alertEmail'
+            )?.last_value;
+
+            // Device is great if and only if:
+            // 1. It is connected
+            // 2. Cloud temperature is less than temperature threshold max
+            // 3. Time since flow is less than no flow critical time
+            const isGreat = isConnected && 
+                           cloudTemp !== undefined && 
+                           tempThresholdMax !== undefined && 
+                           cloudTemp < tempThresholdMax &&
+                           timeSinceFlowHours !== null && 
+                           !isNaN(noFlowCriticalTime) && 
+                           timeSinceFlowHours < noFlowCriticalTime;
+
+            return {
+                isConnected,
+                isGreat,
+                cloudTemp,
+                tempThresholdMax,
+                ultrasonic,
+                cloudFlowRate: cloudFlowRate?.last_value,
+                flowThresholdMin,
+                timeSinceFlowMs,
+                timeSinceFlowHours,
+                noFlowCriticalTime,
+                alertEmail,
+                flowLastUpdate
+            };
+        }
+
         function displayDevices(devices) {
+            // Clear existing timers before updating display
+            clearTimeSinceFlowTimers();
+
             // Update device counts
             const activeDevices = devices.length;
-            const connectedDevices = devices.filter(device => 
-                device.events?.find(event => event.name === 'r_status')?.value === 'CONNECTED'
-            ).length;
+            const deviceStatuses = devices.map(device => calculateDeviceStatus(device));
+            const connectedDevices = deviceStatuses.filter(status => status.isConnected).length;
+            const greatDevices = deviceStatuses.filter(status => status.isGreat).length;
             
             document.getElementById('activeDevicesCount').textContent = activeDevices;
             document.getElementById('connectedDevicesCount').textContent = connectedDevices;
+            document.getElementById('greatDevicesCount').textContent = greatDevices;
 
             if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
                             <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
                             </svg>
                             <p class="mt-4 text-gray-500 text-lg">No devices found</p>
                             <p class="mt-2 text-gray-400 text-sm">Connect a device to get started</p>
@@ -552,52 +753,7 @@
             });
 
             devicesContainer.innerHTML = devices.map((device, index) => {
-                // Find the r_status event to determine connection status
-                const statusEvent = device.events?.find(event => event.name === 'r_status');
-                const isConnected = statusEvent?.value === 'CONNECTED';
-
-                // Find key properties with more flexible matching
-                const properties = device.thing?.properties || [];
-                
-                // More flexible property matching for flow rate
-                const flowRate = properties.find(p => 
-                    p.name.toLowerCase().includes('flow') && 
-                    !p.name.toLowerCase().includes('threshold') &&
-                    !p.name.toLowerCase().includes('warning') &&
-                    !p.name.toLowerCase().includes('critical')
-                );
-                
-                // More flexible property matching for temperature
-                const temperature = properties.find(p => 
-                    (p.name.toLowerCase().includes('temp') || 
-                    p.name.toLowerCase().includes('temperature')) &&
-                    !p.name.toLowerCase().includes('threshold') &&
-                    p.type === 'TEMPERATURE'
-                );
-                
-                // More flexible property matching for humidity
-                const humidity = properties.find(p => 
-                    p.name.toLowerCase().includes('humid') && 
-                    !p.name.toLowerCase().includes('threshold') &&
-                    p.type === 'PERCENTAGE_RELATIVE_HUMIDITY'
-                );
-
-                // Log found properties for debugging
-                logToConsole(`Device ${index + 1} property matching results:`, 'info');
-                logToConsole({
-                    deviceName: device.name || device.id,
-                    foundProperties: {
-                        flowRate: flowRate ? `${flowRate.name} (${flowRate.type})` : 'Not found',
-                        temperature: temperature ? `${temperature.name} (${temperature.type})` : 'Not found',
-                        humidity: humidity ? `${humidity.name} (${humidity.type})` : 'Not found'
-                    }
-                });
-
-                // Calculate hours since last flow reading
-                const flowLastUpdate = flowRate ? new Date(flowRate.value_updated_at || flowRate.updated_at) : null;
-                const hoursSinceLastFlow = flowLastUpdate 
-                    ? Math.round((new Date() - flowLastUpdate) / (1000 * 60 * 60) * 10) / 10 
-                    : null;
+                const status = calculateDeviceStatus(device);
 
                 return `
                 <div class="device-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all">
@@ -605,39 +761,47 @@
                         <div>
                             <h2 class="text-base font-semibold text-gray-800">${device.name || 'Unnamed Device'}</h2>
                             <p class="text-xs text-gray-500">ID: ${device.id.slice(0, 8)}...</p>
+                            ${status.alertEmail ? `<p class="text-xs text-blue-600">Alert Email: ${status.alertEmail}</p>` : ''}
                         </div>
-                        <span class="connected-badge px-1.5 py-0.5 text-xs font-medium rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                            ${isConnected ? 'Connected' : 'Disconnected'}
+                        <span class="connected-badge px-1.5 py-0.5 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
+                            ${status.isConnected ? 'Connected' : 'Disconnected'}
                         </span>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-2 mb-2">
-                        <!-- Flow Rate -->
+                        <!-- Ultrasonic -->
                         <div class="property-card bg-gradient-to-br from-purple-50 to-purple-100 p-2 rounded-lg">
-                            <p class="text-purple-800 font-medium text-xs">Flow Rate</p>
-                            <p class="text-lg font-bold text-purple-900 leading-tight">${flowRate ? formatPropertyValue(flowRate) : 'N/A'}</p>
-                            ${flowRate ? `<p class="text-xs text-purple-600 truncate">${flowRate.name}</p>` : ''}
+                            <p class="text-purple-800 font-medium text-xs">Ultrasonic</p>
+                            <p class="text-lg font-bold text-purple-900 leading-tight">${status.ultrasonic !== undefined ? status.ultrasonic + ' cm' : 'N/A'}</p>
                         </div>
                         
                         <!-- Temperature -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2 rounded-lg">
+                        <div class="property-card ${getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax)} p-2 rounded-lg">
                             <p class="text-blue-800 font-medium text-xs">Temperature</p>
-                            <p class="text-lg font-bold text-blue-900 leading-tight">${temperature ? formatPropertyValue(temperature) : 'N/A'}</p>
-                            ${temperature ? `<p class="text-xs text-blue-600 truncate">${temperature.name}</p>` : ''}
+                            <p class="text-lg font-bold text-blue-900 leading-tight">${formatTemperature(status.cloudTemp)}</p>
+                            <p class="text-xs text-blue-600">
+                                Max: ${formatTemperature(status.tempThresholdMax)}
+                            </p>
                         </div>
                         
-                        <!-- Humidity -->
-                        <div class="property-card bg-gradient-to-br from-green-50 to-green-100 p-2 rounded-lg">
-                            <p class="text-green-800 font-medium text-xs">Humidity</p>
-                            <p class="text-lg font-bold text-green-900 leading-tight">${humidity ? formatPropertyValue(humidity) : 'N/A'}</p>
-                            ${humidity ? `<p class="text-xs text-green-600 truncate">${humidity.name}</p>` : ''}
+                        <!-- Time Since Flow -->
+                        <div class="property-card ${getFlowCardClass(status.timeSinceFlowHours, status.noFlowCriticalTime)} p-2 rounded-lg">
+                            <p class="text-green-800 font-medium text-xs">Time Since Flow</p>
+                            <p class="text-lg font-bold text-green-900 leading-tight time-since-flow" data-start-time="${status.flowLastUpdate || ''}" data-critical-time="${status.noFlowCriticalTime || ''}">
+                                ${formatTimeDuration(status.timeSinceFlowMs)}
+                            </p>
+                            <p class="text-xs text-green-600">
+                                Critical: ${status.noFlowCriticalTime !== undefined ? status.noFlowCriticalTime + 'h' : 'N/A'}<br>
+                                Last: ${status.flowLastUpdate ? new Date(status.flowLastUpdate).toLocaleTimeString() : 'N/A'}
+                            </p>
                         </div>
                         
-                        <!-- Hours Since Last Flow Reading -->
+                        <!-- Status -->
                         <div class="property-card bg-gradient-to-br from-gray-50 to-gray-100 p-2 rounded-lg">
-                            <p class="text-gray-800 font-medium text-xs">Hours Since Last Flow</p>
-                            <p class="text-lg font-bold text-gray-900 leading-tight">${hoursSinceLastFlow !== null ? hoursSinceLastFlow : 'N/A'}</p>
-                            ${flowRate ? `<p class="text-xs text-gray-600 truncate">Last: ${new Date(flowLastUpdate).toLocaleTimeString()}</p>` : ''}
+                            <p class="text-gray-800 font-medium text-xs">Status</p>
+                            <p class="text-lg font-bold ${status.isGreat ? 'text-emerald-600' : 'text-gray-900'} leading-tight">
+                                ${status.isGreat ? 'Great' : 'Not Great'}
+                            </p>
                         </div>
                     </div>
 
@@ -655,6 +819,12 @@
                 </div>
                 `;
             }).join('');
+
+            // Start timers for all time-since-flow elements
+            document.querySelectorAll('.time-since-flow').forEach(element => {
+                const startTime = element.dataset.startTime;
+                updateTimeSinceFlow(element, startTime);
+            });
 
             // Add the modal container if it doesn't exist
             if (!document.getElementById('device-modal')) {
@@ -966,11 +1136,33 @@
             modal.classList.remove('flex');
         }
 
-        // Placeholder functions for the new device status modals
         function showGreatDevices() {
+            const devices = window.lastDevicesData || [];
             const modal = document.getElementById('great-devices-modal');
             const devicesList = document.getElementById('great-devices-list');
-            devicesList.innerHTML = '<p class="text-gray-500 text-center py-4">Status detection coming soon</p>';
+
+            const greatDevices = devices.filter(device => calculateDeviceStatus(device).isGreat);
+
+            devicesList.innerHTML = greatDevices.length > 0 ? 
+                greatDevices.map(device => {
+                    const status = calculateDeviceStatus(device);
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-emerald-50 rounded-lg hover:bg-emerald-100">
+                            <div>
+                                <h3 class="font-medium text-emerald-800">${device.name || 'Unnamed Device'}</h3>
+                                <p class="text-sm text-emerald-600">
+                                    Cloud Temp: ${formatTemperature(status.cloudTemp, status.tempThresholdMax)} (Max: ${formatTemperature(status.tempThresholdMax)})<br>
+                                    Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
+                                </p>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
+                                Great
+                            </span>
+                        </div>
+                    `;
+                }).join('') 
+                : '<p class="text-gray-500 text-center py-4">No devices in great condition found</p>';
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
