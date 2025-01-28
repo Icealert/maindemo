@@ -317,7 +317,10 @@
                 case 'BOOL':
                     return property.last_value ? 'True' : 'False';
                 case 'FLOAT':
-                    // Format float values to 2 decimal places
+                    if (property.name === 'sensorplacement') {
+                        const percentage = property.last_value * 100;
+                        return `${percentage}%`;
+                    }
                     return Number(property.last_value).toFixed(2);
                 case 'INT':
                     return property.last_value.toString();
@@ -392,7 +395,8 @@
                         }
                         break;
                     case 'BOOL':
-                        formattedValue = String(property.new_value).toLowerCase() === 'true';
+                        // Convert to actual boolean instead of string
+                        formattedValue = property.new_value === true || property.new_value === 'true';
                         break;
                     case 'CHARSTRING':
                     case 'STATUS':
@@ -415,7 +419,7 @@
                         properties: [{
                             name: property.name,
                             type: property.type,
-                            value: formattedValue
+                            value: formattedValue // Send raw value without converting to string
                         }]
                     }
                 };
@@ -606,6 +610,14 @@
 
             const criticalTime = parseFloat(element.dataset.criticalTime);
             const cardElement = element.closest('.property-card');
+            const deviceId = element.dataset.deviceId; // Add device ID to track updates per device
+
+            // Log initial state for debugging
+            logToConsole(`Initializing flow timer for device ${deviceId}:`, {
+                startTime,
+                criticalTime,
+                currentTime: new Date().toISOString()
+            });
 
             const update = () => {
                 const timeSinceFlowMs = new Date() - new Date(startTime);
@@ -616,11 +628,13 @@
                 cardElement.className = `property-card ${getFlowCardClass(timeSinceFlowHours, criticalTime)} p-2 rounded-lg`;
                 
                 // Log for debugging
-                console.log('Flow status:', {
-                    timeSinceFlowHours,
-                    criticalTime,
-                    isWarning: timeSinceFlowHours >= criticalTime
-                });
+                if (timeSinceFlowHours >= criticalTime) {
+                    logToConsole(`Critical flow time reached for device ${deviceId}:`, {
+                        timeSinceFlowHours,
+                        criticalTime,
+                        lastUpdate: startTime
+                    });
+                }
             };
 
             update(); // Initial update
@@ -629,27 +643,66 @@
             return timer;
         }
 
+        // Add cooldown tracking for warning and critical updates
+        const lastStatusUpdate = {
+            warning: {},
+            critical: {}
+        };
+
+        const FIVE_MINUTES = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+        function canUpdateStatus(deviceId, statusType) {
+            const lastUpdate = lastStatusUpdate[statusType][deviceId];
+            if (!lastUpdate) return true;
+            
+            const timeSinceLastUpdate = Date.now() - lastUpdate;
+            return timeSinceLastUpdate >= FIVE_MINUTES;
+        }
+
+        function updateLastStatusTime(deviceId, statusType) {
+            lastStatusUpdate[statusType][deviceId] = Date.now();
+            logToConsole(`Updated ${statusType} status for device ${deviceId}. Next update allowed after ${new Date(Date.now() + FIVE_MINUTES).toLocaleTimeString()}`);
+        }
+
         function calculateDeviceStatus(device) {
             // Find the r_status event to determine connection status
             const statusEvent = device.events?.find(event => event.name === 'r_status');
             const isConnected = statusEvent?.value === 'CONNECTED';
+            const lastConnectedTime = statusEvent?.updated_at;
 
             // Find key properties
             const properties = device.thing?.properties || [];
             
+            // Get current warning and critical states
+            const currentWarning = properties.find(p => p.name === 'warning')?.last_value === 'true';
+            const currentCritical = properties.find(p => p.name === 'critical')?.last_value === 'true';
+            const warningProperty = properties.find(p => p.name === 'warning');
+            const criticalProperty = properties.find(p => p.name === 'critical');
+
             // Get cloud temperature
             const cloudTemp = properties.find(p => 
                 p.name === 'cloudtemp'
             )?.last_value;
 
+            // Get sensor placement
+            const sensorPlacement = properties.find(p => 
+                p.name === 'sensorplacement'
+            )?.last_value;
+
+            // Calculate ice level based on temperature and sensor placement
+            const tempF = cloudTemp !== undefined ? celsiusToFahrenheit(cloudTemp) : undefined;
+            const isIceAboveSensor = tempF !== undefined && tempF <= 34;
+
+            // If temperature is ≤ 34°F, ice is above the sensor placement
+            // If temperature is > 34°F, ice is below the sensor placement
+            const iceLevel = {
+                isAboveSensor: isIceAboveSensor,
+                sensorPlacement: sensorPlacement
+            };
+
             // Get temperature threshold max
             const tempThresholdMax = properties.find(p => 
                 p.name === 'tempThresholdMax'
-            )?.last_value;
-
-            // Get ultrasonic sensor value
-            const ultrasonic = properties.find(p => 
-                p.name === 'ultrasonic'
             )?.last_value;
 
             // Get flow related properties
@@ -661,52 +714,87 @@
                 p.name === 'flowThresholdMin'
             )?.last_value;
 
-            // Calculate time since last flow based on cloudflowrate's value_updated_at
-            const flowLastUpdate = cloudFlowRate?.value_updated_at;
-            const timeSinceFlowMs = flowLastUpdate ? 
-                (new Date() - new Date(flowLastUpdate)) : 
-                null;
-            
-            // Convert to hours for comparison with critical time
-            const timeSinceFlowHours = timeSinceFlowMs ? 
-                timeSinceFlowMs / (1000 * 60 * 60) : 
-                null;
-
-            const noFlowCriticalTime = parseFloat(properties.find(p => 
+            const noFlowCriticalTime = properties.find(p => 
                 p.name === 'noFlowCriticalTime'
-            )?.last_value);
+            )?.last_value;
 
-            // Get alert email
             const alertEmail = properties.find(p => 
                 p.name === 'alertEmail'
             )?.last_value;
 
-            // Device is great if and only if:
-            // 1. It is connected
-            // 2. Cloud temperature is less than temperature threshold max
-            // 3. Time since flow is less than no flow critical time
+            // Calculate time since last flow
+            const flowLastUpdate = cloudFlowRate?.value_updated_at;
+            const timeSinceFlowMs = flowLastUpdate ? new Date() - new Date(flowLastUpdate) : null;
+            const timeSinceFlowHours = timeSinceFlowMs ? timeSinceFlowMs / (1000 * 60 * 60) : null;
+
+            // Status conditions
+            const isTemperatureBad = cloudTemp !== undefined && cloudTemp > tempThresholdMax;
+            const isFlowBad = timeSinceFlowHours !== null && !isNaN(noFlowCriticalTime) && timeSinceFlowHours >= noFlowCriticalTime;
+
+            // Great: Device must be connected AND temperature is below threshold AND flow time is below critical threshold
             const isGreat = isConnected && 
                            cloudTemp !== undefined && 
-                           tempThresholdMax !== undefined && 
-                           cloudTemp < tempThresholdMax &&
+                           !isTemperatureBad &&
                            timeSinceFlowHours !== null && 
                            !isNaN(noFlowCriticalTime) && 
-                           timeSinceFlowHours < noFlowCriticalTime;
+                           !isFlowBad;
+
+            // Warning: Device must be connected AND exactly one condition is bad (temp XOR flow)
+            const isWarning = isConnected && 
+                            ((isTemperatureBad && !isFlowBad) || (!isTemperatureBad && isFlowBad));
+
+            // Critical: Device is disconnected OR both temperature and flow are bad
+            const isCritical = !isConnected || (isTemperatureBad && isFlowBad);
+
+            // Update warning status if different and cooldown period has passed
+            if (currentWarning !== isWarning && warningProperty && canUpdateStatus(device.id, 'warning')) {
+                updatePropertyValue(device.id, {
+                    ...warningProperty,
+                    new_value: isWarning
+                });
+                updateLastStatusTime(device.id, 'warning');
+            }
+
+            // Update critical status if different and cooldown period has passed
+            if (currentCritical !== isCritical && criticalProperty && canUpdateStatus(device.id, 'critical')) {
+                updatePropertyValue(device.id, {
+                    ...criticalProperty,
+                    new_value: isCritical
+                });
+                updateLastStatusTime(device.id, 'critical');
+            }
 
             return {
                 isConnected,
                 isGreat,
+                isWarning,
+                isCritical,
                 cloudTemp,
                 tempThresholdMax,
-                ultrasonic,
+                iceLevel,
                 cloudFlowRate: cloudFlowRate?.last_value,
                 flowThresholdMin,
                 timeSinceFlowMs,
                 timeSinceFlowHours,
                 noFlowCriticalTime,
                 alertEmail,
-                flowLastUpdate
+                flowLastUpdate,
+                lastConnectedTime,
+                sensorPlacement
             };
+        }
+
+        // Update the ice level display in the device card
+        function getIceLevelText(status) {
+            if (!status.sensorPlacement) {
+                return 'Sensor placement not set';
+            }
+            const placement = status.sensorPlacement * 100;
+            if (status.iceLevel.isAboveSensor) {
+                return `More than ${placement}% full`;
+            } else {
+                return `Less than ${placement}% full`;
+            }
         }
 
         function displayDevices(devices) {
@@ -718,10 +806,14 @@
             const deviceStatuses = devices.map(device => calculateDeviceStatus(device));
             const connectedDevices = deviceStatuses.filter(status => status.isConnected).length;
             const greatDevices = deviceStatuses.filter(status => status.isGreat).length;
+            const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
+            const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
             
             document.getElementById('activeDevicesCount').textContent = activeDevices;
             document.getElementById('connectedDevicesCount').textContent = connectedDevices;
             document.getElementById('greatDevicesCount').textContent = greatDevices;
+            document.getElementById('warningDevicesCount').textContent = warningDevices;
+            document.getElementById('criticalDevicesCount').textContent = criticalDevices;
 
             if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
@@ -763,16 +855,23 @@
                             <p class="text-xs text-gray-500">ID: ${device.id.slice(0, 8)}...</p>
                             ${status.alertEmail ? `<p class="text-xs text-blue-600">Alert Email: ${status.alertEmail}</p>` : ''}
                         </div>
-                        <span class="connected-badge px-1.5 py-0.5 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                            ${status.isConnected ? 'Connected' : 'Disconnected'}
-                        </span>
+                        <div class="text-right">
+                            <span class="connected-badge px-1.5 py-0.5 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${status.isConnected ? 'Connected' : 'Disconnected'}
+                            </span>
+                            ${!status.isConnected && status.lastConnectedTime ? `
+                                <p class="text-xs text-red-600 mt-1">Last Connected:<br>${new Date(status.lastConnectedTime).toLocaleString()}</p>
+                            ` : ''}
+                        </div>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-2 mb-2">
-                        <!-- Ultrasonic -->
-                        <div class="property-card bg-gradient-to-br from-purple-50 to-purple-100 p-2 rounded-lg">
-                            <p class="text-purple-800 font-medium text-xs">Ultrasonic</p>
-                            <p class="text-lg font-bold text-purple-900 leading-tight">${status.ultrasonic !== undefined ? status.ultrasonic + ' cm' : 'N/A'}</p>
+                        <!-- Ice Level -->
+                        <div class="property-card bg-gradient-to-br from-indigo-50 to-indigo-100 p-2 rounded-lg">
+                            <p class="text-indigo-800 font-medium text-xs">Ice Level</p>
+                            <p class="text-lg font-bold text-indigo-900 leading-tight">
+                                ${getIceLevelText(status)}
+                            </p>
                         </div>
                         
                         <!-- Temperature -->
@@ -787,7 +886,10 @@
                         <!-- Time Since Flow -->
                         <div class="property-card ${getFlowCardClass(status.timeSinceFlowHours, status.noFlowCriticalTime)} p-2 rounded-lg">
                             <p class="text-green-800 font-medium text-xs">Time Since Flow</p>
-                            <p class="text-lg font-bold text-green-900 leading-tight time-since-flow" data-start-time="${status.flowLastUpdate || ''}" data-critical-time="${status.noFlowCriticalTime || ''}">
+                            <p class="text-lg font-bold text-green-900 leading-tight time-since-flow" 
+                               data-start-time="${status.flowLastUpdate || ''}" 
+                               data-critical-time="${status.noFlowCriticalTime || ''}"
+                               data-device-id="${device.id}">
                                 ${formatTimeDuration(status.timeSinceFlowMs)}
                             </p>
                             <p class="text-xs text-green-600">
@@ -799,8 +901,18 @@
                         <!-- Status -->
                         <div class="property-card bg-gradient-to-br from-gray-50 to-gray-100 p-2 rounded-lg">
                             <p class="text-gray-800 font-medium text-xs">Status</p>
-                            <p class="text-lg font-bold ${status.isGreat ? 'text-emerald-600' : 'text-gray-900'} leading-tight">
-                                ${status.isGreat ? 'Great' : 'Not Great'}
+                            <p class="text-lg font-bold leading-tight ${
+                                status.isGreat ? 'text-emerald-600' : 
+                                status.isWarning ? 'text-yellow-600' :
+                                status.isCritical ? 'text-red-600' :
+                                'text-gray-900'
+                            }">
+                                ${
+                                    status.isGreat ? 'Great' :
+                                    status.isWarning ? 'Warning' :
+                                    status.isCritical ? 'Critical' :
+                                    'Not Available'
+                                }
                             </p>
                         </div>
                     </div>
@@ -823,6 +935,9 @@
             // Start timers for all time-since-flow elements
             document.querySelectorAll('.time-since-flow').forEach(element => {
                 const startTime = element.dataset.startTime;
+                if (startTime) {
+                    logToConsole(`Starting flow timer for device ${element.dataset.deviceId} with start time ${startTime}`);
+                }
                 updateTimeSinceFlow(element, startTime);
             });
 
@@ -966,15 +1081,17 @@
 
             modalTitle.textContent = device.name || 'Device Details';
             
-            // Generate the detailed view similar to the original display
+            // Generate the detailed view with added status controls
             modalContent.innerHTML = `
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4 text-sm">
                         <p class="text-gray-600">ID: ${device.id || 'N/A'}</p>
                         <p class="text-gray-600">Type: ${device.type || 'N/A'}</p>
                     </div>
+                    
+                    ${device.thing ? `
+                        ${getStatusControls(device.id, device.thing.properties || [])}
                         
-                        ${device.thing ? `
                         <div class="mt-4">
                             <h3 class="font-medium text-gray-700 mb-2">Properties:</h3>
                             <div class="grid grid-cols-2 gap-4">
@@ -984,7 +1101,9 @@
                                             <p class="${getPropertyTextColor(prop.name)} font-medium">${prop.name}</p>
                                                 ${prop.permission === 'READ_WRITE' ? `
                                                 <div class="flex items-center space-x-2 mt-2">
-                                                        ${prop.type === 'BOOL' ? `
+                                                        ${prop.name === 'sensorplacement' ? 
+                                                            getSensorPlacementSelector(device.id, prop)
+                                                        : prop.type === 'BOOL' ? `
                                                             <label class="inline-flex items-center">
                                                                 <input 
                                                                     type="checkbox"
@@ -1174,9 +1293,32 @@
         }
 
         function showWarningDevices() {
+            const devices = window.lastDevicesData || [];
             const modal = document.getElementById('warning-devices-modal');
             const devicesList = document.getElementById('warning-devices-list');
-            devicesList.innerHTML = '<p class="text-gray-500 text-center py-4">Status detection coming soon</p>';
+
+            const warningDevices = devices.filter(device => calculateDeviceStatus(device).isWarning);
+
+            devicesList.innerHTML = warningDevices.length > 0 ? 
+                warningDevices.map(device => {
+                    const status = calculateDeviceStatus(device);
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100">
+                            <div>
+                                <h3 class="font-medium text-yellow-800">${device.name || 'Unnamed Device'}</h3>
+                                <p class="text-sm text-yellow-600">
+                                    Cloud Temp: ${formatTemperature(status.cloudTemp)} (${status.cloudTemp > 32 ? 'High' : 'Normal'})<br>
+                                    Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
+                                </p>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
+                                Warning
+                            </span>
+                        </div>
+                    `;
+                }).join('') 
+                : '<p class="text-gray-500 text-center py-4">No devices in warning state found</p>';
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -1188,9 +1330,38 @@
         }
 
         function showCriticalDevices() {
+            const devices = window.lastDevicesData || [];
             const modal = document.getElementById('critical-devices-modal');
             const devicesList = document.getElementById('critical-devices-list');
-            devicesList.innerHTML = '<p class="text-gray-500 text-center py-4">Status detection coming soon</p>';
+
+            const criticalDevices = devices.filter(device => calculateDeviceStatus(device).isCritical);
+
+            devicesList.innerHTML = criticalDevices.length > 0 ? 
+                criticalDevices.map(device => {
+                    const status = calculateDeviceStatus(device);
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100">
+                            <div>
+                                <h3 class="font-medium text-red-800">${device.name || 'Unnamed Device'}</h3>
+                                ${!status.isConnected ? `
+                                    <p class="text-sm text-red-600">
+                                        Disconnected since: ${new Date(status.lastConnectedTime).toLocaleString()}
+                                    </p>
+                                ` : `
+                                    <p class="text-sm text-red-600">
+                                        Cloud Temp: ${formatTemperature(status.cloudTemp)} (High)<br>
+                                        Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
+                                    </p>
+                                `}
+                            </div>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">
+                                Critical
+                            </span>
+                        </div>
+                    `;
+                }).join('') 
+                : '<p class="text-gray-500 text-center py-4">No devices in critical state found</p>';
+
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -1199,6 +1370,225 @@
             const modal = document.getElementById('critical-devices-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+
+        function getSensorPlacementSelector(deviceId, property) {
+            const currentValue = property.last_value ? property.last_value * 100 : null;
+            return `
+                <div class="flex flex-col space-y-2">
+                    <div class="flex space-x-2">
+                        <select 
+                            class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-device-id="${deviceId}"
+                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                            id="sensorPlacement_${deviceId}"
+                        >
+                            <option value="" ${!currentValue ? 'selected' : ''}>Select sensor placement</option>
+                            <option value="10" ${currentValue === 10 ? 'selected' : ''}>10% from bottom</option>
+                            <option value="25" ${currentValue === 25 ? 'selected' : ''}>25% from bottom</option>
+                            <option value="50" ${currentValue === 50 ? 'selected' : ''}>50% from bottom</option>
+                            <option value="75" ${currentValue === 75 ? 'selected' : ''}>75% from bottom</option>
+                        </select>
+                        <button 
+                            onclick="handleSensorPlacementChange(document.getElementById('sensorPlacement_${deviceId}'))"
+                            class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            Update
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-600">
+                        Select where the temperature sensor is placed in the ice machine (percentage from bottom).
+                        This will be used to determine ice level based on temperature readings.
+                    </p>
+                </div>
+            `;
+        }
+
+        function handleSensorPlacementChange(select) {
+            const deviceId = select.dataset.deviceId;
+            const percentage = parseFloat(select.value);
+            
+            if (isNaN(percentage)) {
+                logToConsole('Please select a valid sensor placement percentage', 'error');
+                return;
+            }
+            
+            try {
+                const property = JSON.parse(select.dataset.property);
+                const decimalValue = percentage / 100; // Convert percentage to decimal
+                
+                if (!deviceId) {
+                    throw new Error('Device ID is missing');
+                }
+
+                // Log the update attempt
+                logToConsole(`Updating sensor placement for device ${deviceId} to ${percentage}% (${decimalValue})`);
+
+                // Use the same API endpoint and structure that works for other variables
+                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                
+                fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        propertiesValues: {
+                            input: true,
+                            properties: [{
+                                name: 'sensorplacement',
+                                type: 'FLOAT',
+                                value: decimalValue
+                            }]
+                        }
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    logToConsole(`Successfully updated sensor placement to ${percentage}%`);
+                    // Refresh devices to show updated value
+                    fetchDevices();
+                })
+                .catch(error => {
+                    logToConsole(`Error updating sensor placement: ${error.message}`, 'error');
+                    showError(`Failed to update sensor placement: ${error.message}`);
+                });
+            } catch (error) {
+                logToConsole(`Error handling sensor placement: ${error.message}`, 'error');
+                showError(`Failed to handle sensor placement: ${error.message}`);
+            }
+        }
+
+        function handleManualStatusUpdate(deviceId, statusType, value) {
+            const properties = window.lastDevicesData.find(d => d.id === deviceId)?.thing?.properties || [];
+            const property = properties.find(p => p.name === statusType);
+            
+            if (!property) {
+                logToConsole(`${statusType} property not found for device ${deviceId}`, 'error');
+                return;
+            }
+
+            try {
+                // Log the update attempt
+                logToConsole(`Attempting to update ${statusType} to ${value} for device ${deviceId}`);
+
+                // Use the same API endpoint and structure that works for other variables
+                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                
+                fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        propertiesValues: {
+                            input: true,
+                            properties: [{
+                                name: statusType,
+                                type: 'BOOL',
+                                value: value // Send raw boolean, not string
+                            }]
+                        }
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    logToConsole(`Successfully updated ${statusType} to ${value}`);
+                    // Refresh devices to show updated value
+                    fetchDevices();
+                })
+                .catch(error => {
+                    logToConsole(`Error updating ${statusType}: ${error.message}`, 'error');
+                    showError(`Failed to update ${statusType}: ${error.message}`);
+                });
+            } catch (error) {
+                logToConsole(`Error handling ${statusType} update: ${error.message}`, 'error');
+                showError(`Failed to handle ${statusType} update: ${error.message}`);
+            }
+        }
+
+        function getStatusControls(deviceId, properties) {
+            const warningProp = properties.find(p => p.name === 'warning');
+            const criticalProp = properties.find(p => p.name === 'critical');
+            
+            // Convert string values to boolean for comparison
+            const warningValue = warningProp?.last_value === true || warningProp?.last_value === 'true';
+            const criticalValue = criticalProp?.last_value === true || criticalProp?.last_value === 'true';
+
+            // Get calculated status
+            const device = window.lastDevicesData.find(d => d.id === deviceId);
+            const calculatedStatus = calculateDeviceStatus(device);
+
+            // Determine which buttons should be highlighted
+            const shouldBeWarning = calculatedStatus.isWarning;
+            const shouldBeCritical = calculatedStatus.isCritical;
+
+            // Highlight classes
+            const warningHighlight = 'ring-2 ring-yellow-500 animate-pulse';
+            const criticalHighlight = 'ring-2 ring-red-500 animate-pulse';
+            
+            return `
+                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h3 class="font-medium text-gray-700 mb-3">Manual Status Controls</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Warning Control -->
+                        <div class="p-3 bg-yellow-50 rounded-lg ${warningValue !== shouldBeWarning ? 'ring-2 ring-yellow-500' : ''}">
+                            <p class="text-yellow-800 font-medium mb-2">Warning Status</p>
+                            <div class="flex space-x-2">
+                                <button 
+                                    onclick="handleManualStatusUpdate('${deviceId}', 'warning', true)"
+                                    class="px-3 py-1 text-sm bg-yellow-500 text-white rounded hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-500 ${shouldBeWarning && !warningValue ? warningHighlight : ''}"
+                                >
+                                    Set True
+                                </button>
+                                <button 
+                                    onclick="handleManualStatusUpdate('${deviceId}', 'warning', false)"
+                                    class="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 ${!shouldBeWarning && warningValue ? warningHighlight : ''}"
+                                >
+                                    Set False
+                                </button>
+                            </div>
+                            <p class="text-sm text-yellow-600 mt-2">
+                                Current: ${warningValue ? 'True' : 'False'}
+                                ${warningValue !== shouldBeWarning ? 
+                                    `<br><span class="text-yellow-700 font-medium">Should be: ${shouldBeWarning ? 'True' : 'False'}</span>` 
+                                    : ''}
+                            </p>
+                        </div>
+                        
+                        <!-- Critical Control -->
+                        <div class="p-3 bg-red-50 rounded-lg ${criticalValue !== shouldBeCritical ? 'ring-2 ring-red-500' : ''}">
+                            <p class="text-red-800 font-medium mb-2">Critical Status</p>
+                            <div class="flex space-x-2">
+                                <button 
+                                    onclick="handleManualStatusUpdate('${deviceId}', 'critical', true)"
+                                    class="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 ${shouldBeCritical && !criticalValue ? criticalHighlight : ''}"
+                                >
+                                    Set True
+                                </button>
+                                <button 
+                                    onclick="handleManualStatusUpdate('${deviceId}', 'critical', false)"
+                                    class="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500 ${!shouldBeCritical && criticalValue ? criticalHighlight : ''}"
+                                >
+                                    Set False
+                                </button>
+                            </div>
+                            <p class="text-sm text-red-600 mt-2">
+                                Current: ${criticalValue ? 'True' : 'False'}
+                                ${criticalValue !== shouldBeCritical ? 
+                                    `<br><span class="text-red-700 font-medium">Should be: ${shouldBeCritical ? 'True' : 'False'}</span>` 
+                                    : ''}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Fetch devices immediately and then every 30 seconds
