@@ -36,15 +36,15 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 // Enable CORS and JSON parsing
 app.use(cors({
-  origin: [
-    'https://web-production-d2a3c.up.railway.app',
-    'http://localhost:8080',  // Local development with port 8080
-    'http://localhost:3000'   // Alternative local development port
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
-  credentials: true,
-  optionsSuccessStatus: 200
+    origin: [
+        'https://web-production-d2a3c.up.railway.app',
+        'http://localhost:3000',
+        'http://localhost:8080'
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(express.static('public'));
@@ -99,7 +99,12 @@ async function getToken() {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'healthy' });
+    res.json({ 
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        environment: process.env.NODE_ENV,
+        hasCredentials: !!(process.env.CLIENT_ID && process.env.CLIENT_SECRET)
+    });
 });
 
 // API endpoint to get devices data
@@ -235,4 +240,22 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
     console.log('Press Ctrl+C to quit.');
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err);
+    res.status(err.status || 500).json({
+        error: 'Server error',
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
+});
+
+// 404 handler
+app.use((req, res) => {
+    res.status(404).json({
+        error: 'Not Found',
+        message: `Cannot ${req.method} ${req.url}`
+    });
 });

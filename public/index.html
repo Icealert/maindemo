@@ -234,10 +234,10 @@
     </div>
 
     <script>
-        // Add this at the start of your script
+        // At the start of your script
         const API_URL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:8080'  // Local development
-            : 'https://web-production-d2a3c.up.railway.app';  // Production URL
+            ? 'http://localhost:3000'
+            : 'https://web-production-d2a3c.up.railway.app';
 
         const statusEl = document.getElementById('status');
         const errorEl = document.getElementById('error');
@@ -248,7 +248,10 @@
 
         // Debug Console Functions
         function toggleConsole() {
-            debugConsole.classList.toggle('hidden');
+            const debugConsole = document.getElementById('debug-console');
+            if (debugConsole) {
+                debugConsole.classList.toggle('hidden');
+            }
         }
 
         function clearConsole() {
@@ -323,6 +326,7 @@
             showLoading();
             
             try {
+                // First check if server is healthy
                 const isHealthy = await checkServerHealth();
                 if (!isHealthy) {
                     throw new Error('Server is not responding. Please make sure the server is running.');
@@ -466,7 +470,7 @@
                 }
 
                 // Using V2 API endpoint format and structure
-                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
 
                 // Construct payload exactly as per Arduino V2 API docs
                 const requestBody = {
@@ -1648,9 +1652,10 @@
             }
 
             try {
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
+                const response = await fetch(apiUrl, {
                 logToConsole(`Attempting to update ${statusType} to ${value} for device ${deviceId}`);
 
-                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
                 const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
                 
                 fetch(apiUrl, {
