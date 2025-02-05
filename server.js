@@ -7,15 +7,20 @@ if (process.env.NODE_ENV !== 'production') {
     dotenv.config();
 }
 
-// Log environment status
-console.log('Environment Status:', {
-    NODE_ENV: process.env.NODE_ENV || 'development',
-    PORT: process.env.PORT || '8080',
-    CLIENT_ID_SET: !!process.env.CLIENT_ID,
-    CLIENT_SECRET_SET: !!process.env.CLIENT_SECRET,
-    ACTUAL_CLIENT_ID: process.env.CLIENT_ID, // Log the actual value for debugging
-    ACTUAL_CLIENT_SECRET: process.env.CLIENT_SECRET // Log the actual value for debugging
-});
+// Verify required environment variables
+const requiredEnvVars = ['CLIENT_ID', 'CLIENT_SECRET'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+    console.error('Missing required environment variables:', missingEnvVars);
+    console.error('Current environment:', {
+        NODE_ENV: process.env.NODE_ENV,
+        PORT: process.env.PORT,
+        CLIENT_ID: process.env.CLIENT_ID ? '***' : undefined,
+        CLIENT_SECRET: process.env.CLIENT_SECRET ? '***' : undefined
+    });
+    process.exit(1);
+}
 
 const app = express();
 const port = process.env.PORT || 8080;

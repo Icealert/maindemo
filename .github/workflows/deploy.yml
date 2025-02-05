@@ -20,13 +20,11 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Create env file
-        run: |
-          echo "PORT=${{ secrets.PORT }}" >> .env
-          echo "CLIENT_ID=${{ secrets.CLIENT_ID }}" >> .env
-          echo "CLIENT_SECRET=${{ secrets.CLIENT_SECRET }}" >> .env
-
       - name: Deploy to Railway
         uses: bervProject/railway-deploy@main
         env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }} 
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          CLIENT_ID: ${{ secrets.CLIENT_ID }}
+          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
+          PORT: 8080
+          NODE_ENV: production 

@@ -17,7 +17,8 @@ COPY . .
 EXPOSE 8080
 
 # Start the app with environment variables
-CMD PORT=$PORT \
-    CLIENT_ID=$CLIENT_ID \
-    CLIENT_SECRET=$CLIENT_SECRET \
-    npm start
+ENV NODE_ENV=production
+ENV PORT=8080
+
+# Use environment variables from Railway
+CMD ["node", "server.js"]
