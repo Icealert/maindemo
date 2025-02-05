@@ -2050,7 +2050,7 @@
       // Temperature
       tempProperty
         ? fetch(
-            `http://localhost:3000/api/proxy/timeseries/${thingId}/${tempProperty.id}?${buildQuery()}`,
+            `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${buildQuery()}`,
             fetchOptions
           ).then(async res => {
             if (!res.ok) {
@@ -2064,7 +2064,7 @@
       // Flow
       flowProperty
         ? fetch(
-            `http://localhost:3000/api/proxy/timeseries/${thingId}/${flowProperty.id}?${buildQuery()}`,
+            `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${buildQuery()}`,
             fetchOptions
           ).then(async res => {
             if (!res.ok) {
