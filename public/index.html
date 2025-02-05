@@ -152,6 +152,15 @@
                         <div>
                             <h1 class="text-2xl font-bold text-gray-800">IceAlert</h1>
                             <p class="text-sm text-gray-600">Commercial & Residential Ice Machine Monitoring</p>
+                            <div class="flex items-center mt-1">
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
+                                <button 
+                                    onclick="showDisclaimer()" 
+                                    class="ml-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    View Disclaimer
+                                </button>
+                            </div>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
@@ -230,6 +239,34 @@
         
         <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Devices will be populated here -->
+        </div>
+    </div>
+
+    <!-- Disclaimer Modal -->
+    <div id="disclaimer-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Beta Version Disclaimer</h2>
+                <button onclick="hideDisclaimer()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="text-gray-600 space-y-4">
+                <p>Welcome to the IceAlert Beta version. Please be aware that:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>This is a beta release and features may be incomplete or subject to change</li>
+                    <li>Data accuracy and system reliability are being continuously improved</li>
+                    <li>The interface and functionality may be updated without prior notice</li>
+                    <li>We recommend verifying critical alerts through physical inspection</li>
+                    <li>Your feedback is valuable in helping us improve the system</li>
+                </ul>
+                <p class="text-sm mt-4">
+                    By using this beta version, you acknowledge that the system is under development and 
+                    should not be solely relied upon for critical ice machine monitoring without appropriate backup measures.
+                </p>
+            </div>
         </div>
     </div>
 
@@ -323,33 +360,16 @@
             showLoading();
             
             try {
+                // First check if server is healthy
                 const isHealthy = await checkServerHealth();
                 if (!isHealthy) {
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
 
                 const response = await fetch(`${API_URL}/api/devices`);
-                if (response.status === 401) {
-                    // Show login prompt if unauthorized
-                    const credentials = await showLoginPrompt();
-                    if (!credentials) {
-                        throw new Error('Authentication required');
-                    }
-                    // Retry with credentials
-                    const authResponse = await fetch(`${API_URL}/api/devices`, {
-                        headers: {
-                            'Authorization': 'Basic ' + btoa(credentials.username + ':' + credentials.password)
-                        }
-                    });
-                    if (!authResponse.ok) {
-                        throw new Error('Invalid credentials');
-                    }
-                    return authResponse.json();
-                }
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-
                 const devices = await response.json();
                 
                 if (devices.error) {
@@ -2042,8 +2062,7 @@
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        ...getAuthHeaders()
+        'Content-Type': 'application/json'
       }
     };
 
@@ -2741,57 +2760,23 @@
                 `${value}°F`;
         }
 
-        // Add login prompt function
-        function showLoginPrompt() {
-            return new Promise((resolve) => {
-                const loginHtml = `
-                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-                            <h2 class="text-xl font-bold mb-4">Login Required</h2>
-                            <form id="loginForm" class="space-y-4">
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Username</label>
-                                    <input type="text" id="username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-medium text-gray-700">Password</label>
-                                    <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                                </div>
-                                <div class="flex justify-end space-x-3">
-                                    <button type="button" onclick="closeLoginPrompt()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">Cancel</button>
-                                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">Login</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                `;
-
-                const loginDiv = document.createElement('div');
-                loginDiv.innerHTML = loginHtml;
-                document.body.appendChild(loginDiv);
-
-                const form = document.getElementById('loginForm');
-                form.onsubmit = (e) => {
-                    e.preventDefault();
-                    const username = document.getElementById('username').value;
-                    const password = document.getElementById('password').value;
-                    document.body.removeChild(loginDiv);
-                    resolve({ username, password });
-                };
-
-                window.closeLoginPrompt = () => {
-                    document.body.removeChild(loginDiv);
-                    resolve(null);
-                };
-            });
+        // Add these functions to your existing script section
+        function showDisclaimer() {
+            const modal = document.getElementById('disclaimer-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
-        // Add this helper function
-        function getAuthHeaders() {
-            const credentials = localStorage.getItem('credentials');
-            return credentials ? {
-                'Authorization': 'Basic ' + credentials
-            } : {};
+        function hideDisclaimer() {
+            const modal = document.getElementById('disclaimer-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        // Show disclaimer on first visit
+        if (!localStorage.getItem('disclaimerShown')) {
+            setTimeout(showDisclaimer, 1000);
+            localStorage.setItem('disclaimerShown', 'true');
         }
     </script>
 </body>
