@@ -1,16 +1,25 @@
-// server.js
+const express = require('express');
+const cors = require('cors');
+const app = express();
+// Use environment variables for port
 const port = process.env.PORT || 3000;
-// ...
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-});
 
 // Import Arduino IoT client code
 const IotApi = require('@arduino/arduino-iot-client');
 const rp = require('request-promise');
 
+// Use environment variables for sensitive data
+const CLIENT_ID = process.env.CLIENT_ID;
+const CLIENT_SECRET = process.env.CLIENT_SECRET;
+
 // Enable CORS and JSON parsing
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://your-site-name.netlify.app',
+    'http://localhost:3000' // for local development
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.static('public'));
 
@@ -23,8 +32,8 @@ async function getToken() {
         json: true,
         form: {
             grant_type: 'client_credentials',
-            client_id: 'mNXZyIS1sToqYaAq5I2mVhQF9sxAbkyx',
-            client_secret: 'CEdhI99emIUQjqEXQivk08ROZpwc9xxtdpVCVAsFG32KU6qYGplyoOIo0DM4EydG',
+            client_id: CLIENT_ID,
+            client_secret: CLIENT_SECRET,
             audience: 'https://api2.arduino.cc/iot'
         }
     };

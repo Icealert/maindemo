@@ -234,6 +234,11 @@
     </div>
 
     <script>
+        // Add this at the start of your script
+        const API_URL = process.env.NODE_ENV === 'production' 
+            ? 'https://your-railway-app-url.railway.app'
+            : 'http://localhost:3000';
+
         const statusEl = document.getElementById('status');
         const errorEl = document.getElementById('error');
         const errorMessageEl = document.getElementById('error-message');
@@ -324,7 +329,7 @@
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
 
-                const response = await fetch('http://localhost:3000/api/devices');
+                const response = await fetch(`${API_URL}/api/devices`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
