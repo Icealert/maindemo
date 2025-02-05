@@ -16,9 +16,9 @@ COPY . .
 # Expose port
 EXPOSE 8080
 
-# Start the app with environment variables
-ENV NODE_ENV=production
-ENV PORT=8080
+# Set default environment variables
+ENV NODE_ENV=production \
+    PORT=8080
 
-# Use environment variables from Railway
-CMD ["node", "server.js"]
+# Start the app
+CMD ["npm", "start"]

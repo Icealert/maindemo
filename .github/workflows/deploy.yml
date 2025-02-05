@@ -21,10 +21,8 @@ jobs:
         run: npm install
 
       - name: Deploy to Railway
-        uses: bervProject/railway-deploy@main
+        uses: railway/cli-action@v2
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-          CLIENT_ID: ${{ secrets.CLIENT_ID }}
-          CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
-          PORT: 8080
-          NODE_ENV: production 
+        with:
+          command: up 
