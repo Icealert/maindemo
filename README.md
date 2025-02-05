@@ -1,6 +1,8 @@
-# Arduino IoT Dashboard
+# IceAlert - Ice Machine Monitoring System
 
-A real-time web dashboard for monitoring and controlling Arduino IoT devices. Built with Node.js and vanilla JavaScript, featuring a clean and responsive UI using TailwindCSS.
+A real-time web dashboard for monitoring and controlling Arduino IoT devices, specifically designed for ice machine monitoring. Built with Node.js and vanilla JavaScript, featuring a clean and responsive UI using TailwindCSS.
+
+**Note: This application is being developed for a specific undisclosed client and is currently in BETA.**
 
 ## Features
 
@@ -12,13 +14,22 @@ A real-time web dashboard for monitoring and controlling Arduino IoT devices. Bu
 - Automatic refresh every 30 seconds
 - Color-coded property cards based on property type
 
-## Prerequisites
+## Contact & Support
+
+For questions, support, or feedback please contact:
+
+**Kunj Tapiawala**  
+Email: icealertdevice@gmail.com
+
+## Technical Details
+
+### Prerequisites
 
 - Node.js (v14 or higher)
 - Arduino IoT Cloud account and API credentials
 - Arduino devices connected to Arduino IoT Cloud
 
-## Setup
+### Setup
 
 1. Clone the repository:
 ```bash
@@ -47,15 +58,6 @@ node server.js
 http://localhost:3000
 ```
 
-## Usage
-
-- The dashboard automatically loads and displays all your Arduino IoT devices
-- For writable properties:
-  - Toggle switches for boolean values
-  - Input fields with update buttons for numeric and text values
-- Use the debug console to monitor updates and troubleshoot issues
-- The dashboard automatically refreshes every 30 seconds
-
 ## Project Structure
 
 ```
@@ -67,14 +69,16 @@ http://localhost:3000
 └── .env             # Environment variables (not in repo)
 ```
 
-## Contributing
+## Beta Status
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+This application is currently in beta. Users should be aware that:
+- Features may be incomplete or subject to change
+- Data accuracy and system reliability are being continuously improved
+- The interface and functionality may be updated without prior notice
+- Critical alerts should be verified through physical inspection
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details. 
+This project is proprietary software developed for a specific client. All rights reserved.
+
+© 2024 IceAlert 
