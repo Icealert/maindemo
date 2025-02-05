@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IceAlert - Commercial & Residential Ice Machine Monitoring</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
@@ -98,6 +99,41 @@
 
         .temp-warning-box *, .flow-warning-box * {
             color: #991B1B !important;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .time-range-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .time-range-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .time-range-button.active {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .time-range-button:not(.active) {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .time-range-button:hover:not(.active) {
+            background-color: #d1d5db;
         }
     </style>
 </head>
@@ -227,7 +263,23 @@
             consoleOutput.appendChild(logEntry);
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
+        function parseTsArray(arr) {
+  if (!Array.isArray(arr)) {
+    logToConsole('parseTsArray received non-array input:', 'warning');
+    logToConsole(arr, 'warning');
+    return { times: [], values: [] };
+  }
 
+  const result = {
+    times: arr.map(obj => obj.time || obj.timestamp),
+    values: arr.map(obj => obj.value)
+  };
+
+  logToConsole('parseTsArray result:', 'info');
+  logToConsole(`Times: ${result.times.length}, Values: ${result.values.length}`, 'info');
+
+  return result;
+}
         function showLoading() {
             statusEl.classList.remove('hidden');
             errorEl.classList.add('hidden');
@@ -649,19 +701,19 @@
             critical: {}
         };
 
-        const FIVE_MINUTES = 5 * 60 * 1000; // 5 minutes in milliseconds
+        const COOLDOWN_TIME = 5000; // 5 seconds in milliseconds
 
         function canUpdateStatus(deviceId, statusType) {
             const lastUpdate = lastStatusUpdate[statusType][deviceId];
             if (!lastUpdate) return true;
             
             const timeSinceLastUpdate = Date.now() - lastUpdate;
-            return timeSinceLastUpdate >= FIVE_MINUTES;
+            return timeSinceLastUpdate >= COOLDOWN_TIME;
         }
 
         function updateLastStatusTime(deviceId, statusType) {
             lastStatusUpdate[statusType][deviceId] = Date.now();
-            logToConsole(`Updated ${statusType} status for device ${deviceId}. Next update allowed after ${new Date(Date.now() + FIVE_MINUTES).toLocaleTimeString()}`);
+            logToConsole(`Updated ${statusType} status for device ${deviceId}. Next update allowed after ${new Date(Date.now() + COOLDOWN_TIME).toLocaleTimeString()}`);
         }
 
         function calculateDeviceStatus(device) {
@@ -673,16 +725,89 @@
             // Find key properties
             const properties = device.thing?.properties || [];
             
-            // Get current warning and critical states
-            const currentWarning = properties.find(p => p.name === 'warning')?.last_value === 'true';
-            const currentCritical = properties.find(p => p.name === 'critical')?.last_value === 'true';
+            // Get current warning and critical states with normalized boolean values
             const warningProperty = properties.find(p => p.name === 'warning');
             const criticalProperty = properties.find(p => p.name === 'critical');
+            
+            // Helper function to normalize boolean values
+            const normalizeBoolean = (value) => {
+                if (value === 'true' || value === true) return true;
+                if (value === 'false' || value === false) return false;
+                return false; // default value
+            };
+            
+            // Normalize current values
+            const currentWarning = normalizeBoolean(warningProperty?.last_value);
+            const currentCritical = normalizeBoolean(criticalProperty?.last_value);
 
             // Get cloud temperature
             const cloudTemp = properties.find(p => 
                 p.name === 'cloudtemp'
             )?.last_value;
+
+            // Get temperature threshold max
+            const tempThresholdMax = properties.find(p => 
+                p.name === 'tempThresholdMax'
+            )?.last_value;
+
+            // Get flow related properties
+            const cloudFlowRate = properties.find(p => 
+                p.name === 'cloudflowrate'
+            );
+
+            const noFlowCriticalTime = properties.find(p => 
+                p.name === 'noFlowCriticalTime'
+            )?.last_value;
+
+            // Calculate time since last flow
+            const flowLastUpdate = cloudFlowRate?.value_updated_at;
+            const timeSinceFlowMs = flowLastUpdate ? new Date() - new Date(flowLastUpdate) : null;
+            const timeSinceFlowHours = timeSinceFlowMs ? timeSinceFlowMs / (1000 * 60 * 60) : null;
+
+            // Status conditions
+            const isTemperatureBad = cloudTemp !== undefined && cloudTemp > tempThresholdMax;
+            const isFlowBad = timeSinceFlowHours !== null && !isNaN(noFlowCriticalTime) && timeSinceFlowHours >= noFlowCriticalTime;
+
+            // Great: Device must be connected AND temperature is below threshold AND flow time is below critical threshold
+            const isGreat = isConnected && !isTemperatureBad && !isFlowBad;
+
+            // Warning: Device must be connected AND exactly one condition is bad (temp XOR flow)
+            const isWarning = isConnected && ((isTemperatureBad || isFlowBad) && !(isTemperatureBad && isFlowBad));
+
+            // Critical: Device is disconnected OR both temperature and flow are bad
+            const isCritical = !isConnected || (isTemperatureBad && isFlowBad);
+
+            // Compare normalized boolean values
+            const shouldUpdateWarning = currentWarning !== isWarning;
+            const shouldUpdateCritical = currentCritical !== isCritical;
+
+            // Debug logging
+            if (shouldUpdateWarning || shouldUpdateCritical) {
+                logToConsole('Status update check:', {
+                    deviceId: device.id,
+                    currentWarning,
+                    isWarning,
+                    currentCritical,
+                    isCritical,
+                    shouldUpdateWarning,
+                    shouldUpdateCritical,
+                    temperature: cloudTemp,
+                    tempThreshold: tempThresholdMax,
+                    timeSinceFlowHours,
+                    noFlowCriticalTime
+                });
+            }
+
+            // Only update if the values are actually different and cooldown period has elapsed
+            if (shouldUpdateWarning && canUpdateStatus(device.id, 'warning')) {
+                logToConsole(`Auto-updating warning status for device ${device.id} from ${currentWarning} to ${isWarning}`);
+                handleManualStatusUpdate(device.id, 'warning', isWarning);
+            }
+
+            if (shouldUpdateCritical && canUpdateStatus(device.id, 'critical')) {
+                logToConsole(`Auto-updating critical status for device ${device.id} from ${currentCritical} to ${isCritical}`);
+                handleManualStatusUpdate(device.id, 'critical', isCritical);
+            }
 
             // Get sensor placement
             const sensorPlacement = properties.find(p => 
@@ -700,70 +825,6 @@
                 sensorPlacement: sensorPlacement
             };
 
-            // Get temperature threshold max
-            const tempThresholdMax = properties.find(p => 
-                p.name === 'tempThresholdMax'
-            )?.last_value;
-
-            // Get flow related properties
-            const cloudFlowRate = properties.find(p => 
-                p.name === 'cloudflowrate'
-            );
-
-            const flowThresholdMin = properties.find(p => 
-                p.name === 'flowThresholdMin'
-            )?.last_value;
-
-            const noFlowCriticalTime = properties.find(p => 
-                p.name === 'noFlowCriticalTime'
-            )?.last_value;
-
-            const alertEmail = properties.find(p => 
-                p.name === 'alertEmail'
-            )?.last_value;
-
-            // Calculate time since last flow
-            const flowLastUpdate = cloudFlowRate?.value_updated_at;
-            const timeSinceFlowMs = flowLastUpdate ? new Date() - new Date(flowLastUpdate) : null;
-            const timeSinceFlowHours = timeSinceFlowMs ? timeSinceFlowMs / (1000 * 60 * 60) : null;
-
-            // Status conditions
-            const isTemperatureBad = cloudTemp !== undefined && cloudTemp > tempThresholdMax;
-            const isFlowBad = timeSinceFlowHours !== null && !isNaN(noFlowCriticalTime) && timeSinceFlowHours >= noFlowCriticalTime;
-
-            // Great: Device must be connected AND temperature is below threshold AND flow time is below critical threshold
-            const isGreat = isConnected && 
-                           cloudTemp !== undefined && 
-                           !isTemperatureBad &&
-                           timeSinceFlowHours !== null && 
-                           !isNaN(noFlowCriticalTime) && 
-                           !isFlowBad;
-
-            // Warning: Device must be connected AND exactly one condition is bad (temp XOR flow)
-            const isWarning = isConnected && 
-                            ((isTemperatureBad && !isFlowBad) || (!isTemperatureBad && isFlowBad));
-
-            // Critical: Device is disconnected OR both temperature and flow are bad
-            const isCritical = !isConnected || (isTemperatureBad && isFlowBad);
-
-            // Update warning status if different and cooldown period has passed
-            if (currentWarning !== isWarning && warningProperty && canUpdateStatus(device.id, 'warning')) {
-                updatePropertyValue(device.id, {
-                    ...warningProperty,
-                    new_value: isWarning
-                });
-                updateLastStatusTime(device.id, 'warning');
-            }
-
-            // Update critical status if different and cooldown period has passed
-            if (currentCritical !== isCritical && criticalProperty && canUpdateStatus(device.id, 'critical')) {
-                updatePropertyValue(device.id, {
-                    ...criticalProperty,
-                    new_value: isCritical
-                });
-                updateLastStatusTime(device.id, 'critical');
-            }
-
             return {
                 isConnected,
                 isGreat,
@@ -771,26 +832,28 @@
                 isCritical,
                 cloudTemp,
                 tempThresholdMax,
-                iceLevel,
                 cloudFlowRate: cloudFlowRate?.last_value,
-                flowThresholdMin,
                 timeSinceFlowMs,
                 timeSinceFlowHours,
                 noFlowCriticalTime,
-                alertEmail,
                 flowLastUpdate,
                 lastConnectedTime,
+                iceLevel,
                 sensorPlacement
             };
         }
 
         // Update the ice level display in the device card
         function getIceLevelText(status) {
-            if (!status.sensorPlacement) {
+            if (status.sensorPlacement === undefined || status.sensorPlacement === null) {
                 return 'Sensor placement not set';
             }
-            const placement = status.sensorPlacement * 100;
-            if (status.iceLevel.isAboveSensor) {
+            
+            const placement = (status.sensorPlacement * 100).toFixed(0);
+            const tempF = status.cloudTemp !== undefined ? celsiusToFahrenheit(status.cloudTemp) : undefined;
+            const isIceAboveSensor = tempF !== undefined && tempF <= 34;
+
+            if (isIceAboveSensor) {
                 return `More than ${placement}% full`;
             } else {
                 return `Less than ${placement}% full`;
@@ -820,7 +883,7 @@
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
                             <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
                             </svg>
                             <p class="mt-4 text-gray-500 text-lg">No devices found</p>
                             <p class="mt-2 text-gray-400 text-sm">Connect a device to get started</p>
@@ -1078,82 +1141,193 @@
             const modal = document.getElementById('device-modal');
             const modalTitle = document.getElementById('modal-title');
             const modalContent = document.getElementById('modal-content');
+            const status = calculateDeviceStatus(device);
 
             modalTitle.textContent = device.name || 'Device Details';
             
-            // Generate the detailed view with added status controls
+            // Generate the detailed view with improved layout
             modalContent.innerHTML = `
-                <div class="space-y-4">
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <p class="text-gray-600">ID: ${device.id || 'N/A'}</p>
-                        <p class="text-gray-600">Type: ${device.type || 'N/A'}</p>
+                <div class="space-y-6">
+                    <!-- Device Info Card -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-600">Device ID</p>
+                                <p class="font-medium text-gray-900">${device.id}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Type</p>
+                                <p class="font-medium text-gray-900">${device.type || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Connection Status</p>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                }">
+                                    ${status.isConnected ? 'Connected' : 'Disconnected'}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-600">Current Status</p>
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    status.isGreat ? 'bg-emerald-100 text-emerald-800' :
+                                    status.isWarning ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-red-100 text-red-800'
+                                }">
+                                    ${status.isGreat ? 'Great' : status.isWarning ? 'Warning' : 'Critical'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                    
-                    ${device.thing ? `
-                        ${getStatusControls(device.id, device.thing.properties || [])}
+
+                    <!-- Time Series Graphs Section -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Time Series Data</h3>
                         
-                        <div class="mt-4">
-                            <h3 class="font-medium text-gray-700 mb-2">Properties:</h3>
-                            <div class="grid grid-cols-2 gap-4">
-                                    ${device.thing.properties ? 
-                                        device.thing.properties.map(prop => `
-                                        <div class="${getPropertyBgColor(prop.name)} p-3 rounded">
-                                            <p class="${getPropertyTextColor(prop.name)} font-medium">${prop.name}</p>
-                                                ${prop.permission === 'READ_WRITE' ? `
-                                                <div class="flex items-center space-x-2 mt-2">
-                                                        ${prop.name === 'sensorplacement' ? 
-                                                            getSensorPlacementSelector(device.id, prop)
-                                                        : prop.type === 'BOOL' ? `
-                                                            <label class="inline-flex items-center">
-                                                                <input 
-                                                                    type="checkbox"
-                                                                    class="form-checkbox h-5 w-5 text-blue-600"
-                                                                    ${prop.last_value ? 'checked' : ''}
-                                                                    data-device-id="${device.id}"
-                                                                    data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                                    onchange="handlePropertyInputChange(event)"
-                                                                />
-                                                                <span class="ml-2">${prop.last_value ? 'On' : 'Off'}</span>
-                                                            </label>
-                                                        ` : `
-                                                    <div class="flex space-x-2">
-                                                        <input 
-                                                                type="${getPropertyInputType(prop)}"
-                                                            class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                            value="${prop.last_value || ''}"
-                                                            placeholder="Enter new value"
-                                                            data-device-id="${device.id}"
-                                                            data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                            onkeydown="handlePropertyInputKeydown(event)"
-                                                                step="${getPropertyStep(prop)}"
-                                                                ${prop.type === 'INT' || prop.type === 'FLOAT' ? `min="0"` : ''}
-                                                        />
-                                                        <button 
-                                                            onclick="handleUpdateButtonClick(event)"
-                                                            data-device-id="${device.id}"
-                                                            data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                            class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                        >
-                                                            Update
-                                                        </button>
-                                                    </div>
-                                                        `}
-                                                    </div>
-                                                ` : `
-                                                <p class="font-medium mt-2">${formatPropertyValue(prop)}</p>
-                                                `}
-                                            <p class="text-xs text-gray-500 mt-2">Updated: ${new Date(prop.value_updated_at || prop.updated_at).toLocaleString()}</p>
-                                            </div>
-                                        `).join('') 
-                                        : '<p class="text-gray-500">No properties available</p>'
-                                    }
+                        <!-- Temperature & Ice Level Graph -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Temperature & Ice Level</h4>
+                                <div class="time-range-selector" id="temp-time-range">
+                                    <button class="time-range-button active" data-days="0" onclick="toggleTempGraph(${deviceIndex}, 0)">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="toggleTempGraph(${deviceIndex}, 1)">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="toggleTempGraph(${deviceIndex}, 2)">2 Days Ago</button>
                                 </div>
                             </div>
-                        ` : '<p class="text-gray-500">No thing data available</p>'}
-                        
-                        <p class="text-xs text-gray-500 mt-4">Device Last Updated: ${new Date(device.thing?.updated_at || device.created_at).toLocaleString()}</p>
+                            <!-- Add Statistics Summary Box -->
+                            <div id="tempStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                                <div class="stat-box">
+                                    <h5 class="text-xs font-medium text-gray-500">24h Range</h5>
+                                    <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
+                                </div>
+                                <div class="stat-box">
+                                    <h5 class="text-xs font-medium text-gray-500">24h Average</h5>
+                                    <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
+                                </div>
+                                <div class="stat-box">
+                                    <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
+                                    <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
+                                </div>
+                                <div class="stat-box">
+                                    <h5 class="text-xs font-medium text-gray-500">Mode</h5>
+                                    <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="tempChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Status Graph -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Device Status</h4>
+                                <div class="time-range-selector" id="status-time-range">
+                                    <button class="time-range-button active" data-days="0" onclick="updateStatusGraph(${deviceIndex}, 0)">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="updateStatusGraph(${deviceIndex}, 1)">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="updateStatusGraph(${deviceIndex}, 2)">2 Days Ago</button>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="statusChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Flow Time Graph -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Time Since Flow</h4>
+                                <div class="time-range-selector" id="flow-time-range">
+                                    <button class="time-range-button active" data-days="0" onclick="updateFlowGraph(${deviceIndex}, 0)">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="updateFlowGraph(${deviceIndex}, 1)">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="updateFlowGraph(${deviceIndex}, 2)">2 Days Ago</button>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="flowChart"></canvas>
+                            </div>
+                        </div>
                     </div>
+
+                    <!-- Status Controls -->
+                    ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
+
+                    <!-- Properties Section -->
+                    ${device.thing ? `
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                            <h3 class="text-lg font-medium text-gray-900 mb-4">Properties</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                ${device.thing.properties ? 
+                                    device.thing.properties.map(prop => `
+                                        <div class="property-card ${getPropertyBgColor(prop.name)} p-4 rounded-lg">
+                                            <div class="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <p class="${getPropertyTextColor(prop.name)} font-medium">${prop.name}</p>
+                                                    <p class="text-xs text-gray-500">Type: ${prop.type}</p>
+                                                </div>
+                                                ${prop.permission === 'READ_WRITE' ? 
+                                                    `<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Editable</span>` : 
+                                                    `<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Read Only</span>`
+                                                }
+                                            </div>
+                                            ${prop.permission === 'READ_WRITE' ? `
+                                                <div class="mt-3">
+                                                    ${prop.name === 'sensorplacement' ? 
+                                                        getSensorPlacementSelector(device.id, prop)
+                                                    : prop.type === 'BOOL' || prop.type === 'STATUS' ? `
+                                                        <label class="inline-flex items-center">
+                                                            <input 
+                                                                type="checkbox"
+                                                                class="form-checkbox h-5 w-5 text-blue-600 rounded"
+                                                                ${prop.last_value === true || prop.last_value === 'true' ? 'checked' : ''}
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                                onchange="handlePropertyInputChange(event)"
+                                                            />
+                                                            <span class="ml-2 text-sm text-gray-700">
+                                                                ${prop.last_value === true || prop.last_value === 'true' ? 'On' : 'Off'}
+                                                            </span>
+                                                        </label>
+                                                    ` : `
+                                                        <div class="flex space-x-2">
+                                                            <input 
+                                                                type="${getPropertyInputType(prop)}"
+                                                                class="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                value="${prop.last_value || ''}"
+                                                                placeholder="Enter new value"
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                                onkeydown="handlePropertyInputKeydown(event)"
+                                                                step="${getPropertyStep(prop)}"
+                                                                ${prop.type === 'INT' || prop.type === 'FLOAT' ? `min="0"` : ''}
+                                                            />
+                                                            <button 
+                                                                onclick="handleUpdateButtonClick(event)"
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
+                                                                class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                                                            >
+                                                                Update
+                                                            </button>
+                                                        </div>
+                                                    `}
+                                                </div>
+                                            ` : `
+                                                <p class="mt-2 text-lg font-medium ${getPropertyTextColor(prop.name)}">${formatPropertyValue(prop)}</p>
+                                            `}
+                                            <p class="text-xs text-gray-500 mt-2">Last Updated: ${new Date(prop.value_updated_at || prop.updated_at).toLocaleString()}</p>
+                                        </div>
+                                    `).join('') 
+                                    : '<p class="text-gray-500">No properties available</p>'
+                                }
+                            </div>
+                        </div>
+                    ` : '<p class="text-gray-500">No thing data available</p>'}
+                </div>
             `;
+
+            // Initialize the graphs
+            initializeGraphs(deviceIndex);
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -1463,19 +1637,15 @@
         }
 
         function handleManualStatusUpdate(deviceId, statusType, value) {
-            const properties = window.lastDevicesData.find(d => d.id === deviceId)?.thing?.properties || [];
-            const property = properties.find(p => p.name === statusType);
-            
-            if (!property) {
-                logToConsole(`${statusType} property not found for device ${deviceId}`, 'error');
+            // Check cooldown before updating
+            if (!canUpdateStatus(deviceId, statusType)) {
+                logToConsole(`Skipping ${statusType} update for device ${deviceId} - cooldown period not elapsed`);
                 return;
             }
 
             try {
-                // Log the update attempt
                 logToConsole(`Attempting to update ${statusType} to ${value} for device ${deviceId}`);
 
-                // Use the same API endpoint and structure that works for other variables
                 const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
                 
                 fetch(apiUrl, {
@@ -1489,8 +1659,8 @@
                             input: true,
                             properties: [{
                                 name: statusType,
-                                type: 'BOOL',
-                                value: value // Send raw boolean, not string
+                                type: 'STATUS',
+                                value: value
                             }]
                         }
                     })
@@ -1499,9 +1669,10 @@
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
+                    updateLastStatusTime(deviceId, statusType);
                     logToConsole(`Successfully updated ${statusType} to ${value}`);
-                    // Refresh devices to show updated value
-                    fetchDevices();
+                    // Refresh devices to show updated value after a short delay
+                    setTimeout(fetchDevices, 1000);
                 })
                 .catch(error => {
                     logToConsole(`Error updating ${statusType}: ${error.message}`, 'error');
@@ -1591,6 +1762,690 @@
             `;
         }
 
+        // Add these new functions for graph handling
+        function initializeGraphs(deviceIndex) {
+            // Initialize with only today's data visible
+            updateTempGraph(deviceIndex, [0]);
+            updateStatusGraph(deviceIndex, 0);
+            updateFlowGraph(deviceIndex, 0);
+        }
+
+        function toggleTempGraph(deviceIndex, day) {
+            const button = document.querySelector(`#temp-time-range button[data-days="${day}"]`);
+            button.classList.toggle('active');
+            
+            // Get all active days
+            const activeDays = Array.from(document.querySelectorAll('#temp-time-range button.active'))
+                .map(btn => parseInt(btn.dataset.days));
+            
+            // Update graph with active days
+            updateTempGraph(deviceIndex, activeDays);
+        }
+
+        // Helper function to get different colors for each day's dataset
+        function getDatasetColor(dayIndex, alpha = 1) {
+          const colors = [
+            `rgba(59, 130, 246, ${alpha})`,   // Blue
+            `rgba(16, 185, 129, ${alpha})`,   // Green
+            `rgba(245, 158, 11, ${alpha})`    // Orange
+          ];
+          return colors[dayIndex % colors.length];
+        }
+
+        function updateTempGraph(deviceIndex, selectedDays) {
+            if (!Array.isArray(selectedDays)) {
+                selectedDays = [selectedDays];
+            }
+
+            const device = window.lastDevicesData[deviceIndex];
+
+            // Always fetch 72 hours of data to ensure we have enough data for any selected day
+            fetchTimeSeriesData(device.id, 72).then(data => {
+                if (!data) {
+                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    return;
+                }
+
+                // Destroy existing chart if it exists
+                const existingChart = Chart.getChart('tempChart');
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                // Process temperature data for each selected day
+                const allDatasets = [];
+                let deviceThreshold = 34; // Default value
+                for (const day of selectedDays) {
+                    const { datasets, thresholdF } = processTemperatureByHour(data.timestamps, data.temperature, day);
+                    allDatasets.push(...datasets);
+                    deviceThreshold = thresholdF; // Use the threshold from the device
+                }
+
+                // Create hour labels (00:00 to 23:00)
+                const hourLabels = Array.from({ length: 24 }, (_, i) => 
+                    `${i.toString().padStart(2, '0')}:00`
+                );
+
+                // Check if we have any data to display
+                if (allDatasets.every(dataset => dataset.data.every(v => v === null))) {
+                    logToConsole('No temperature data available to display', 'warning');
+                    const ctx = document.getElementById('tempChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: hourLabels,
+                            datasets: [{
+                                label: 'No data available',
+                                data: Array(24).fill(null),
+                                borderColor: 'rgb(156, 163, 175)',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                title: {
+                                    display: true,
+                                    text: 'No temperature data available'
+                                }
+                            }
+                        }
+                    });
+                    return;
+                }
+
+                // Get the canvas context
+                const ctx = document.getElementById('tempChart').getContext('2d');
+                
+                // Build the new chart
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hourLabels,
+                        datasets: allDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        const hour = parseInt(context[0].label);
+                                        const nextHour = (hour + 1) % 24;
+                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
+                                    },
+                                    label: (context) => {
+                                        const value = context.raw;
+                                        if (value === null) return `${context.dataset.label}: No data`;
+                                        const label = context.dataset.label;
+                                        const temp = value.toFixed(1);
+                                        let text = '';
+                                        
+                                        if (label === 'Anomalies') {
+                                          text = `⚠️ Unusual temperature pattern detected!\nAverage: ${temp}°F\n(Outside 2 standard deviations)`;
+                                        } else if (label.includes('Min')) {
+                                          text = `Minimum: ${temp}°F`;
+                                        } else if (label.includes('Max')) {
+                                          text = `Maximum: ${temp}°F`;
+                                        } else {
+                                          text = `${label}: ${temp}°F (hourly average)`;
+                                        }
+
+                                        // Add threshold warning if temperature is too high
+                                        if (value > deviceThreshold) {
+                                          text += `\n🔴 Temperature above ${deviceThreshold.toFixed(1)}°F threshold!`;
+                                        }
+
+                                        return text;
+                                    }
+                                },
+                                titleAlign: 'center',
+                                bodyAlign: 'left',
+                                padding: 12,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: {
+                                    size: 13,
+                                    weight: 'bold'
+                                },
+                                bodyFont: {
+                                    size: 12
+                                },
+                                displayColors: true,
+                                boxPadding: 5
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15
+                                }
+                            },
+                            annotation: {
+                                annotations: {
+                                  thresholdLine: {
+                                    type: 'line',
+                                    yMin: deviceThreshold,
+                                    yMax: deviceThreshold,
+                                    borderColor: 'rgba(239, 68, 68, 0.5)',
+                                    borderWidth: 2,
+                                    borderDash: [6, 6],
+                                    label: {
+                                      content: `Threshold (${deviceThreshold.toFixed(1)}°F)`,
+                                      enabled: true,
+                                      position: 'left'
+                                    }
+                                  }
+                                }
+                              }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hour of Day'
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                }
+                            },
+                            y: {
+                                beginAtZero: false,
+                                title: {
+                                    display: true,
+                                    text: 'Temperature (°F)'
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        async function fetchTimeSeriesData(deviceId, hours) {
+  try {
+    const now = new Date();
+    const from = new Date(now - hours * 60 * 60 * 1000);
+
+    // 1) Identify the device & its properties
+    const device = window.lastDevicesData.find(d => d.id === deviceId);
+    if (!device?.thing?.id) {
+      throw new Error("Device or Thing not found");
+    }
+    const thingId = device.thing.id;
+    const properties = device.thing.properties || [];
+
+    // Helper function to check if a property is numeric
+    function isNumericProperty(prop) {
+      const numericTypes = [
+        'FLOAT', 'INT', 'NUMBER', 'DOUBLE', 'LONG',
+        'TEMPERATURE', // Add custom numeric types
+        'FLOW_RATE'
+      ];
+      return numericTypes.includes(prop.type?.toUpperCase());
+    }
+
+    // Find relevant properties, ensuring they are numeric
+    const tempProperty = properties.find(p => p.name === 'cloudtemp');
+    const flowProperty = properties.find(p => p.name === 'cloudflowrate');
+
+    // Log property types for debugging
+    logToConsole('Property types:', 'info');
+    properties.forEach(p => {
+      logToConsole(`${p.name}: ${p.type}`, 'info');
+    });
+
+    if (!tempProperty) {
+      logToConsole('Temperature property not found', 'warning');
+    } else if (!isNumericProperty(tempProperty)) {
+      logToConsole(`Temperature property type ${tempProperty.type} is not numeric`, 'warning');
+    }
+
+    // 2) Compute interval to stay under 1000 points
+    const timeRangeSeconds = hours * 3600;
+    const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
+
+    // 3) Basic fetch options with required headers
+    const fetchOptions = {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    };
+
+    // Helper function to build the query string according to API specs
+    function buildQuery() {
+      return new URLSearchParams({
+        interval: interval.toString(),
+        from: from.toISOString(),
+        to: now.toISOString(),
+        aggregation: 'AVG',
+        desc: 'false'
+      }).toString();
+    }
+
+    // Log the request details for debugging
+    logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
+    if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+    if (flowProperty) logToConsole(`Flow property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+
+    // 4) Make parallel fetch calls for each numeric property
+    const [tempData, flowData] = await Promise.all([
+      // Temperature
+      tempProperty
+        ? fetch(
+            `http://localhost:3000/api/proxy/timeseries/${thingId}/${tempProperty.id}?${buildQuery()}`,
+            fetchOptions
+          ).then(async res => {
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
+            }
+            return res.json();
+          })
+        : Promise.resolve({ data: [] }),
+
+      // Flow
+      flowProperty
+        ? fetch(
+            `http://localhost:3000/api/proxy/timeseries/${thingId}/${flowProperty.id}?${buildQuery()}`,
+            fetchOptions
+          ).then(async res => {
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
+            }
+            return res.json();
+          })
+        : Promise.resolve({ data: [] })
+    ]);
+
+    // Log raw response data
+    logToConsole('Raw temperature response:', 'info');
+    logToConsole(tempData, 'info');
+
+    // 5) Process the data using parseTsArray
+    const tempResult = parseTsArray(tempData.data || []);
+    const flowResult = parseTsArray(flowData.data || []);
+
+    // For warning and critical status, we'll use the current values since they're boolean
+    const warningProperty = properties.find(p => p.name === 'warning');
+    const criticalProperty = properties.find(p => p.name === 'critical');
+    
+    const currentWarningValue = warningProperty?.last_value === true || warningProperty?.last_value === 'true' ? 1 : 0;
+    const currentCriticalValue = criticalProperty?.last_value === true || criticalProperty?.last_value === 'true' ? 1 : 0;
+
+    // 6) Use the first available time series for timestamps
+    const primaryTimes = tempResult.times.length ? tempResult.times :
+                        flowResult.times.length ? flowResult.times : 
+                        [new Date().toISOString()];
+
+    // Log processed data
+    logToConsole('Processed data:', 'info');
+    logToConsole(`Temperature times: ${tempResult.times.length}`, 'info');
+    logToConsole(`Temperature values: ${tempResult.values.length}`, 'info');
+
+    // 7) Return formatted data for the charts
+    return {
+      timestamps: primaryTimes.map(t => new Date(t).toLocaleString()),
+      temperature: tempResult.values,
+      timeSinceFlow: flowResult.values,
+      // For boolean properties, return arrays with the current value repeated
+      warningStatus: new Array(primaryTimes.length).fill(currentWarningValue),
+      criticalStatus: new Array(primaryTimes.length).fill(currentCriticalValue),
+      iceLevel: tempResult.values?.map(celsius => {
+        if (celsius === null || celsius === undefined) return null;
+        const f = (celsius * 9) / 5 + 32;
+        return f <= 34 ? 100 : 0;
+      }) || []
+    };
+  } catch (error) {
+    logToConsole(`Error fetching timeseries: ${error.message}`, 'error');
+    return null;
+  }
+}
+
+        function updateStatusGraph(deviceIndex, selectedDay) {
+            const device = window.lastDevicesData[deviceIndex];
+            updateTimeRangeButtons('status-time-range', selectedDay);
+            
+            fetchTimeSeriesData(device.id, 72).then(data => {
+                if (!data) {
+                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    return;
+                }
+
+                // Debug logging for raw data
+                logToConsole('Status Data Debug:', 'info');
+                logToConsole('Raw timestamps:', 'info');
+                logToConsole(data.timestamps, 'info');
+                logToConsole('Raw warning status:', 'info');
+                logToConsole(data.warningStatus, 'info');
+                logToConsole('Raw critical status:', 'info');
+                logToConsole(data.criticalStatus, 'info');
+
+                // Get the start and end of the selected day
+                const now = new Date();
+                const dayStart = new Date(now);
+                dayStart.setDate(dayStart.getDate() - selectedDay);
+                dayStart.setHours(0, 0, 0, 0);
+                
+                const dayEnd = new Date(dayStart);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                logToConsole(`Filtering data for day: ${selectedDay}`, 'info');
+                logToConsole(`Day start: ${dayStart.toLocaleString()}`, 'info');
+                logToConsole(`Day end: ${dayEnd.toLocaleString()}`, 'info');
+
+                // Filter data for the selected day and add great status
+                const filteredData = data.timestamps.map((timestamp, index) => {
+                    const date = new Date(timestamp);
+                    if (date >= dayStart && date <= dayEnd) {
+                        const warning = data.warningStatus[index];
+                        const critical = data.criticalStatus[index];
+                        const entry = {
+                            timestamp: date,
+                            warning: warning,
+                            critical: critical,
+                            great: warning === 0 && critical === 0 ? 1 : 0
+                        };
+                        
+                        // Log each data point that passes the filter
+                        logToConsole(`Data point at ${date.toLocaleTimeString()}:`, 'info');
+                        logToConsole({
+                            warning: warning,
+                            critical: critical,
+                            great: entry.great
+                        }, 'info');
+                        
+                        return entry;
+                    }
+                    return null;
+                }).filter(Boolean);
+
+                // Log summary of filtered data
+                logToConsole(`Filtered data points: ${filteredData.length}`, 'info');
+                if (filteredData.length > 0) {
+                    const warningCount = filteredData.filter(d => d.warning === 1).length;
+                    const criticalCount = filteredData.filter(d => d.critical === 1).length;
+                    const greatCount = filteredData.filter(d => d.great === 1).length;
+                    
+                    logToConsole('Status Summary:', 'info');
+                    logToConsole(`Points in Warning state: ${warningCount}`, warningCount > 0 ? 'warning' : 'info');
+                    logToConsole(`Points in Critical state: ${criticalCount}`, criticalCount > 0 ? 'error' : 'info');
+                    logToConsole(`Points in Great state: ${greatCount}`, 'info');
+                }
+
+                // Create datasets with better styling
+                const greatDataset = {
+                    label: 'Great Status',
+                    data: filteredData.map(d => d.great),
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true,
+                    stepped: true,
+                    pointStyle: 'circle',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    order: 3  // Draw great status behind warning and critical
+                };
+
+                const warningDataset = {
+                    label: 'Warning Status',
+                    data: filteredData.map(d => d.warning),
+                    borderColor: 'rgb(234, 179, 8)',
+                    backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true,
+                    stepped: true,
+                    pointStyle: 'circle',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    order: 2
+                };
+
+                const criticalDataset = {
+                    label: 'Critical Status',
+                    data: filteredData.map(d => d.critical),
+                    borderColor: 'rgb(239, 68, 68)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true,
+                    stepped: true,
+                    pointStyle: 'circle',
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    order: 1  // Draw critical status on top
+                };
+
+                // Format timestamps for display
+                const labels = filteredData.map(d => {
+                    return d.timestamp.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    });
+                });
+
+                const ctx = document.getElementById('statusChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [greatDataset, warningDataset, criticalDataset]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        return `Time: ${context[0].label}`;
+                                    },
+                                    label: (context) => {
+                                        const value = context.raw;
+                                        const status = context.dataset.label.replace(' Status', '');
+                                        return `${status}: ${value === 1 ? 'Active' : 'Inactive'}`;
+                                    }
+                                },
+                                titleAlign: 'center',
+                                bodyAlign: 'left',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 }
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: { size: 12 }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                }
+                            },
+                            y: {
+                                min: -0.1,
+                                max: 1.1,
+                                title: {
+                                    display: true,
+                                    text: 'Status',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                },
+                                ticks: {
+                                    callback: value => {
+                                        if (value <= 0) return 'Inactive';
+                                        if (value >= 1) return 'Active';
+                                        return '';
+                                    },
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Add status summary below the graph
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'mt-4 grid grid-cols-3 gap-4';
+                
+                // Calculate time in each state
+                const warningTime = calculateTimeInState(filteredData, 'warning');
+                const criticalTime = calculateTimeInState(filteredData, 'critical');
+                const greatTime = calculateTimeInState(filteredData, 'great');
+
+                summaryDiv.innerHTML = `
+                    <div class="p-3 bg-emerald-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-emerald-800">Great State</h5>
+                        <p class="text-xs text-emerald-600 mt-1">Total Time: ${formatDuration(greatTime)}</p>
+                    </div>
+                    <div class="p-3 bg-yellow-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-yellow-800">Warning State</h5>
+                        <p class="text-xs text-yellow-600 mt-1">Total Time: ${formatDuration(warningTime)}</p>
+                    </div>
+                    <div class="p-3 bg-red-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-red-800">Critical State</h5>
+                        <p class="text-xs text-red-600 mt-1">Total Time: ${formatDuration(criticalTime)}</p>
+                    </div>
+                `;
+
+                // Add the summary to the page
+                const chartContainer = document.getElementById('statusChart').parentElement;
+                const existingSummary = chartContainer.nextElementSibling;
+                if (existingSummary && existingSummary.classList.contains('mt-4')) {
+                    existingSummary.remove();
+                }
+                chartContainer.after(summaryDiv);
+            });
+        }
+
+        // Helper function to calculate time spent in each state
+        function calculateTimeInState(data, state) {
+            let totalTime = 0;
+            let lastActiveTime = null;
+
+            data.forEach((point, index) => {
+                if (point[state] === 1) {
+                    if (lastActiveTime === null) {
+                        lastActiveTime = point.timestamp;
+                    }
+                    if (index === data.length - 1) {
+                        totalTime += point.timestamp - lastActiveTime;
+                    }
+                } else if (lastActiveTime !== null) {
+                    totalTime += point.timestamp - lastActiveTime;
+                    lastActiveTime = null;
+                }
+            });
+
+            return totalTime;
+        }
+
+        // Helper function to format duration
+        function formatDuration(ms) {
+            if (ms === 0) return '0 minutes';
+            
+            const hours = Math.floor(ms / (1000 * 60 * 60));
+            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+            
+            const parts = [];
+            if (hours > 0) parts.push(`${hours}h`);
+            if (minutes > 0) parts.push(`${minutes}m`);
+            
+            return parts.join(' ') || '< 1m';
+        }
+
+        function updateFlowGraph(deviceIndex, hours) {
+            const device = window.lastDevicesData[deviceIndex];
+            updateTimeRangeButtons('flow-time-range', hours);
+            
+            fetchTimeSeriesData(device.id, hours).then(data => {
+                if (!data) return;
+
+                const ctx = document.getElementById('flowChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.timestamps,
+                        datasets: [{
+                            label: 'Time Since Flow (hours)',
+                            data: data.timeSinceFlow,
+                            borderColor: 'rgb(34, 197, 94)',
+                            tension: 0.1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Hours'
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function updateTimeRangeButtons(containerId, selectedDay) {
+            const container = document.getElementById(containerId);
+            container.querySelectorAll('.time-range-button').forEach(button => {
+                const days = parseInt(button.dataset.days);
+                if (days === selectedDay) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
+
         // Fetch devices immediately and then every 30 seconds
         fetchDevices();
         const interval = setInterval(fetchDevices, 30000);
@@ -1599,6 +2454,269 @@
         window.addEventListener('unload', () => {
             clearInterval(interval);
         });
+
+        function processTemperatureByHour(timestamps, temperatures, selectedDay) {
+            logToConsole('Processing temperature data:', 'info');
+            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+            logToConsole(`Temperature values received: ${temperatures.length}`, 'info');
+            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
+
+            const hourlyTemps = {};
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            const dayStart = new Date(now);
+            dayStart.setDate(dayStart.getDate() - selectedDay);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Process each temperature reading
+            for (let i = 0; i < timestamps.length; i++) {
+                const timestamp = new Date(timestamps[i]);
+                const temp = temperatures[i];
+                
+                if (temp === null || temp === undefined) continue;
+                
+                if (timestamp < dayStart || timestamp > dayEnd) continue;
+                
+                const hour = timestamp.getHours();
+                if (selectedDay === 0 && hour > currentHour) continue;
+                
+                if (!hourlyTemps[hour]) {
+                    hourlyTemps[hour] = {
+                        values: [],
+                        hour,
+                        date: new Date(timestamp)
+                    };
+                }
+                
+                // Store all values for statistical calculations
+                hourlyTemps[hour].values.push(temp);
+            }
+
+            // Get the device's temperature threshold
+            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
+            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34; // Default to 34°F if not set
+
+            // Helper function to calculate statistics and check thresholds
+            function calculateStats(values) {
+                if (!values || values.length === 0) return null;
+                
+                const fahrenheitValues = values.map(c => (c * 9) / 5 + 32);
+                const sum = fahrenheitValues.reduce((a, b) => a + b, 0);
+                const avg = sum / fahrenheitValues.length;
+                const min = Math.min(...fahrenheitValues);
+                const max = Math.max(...fahrenheitValues);
+                
+                // Calculate standard deviation
+                const squareDiffs = fahrenheitValues.map(value => {
+                    const diff = value - avg;
+                    return diff * diff;
+                });
+                const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / fahrenheitValues.length;
+                const stdDev = Math.sqrt(avgSquareDiff);
+                
+                // Calculate mode
+                const frequency = {};
+                let maxFreq = 0;
+                let mode = null;
+                fahrenheitValues.forEach(value => {
+                    const rounded = Math.round(value * 10) / 10;
+                    frequency[rounded] = (frequency[rounded] || 0) + 1;
+                    if (frequency[rounded] > maxFreq) {
+                        maxFreq = frequency[rounded];
+                        mode = rounded;
+                    }
+                });
+
+                // Find anomalies (values outside 2 standard deviations)
+                const anomalies = fahrenheitValues.filter(value => 
+                    Math.abs(value - avg) > 2 * stdDev
+                );
+
+                // Check for threshold violations using device's threshold
+                const thresholdViolations = fahrenheitValues.filter(value => value > thresholdF);
+
+                return { 
+                    min, max, avg, stdDev, mode, 
+                    anomalies,
+                    hasThresholdViolation: thresholdViolations.length > 0,
+                    thresholdViolations
+                };
+            }
+
+            // Create datasets for average, min, max, anomalies, and threshold violations
+            const avgData = {
+                label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Avg)`,
+                data: Array(24).fill(null),
+                dates: Array(24).fill(null),
+                borderColor: getDatasetColor(selectedDay),
+                backgroundColor: getDatasetColor(selectedDay, 0.1),
+                tension: 0.1,
+                fill: true,
+                segment: {
+                    borderColor: ctx => {
+                        // Change line color to red if value is above threshold
+                        const value = ctx.p1.parsed.y;
+                        return value > thresholdF ? 'rgba(239, 68, 68, 1)' : getDatasetColor(selectedDay);
+                    }
+                },
+                pointBackgroundColor: (ctx) => {
+                    // Change point color to red if value is above threshold
+                    const value = ctx.raw;
+                    return value > thresholdF ? 'rgba(239, 68, 68, 1)' : getDatasetColor(selectedDay);
+                },
+                pointRadius: (ctx) => {
+                    // Make points larger if they exceed threshold
+                    const value = ctx.raw;
+                    return value > thresholdF ? 6 : 3;
+                },
+                pointHoverRadius: (ctx) => {
+                    const value = ctx.raw;
+                    return value > thresholdF ? 8 : 5;
+                }
+            };
+
+            const minData = {
+                label: 'Min',
+                data: Array(24).fill(null),
+                borderColor: getDatasetColor(selectedDay, 0.5),
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false
+            };
+
+            const maxData = {
+                label: 'Max',
+                data: Array(24).fill(null),
+                borderColor: getDatasetColor(selectedDay, 0.5),
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false
+            };
+
+            const anomalyData = {
+                label: 'Anomalies',
+                data: Array(24).fill(null),
+                backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                borderColor: 'rgba(239, 68, 68, 1)',
+                pointStyle: 'circle',
+                pointRadius: 6,
+                pointHoverRadius: 8,
+                showLine: false
+            };
+
+            // Calculate overall statistics for the day
+            let allValues = [];
+            let anomalyLog = [];
+            let thresholdViolationLog = [];
+
+            // Fill in the data for each hour
+            for (let hour = 0; hour < 24; hour++) {
+                if (selectedDay === 0 && hour > currentHour) continue;
+
+                const hourData = hourlyTemps[hour];
+                
+                if (hourData && hourData.values.length > 0) {
+                    const stats = calculateStats(hourData.values);
+                    if (stats) {
+                        avgData.data[hour] = stats.avg;
+                        minData.data[hour] = stats.min;
+                        maxData.data[hour] = stats.max;
+                        avgData.dates[hour] = hourData.date;
+                        allValues = allValues.concat(hourData.values);
+
+                        // Log anomalies and threshold violations
+                        if (stats.anomalies.length > 0) {
+                            anomalyData.data[hour] = stats.avg;
+                            const date = new Date(hourData.date);
+                            date.setHours(hour);
+                            anomalyLog.push({
+                                hour: `${hour.toString().padStart(2, '0')}:00`,
+                                date: date.toLocaleDateString(),
+                                values: stats.anomalies.map(v => v.toFixed(1) + '°F'),
+                                avg: stats.avg.toFixed(1) + '°F',
+                                stdDev: stats.stdDev.toFixed(1) + '°F'
+                            });
+                        }
+
+                        if (stats.hasThresholdViolation) {
+                            const date = new Date(hourData.date);
+                            date.setHours(hour);
+                            thresholdViolationLog.push({
+                                hour: `${hour.toString().padStart(2, '0')}:00`,
+                                date: date.toLocaleDateString(),
+                                values: stats.thresholdViolations.map(v => v.toFixed(1) + '°F'),
+                                avg: stats.avg.toFixed(1) + '°F'
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Update statistics display and log violations
+            const overallStats = calculateStats(allValues);
+            if (overallStats) {
+                // Update stats with conditional formatting
+                document.getElementById('tempRange').innerHTML = 
+                    `${formatTempValue(overallStats.min.toFixed(1))} - ${formatTempValue(overallStats.max.toFixed(1))}`;
+                document.getElementById('tempAvg').innerHTML = 
+                    formatTempValue(overallStats.avg.toFixed(1));
+                document.getElementById('tempStdDev').innerHTML = 
+                    `±${overallStats.stdDev.toFixed(1)}°F`;
+                document.getElementById('tempMode').innerHTML = 
+                    formatTempValue(overallStats.mode);
+
+                // Add threshold indicator to stats box
+                const statsBox = document.getElementById('tempStats');
+                if (!document.getElementById('tempThreshold')) {
+                    const thresholdDiv = document.createElement('div');
+                    thresholdDiv.className = 'stat-box col-span-2 md:col-span-4 mt-2';
+                    thresholdDiv.innerHTML = `
+                        <h5 class="text-xs font-medium text-gray-500">Temperature Threshold</h5>
+                        <p class="text-sm font-bold text-gray-900" id="tempThreshold">${thresholdF.toFixed(1)}°F</p>
+                    `;
+                    statsBox.appendChild(thresholdDiv);
+                } else {
+                    document.getElementById('tempThreshold').textContent = `${thresholdF.toFixed(1)}°F`;
+                }
+
+                // Log anomalies if found
+                if (anomalyLog.length > 0) {
+                    logToConsole('Statistical anomalies detected:', 'warning');
+                    anomalyLog.forEach(anomaly => {
+                        logToConsole(`${anomaly.date} ${anomaly.hour}: Values ${anomaly.values.join(', ')} (Avg: ${anomaly.avg}, StdDev: ${anomaly.stdDev})`, 'warning');
+                    });
+                }
+
+                // Log threshold violations
+                if (thresholdViolationLog.length > 0) {
+                    logToConsole('Temperature threshold violations detected:', 'error');
+                    thresholdViolationLog.forEach(violation => {
+                        logToConsole(`${violation.date} ${violation.hour}: Temperature(s) above ${thresholdF.toFixed(1)}°F: ${violation.values.join(', ')} (Avg: ${violation.avg})`, 'error');
+                    });
+                }
+            }
+
+            return { 
+                datasets: [minData, avgData, maxData, anomalyData],
+                thresholdF
+            };
+        }
+
+        // Helper function to format temperature value with conditional red color
+        function formatTempValue(value) {
+            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
+            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
+            
+            return parseFloat(value) > thresholdF ? 
+                `<span class="text-red-600">${value}°F</span>` : 
+                `${value}°F`;
+        }
     </script>
 </body>
 </html> 

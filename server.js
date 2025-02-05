@@ -139,6 +139,69 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     }
   });
   
+  // 1) Add this route to your server.js
+app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
+  try {
+    // 2) Get OAuth token
+    const token = await getToken();
+    
+    // 3) Setup the Arduino IoT client with the token
+    const ArduinoIotClient = require('@arduino/arduino-iot-client');
+    const defaultClient = ArduinoIotClient.ApiClient.instance;
+    const oauth2 = defaultClient.authentications['oauth2'];
+    oauth2.accessToken = token;
+
+    // 4) Create the PropertiesV2Api instance
+    const propsApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
+
+    // 5) Extract path params
+    const { thingId, propertyId } = req.params;
+
+    // 6) Extract optional query params (aggregation, desc, from, to, interval)
+    const {
+      aggregation,   // e.g. 'AVG' or 'MIN' or 'MAX'
+      desc,          // 'true' or 'false'
+      from,          // ISO date string
+      to,            // ISO date string
+      interval       // integer in seconds
+    } = req.query;
+
+    // 7) Build the 'opts' object for propertiesV2Timeseries
+    let opts = {};
+
+    if (aggregation) opts.aggregation = aggregation;
+    if (typeof desc !== 'undefined') {
+      // Convert 'desc' from string to boolean
+      opts.desc = (desc === 'true');
+    }
+    if (from)      opts.from = from;
+    if (to)        opts.to = to;
+    if (interval)  opts.interval = parseInt(interval);
+
+    // OPTIONAL: If you want to pass X-Organization from header
+    if (req.headers['x-organization']) {
+      opts['X-Organization'] = req.headers['x-organization'];
+    }
+
+    // 8) Call the PropertiesV2Timeseries endpoint
+    const timeseriesData = await propsApi.propertiesV2Timeseries(
+      thingId,     // ID of the thing
+      propertyId,  // ID of the numeric property
+      opts
+    );
+
+    // 9) Return the raw data from Arduino Cloud to client
+    res.json(timeseriesData);
+
+  } catch (error) {
+    console.error('Time-series error:', error);
+    // Forward the error details
+    res.status(error.status || 500).json({
+      error: 'Failed to fetch time-series data',
+      message: error.message
+    });
+  }
+});
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
