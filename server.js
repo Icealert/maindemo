@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const basicAuth = require('express-basic-auth');
 
 // Load environment variables
 dotenv.config();
@@ -46,15 +45,25 @@ app.use(cors({
   credentials: true,
   optionsSuccessStatus: 200
 }));
+
+// Add basic authentication middleware
+app.use((req, res, next) => {
+    // Parse login and password from headers
+    const b64auth = (req.headers.authorization || '').split(' ')[1] || '';
+    const [login, password] = Buffer.from(b64auth, 'base64').toString().split(':');
+
+    // Verify credentials
+    if (login && password && login === 'Icealert' && password === 'demo') {
+        return next();
+    }
+
+    // Access denied
+    res.set('WWW-Authenticate', 'Basic realm="401"');
+    res.status(401).send('Authentication required.');
+});
+
 app.use(express.json());
 app.use(express.static('public'));
-
-// Basic authentication middleware
-app.use(basicAuth({
-    users: { 'Icealert': 'demo' },
-    challenge: true,
-    realm: 'Ice Alert Monitor'
-}));
 
 // Function to get OAuth token
 async function getToken() {
