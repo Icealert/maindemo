@@ -38,7 +38,8 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 app.use(cors({
   origin: [
     'https://web-production-d2a3c.up.railway.app',
-    'http://localhost:3000' // for local development
+    'http://localhost:8080',  // Local development with port 8080
+    'http://localhost:3000'   // Alternative local development port
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
