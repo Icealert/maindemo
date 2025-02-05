@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
+const dotenv = require('dotenv');
+dotenv.config();
 
 // Import Arduino IoT client code
 const IotApi = require('@arduino/arduino-iot-client');
@@ -25,17 +27,27 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static('public'));
 
-// Add this near the top of server.js to verify environment variables
-console.log('Environment check:', {
-    hasClientId: !!process.env.CLIENT_ID,
-    hasClientSecret: !!process.env.CLIENT_SECRET,
-    port: process.env.PORT
+// Update environment check
+console.log('Full environment check:', {
+    NODE_ENV: process.env.NODE_ENV,
+    PORT: process.env.PORT,
+    CLIENT_ID: process.env.CLIENT_ID ? 'Set' : 'Not set',
+    CLIENT_SECRET: process.env.CLIENT_SECRET ? 'Set' : 'Not set',
+    // Print first 5 chars of credentials for verification
+    CLIENT_ID_START: process.env.CLIENT_ID?.substring(0, 5),
+    CLIENT_SECRET_START: process.env.CLIENT_SECRET?.substring(0, 5)
 });
 
 // Function to get OAuth token
 async function getToken() {
     try {
         console.log('Requesting access token...');
+        
+        // Verify credentials before making request
+        if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET) {
+            throw new Error('Missing credentials. CLIENT_ID and CLIENT_SECRET must be set.');
+        }
+
         var options = {
             method: 'POST',
             url: 'https://api2.arduino.cc/iot/v1/clients/token',
@@ -52,7 +64,14 @@ async function getToken() {
             json: true
         };
 
-        console.log('Using client ID:', process.env.CLIENT_ID?.substring(0, 5) + '...');
+        console.log('Token request options:', {
+            url: options.url,
+            method: options.method,
+            hasClientId: !!options.form.client_id,
+            hasClientSecret: !!options.form.client_secret,
+            clientIdStart: options.form.client_id?.substring(0, 5)
+        });
+
         const response = await rp(options);
         console.log('Access token received successfully');
         return response['access_token'];
@@ -60,7 +79,8 @@ async function getToken() {
         console.error("Failed getting an access token:", {
             status: error.statusCode,
             message: error.message,
-            error: error.error
+            error: error.error,
+            stack: error.stack
         });
         throw error;
     }
