@@ -235,9 +235,9 @@
 
     <script>
         // Add this at the start of your script
-        const API_URL = process.env.NODE_ENV === 'production' 
-            ? 'https://your-railway-app-url.railway.app'
-            : 'http://localhost:3000';
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000'
+            : 'https://web-production-d2a3c.up.railway.app';
 
         const statusEl = document.getElementById('status');
         const errorEl = document.getElementById('error');
@@ -304,7 +304,7 @@
 
         async function checkServerHealth() {
             try {
-                const response = await fetch('http://localhost:3000/health');
+                const response = await fetch(`${API_URL}/health`);
                 if (!response.ok) throw new Error('Server health check failed');
                 return true;
             } catch (error) {

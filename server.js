@@ -15,7 +15,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 // Enable CORS and JSON parsing
 app.use(cors({
   origin: [
-    'https://your-site-name.netlify.app',
+    'https://web-production-d2a3c.up.railway.app',
     'http://localhost:3000' // for local development
   ],
   credentials: true
@@ -118,103 +118,4 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
   
       const propertyId = matchedProp.id;
   
-      console.log(`Will publish new value for thingId=${thingId}, propertyId=${propertyId}`);
-      console.log('newValue =', newValue);
-  
-      // 6) Publish the new value to update last_value
-      const publishPayload = { value: newValue };
-      console.log('Publishing payload:', JSON.stringify(publishPayload, null, 2));
-  
-      const data = await propertiesApi.propertiesV2Publish(thingId, propertyId, publishPayload, opts);
-  
-      // 7) Respond to the client
-      console.log('Publish successful. Response:', JSON.stringify(data, null, 2));
-  
-      res.json({
-        success: true,
-        message: 'Property updated successfully',
-        data: data,
-        timestamp: new Date().toISOString(),
-        deviceId,
-        propertyName
-      });
-  
-    } catch (error) {
-      console.error('Update error:', error);
-  
-      const status = error.status || 500;
-      res.status(status).json({
-        error: 'Failed to update properties',
-        message: error.message
-      });
-    }
-  });
-  
-  // 1) Add this route to your server.js
-app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
-  try {
-    // 2) Get OAuth token
-    const token = await getToken();
-    
-    // 3) Setup the Arduino IoT client with the token
-    const ArduinoIotClient = require('@arduino/arduino-iot-client');
-    const defaultClient = ArduinoIotClient.ApiClient.instance;
-    const oauth2 = defaultClient.authentications['oauth2'];
-    oauth2.accessToken = token;
-
-    // 4) Create the PropertiesV2Api instance
-    const propsApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
-
-    // 5) Extract path params
-    const { thingId, propertyId } = req.params;
-
-    // 6) Extract optional query params (aggregation, desc, from, to, interval)
-    const {
-      aggregation,   // e.g. 'AVG' or 'MIN' or 'MAX'
-      desc,          // 'true' or 'false'
-      from,          // ISO date string
-      to,            // ISO date string
-      interval       // integer in seconds
-    } = req.query;
-
-    // 7) Build the 'opts' object for propertiesV2Timeseries
-    let opts = {};
-
-    if (aggregation) opts.aggregation = aggregation;
-    if (typeof desc !== 'undefined') {
-      // Convert 'desc' from string to boolean
-      opts.desc = (desc === 'true');
-    }
-    if (from)      opts.from = from;
-    if (to)        opts.to = to;
-    if (interval)  opts.interval = parseInt(interval);
-
-    // OPTIONAL: If you want to pass X-Organization from header
-    if (req.headers['x-organization']) {
-      opts['X-Organization'] = req.headers['x-organization'];
-    }
-
-    // 8) Call the PropertiesV2Timeseries endpoint
-    const timeseriesData = await propsApi.propertiesV2Timeseries(
-      thingId,     // ID of the thing
-      propertyId,  // ID of the numeric property
-      opts
-    );
-
-    // 9) Return the raw data from Arduino Cloud to client
-    res.json(timeseriesData);
-
-  } catch (error) {
-    console.error('Time-series error:', error);
-    // Forward the error details
-    res.status(error.status || 500).json({
-      error: 'Failed to fetch time-series data',
-      message: error.message
-    });
-  }
-});
-// Start the server
-app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-    console.log('Press Ctrl+C to quit.');
-});
+      console.log(`
