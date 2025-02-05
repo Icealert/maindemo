@@ -17,31 +17,51 @@ app.use(cors({
     'https://web-production-d2a3c.up.railway.app',
     'http://localhost:3000' // for local development
   ],
-  credentials: true
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
+  credentials: true,
+  optionsSuccessStatus: 200
 }));
 app.use(express.json());
 app.use(express.static('public'));
 
+// Add this near the top of server.js to verify environment variables
+console.log('Environment check:', {
+    hasClientId: !!process.env.CLIENT_ID,
+    hasClientSecret: !!process.env.CLIENT_SECRET,
+    port: process.env.PORT
+});
+
 // Function to get OAuth token
 async function getToken() {
-    var options = {
-        method: 'POST',
-        url: 'https://api2.arduino.cc/iot/v1/clients/token',
-        headers: { 'content-type': 'application/x-www-form-urlencoded' },
-        json: true,
-        form: {
-            grant_type: 'client_credentials',
-            client_id: CLIENT_ID,
-            client_secret: CLIENT_SECRET,
-            audience: 'https://api2.arduino.cc/iot'
-        }
-    };
-
     try {
+        console.log('Requesting access token...');
+        var options = {
+            method: 'POST',
+            url: 'https://api2.arduino.cc/iot/v1/clients/token',
+            headers: { 
+                'content-type': 'application/x-www-form-urlencoded',
+                'accept': 'application/json'
+            },
+            form: {
+                grant_type: 'client_credentials',
+                client_id: process.env.CLIENT_ID,
+                client_secret: process.env.CLIENT_SECRET,
+                audience: 'https://api2.arduino.cc/iot'
+            },
+            json: true
+        };
+
+        console.log('Using client ID:', process.env.CLIENT_ID?.substring(0, 5) + '...');
         const response = await rp(options);
+        console.log('Access token received successfully');
         return response['access_token'];
     } catch (error) {
-        console.error("Failed getting an access token:", error);
+        console.error("Failed getting an access token:", {
+            status: error.statusCode,
+            message: error.message,
+            error: error.error
+        });
         throw error;
     }
 }
@@ -54,17 +74,27 @@ app.get('/health', (req, res) => {
 // API endpoint to get devices data
 app.get('/api/devices', async (req, res) => {
     try {
+        console.log('Fetching devices...');
         var client = IotApi.ApiClient.instance;
         var oauth2 = client.authentications['oauth2'];
         oauth2.accessToken = await getToken();
         
+        console.log('Token received, fetching devices list...');
         var devicesApi = new IotApi.DevicesV2Api(client);
         const devices = await devicesApi.devicesV2List();
         
+        console.log(`Found ${devices.length} devices`);
         res.json(devices);
     } catch (error) {
-        console.error('Error:', error);
-        res.status(500).json({ error: 'Failed to fetch devices' });
+        console.error('Error fetching devices:', {
+            status: error.statusCode,
+            message: error.message,
+            error: error.error
+        });
+        res.status(500).json({ 
+            error: 'Failed to fetch devices',
+            details: error.message
+        });
     }
 });
 
