@@ -1,7 +1,6 @@
 const express = require('express');
 const cors = require('cors');
 const app = express();
-// Use environment variables for port
 const port = process.env.PORT || 3000;
 
 // Import Arduino IoT client code
@@ -70,52 +69,109 @@ app.get('/api/devices', async (req, res) => {
 });
 
 // API endpoint to update device properties
-// API endpoint to update device properties
 app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
-      console.log('Received update request for device:', req.params.id);
-      console.log('Original request body:', JSON.stringify(req.body, null, 2));
-  
-      // 1) Get token first
-      const token = await getToken();
-  
-      // 2) Set up the Arduino IoT client with OAuth2 token
-      const ArduinoIotClient = require('@arduino/arduino-iot-client');
-      const defaultClient = ArduinoIotClient.ApiClient.instance;
-      const oauth2 = defaultClient.authentications['oauth2'];
-      oauth2.accessToken = token;
-  
-      // 3) Create both APIs we need:
-      //    - DevicesV2Api (to fetch the device/thing info)
-      //    - PropertiesV2Api (to publish the new property value)
-      const devicesApi = new ArduinoIotClient.DevicesV2Api(defaultClient);
-      const propertiesApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
-      // Optional: remove the next line if you're not actually using ThingsV2Api
-      // const thingsApi = new ArduinoIotClient.ThingsV2Api(defaultClient);
-  
-      // 4) Extract parameters
-      const deviceId = req.params.id;
-      const propertyName = req.body.propertiesValues.properties[0].name;
-      const newValue = req.body.propertiesValues.properties[0].value;
-  
-      // (Optional) If you need the organization header
-      const opts = req.headers['x-organization']
-        ? { 'X-Organization': req.headers['x-organization'] }
-        : undefined;
-  
-      // 5) Fetch the device info to get the thingId and property list
-      const deviceInfo = await devicesApi.devicesV2Show(deviceId, opts);
-      const thingId = deviceInfo.thing.id;
-  
-      // Find the property that matches `propertyName`
-      const matchedProp = deviceInfo.thing.properties.find((p) => p.name === propertyName);
-      if (!matchedProp) {
-        return res.status(404).json({
-          error: 'Property not found',
-          message: `No property named "${propertyName}" found for device ID "${deviceId}."`
+        console.log('Received update request for device:', req.params.id);
+        console.log('Original request body:', JSON.stringify(req.body, null, 2));
+
+        // 1) Get token first
+        const token = await getToken();
+
+        // 2) Set up the Arduino IoT client with OAuth2 token
+        const ArduinoIotClient = require('@arduino/arduino-iot-client');
+        const defaultClient = ArduinoIotClient.ApiClient.instance;
+        const oauth2 = defaultClient.authentications['oauth2'];
+        oauth2.accessToken = token;
+
+        // 3) Create APIs we need
+        const devicesApi = new ArduinoIotClient.DevicesV2Api(defaultClient);
+        const propertiesApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
+
+        // 4) Extract parameters
+        const deviceId = req.params.id;
+        const propertyName = req.body.propertiesValues.properties[0].name;
+        const newValue = req.body.propertiesValues.properties[0].value;
+
+        // Get organization header if present
+        const opts = req.headers['x-organization']
+            ? { 'X-Organization': req.headers['x-organization'] }
+            : undefined;
+
+        // 5) Fetch device info
+        const deviceInfo = await devicesApi.devicesV2Show(deviceId, opts);
+        const thingId = deviceInfo.thing.id;
+
+        // Find matching property
+        const matchedProp = deviceInfo.thing.properties.find((p) => p.name === propertyName);
+        if (!matchedProp) {
+            return res.status(404).json({
+                error: 'Property not found',
+                message: `No property named "${propertyName}" found for device ID "${deviceId}"`
+            });
+        }
+
+        const propertyId = matchedProp.id;
+
+        // 6) Publish the new value
+        const publishPayload = { value: newValue };
+        const data = await propertiesApi.propertiesV2Publish(thingId, propertyId, publishPayload, opts);
+
+        // 7) Send response
+        res.json({
+            success: true,
+            message: 'Property updated successfully',
+            data: data,
+            timestamp: new Date().toISOString(),
+            deviceId,
+            propertyName
         });
-      }
-  
-      const propertyId = matchedProp.id;
-  
-      console.log(`
+
+    } catch (error) {
+        console.error('Update error:', error);
+        const status = error.status || 500;
+        res.status(status).json({
+            error: 'Failed to update properties',
+            message: error.message
+        });
+    }
+});
+
+// Time series data endpoint
+app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
+    try {
+        const token = await getToken();
+        
+        const ArduinoIotClient = require('@arduino/arduino-iot-client');
+        const defaultClient = ArduinoIotClient.ApiClient.instance;
+        const oauth2 = defaultClient.authentications['oauth2'];
+        oauth2.accessToken = token;
+
+        const propsApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
+        const { thingId, propertyId } = req.params;
+        const { aggregation, desc, from, to, interval } = req.query;
+
+        let opts = {};
+        if (aggregation) opts.aggregation = aggregation;
+        if (typeof desc !== 'undefined') opts.desc = (desc === 'true');
+        if (from) opts.from = from;
+        if (to) opts.to = to;
+        if (interval) opts.interval = parseInt(interval);
+        if (req.headers['x-organization']) opts['X-Organization'] = req.headers['x-organization'];
+
+        const timeseriesData = await propsApi.propertiesV2Timeseries(thingId, propertyId, opts);
+        res.json(timeseriesData);
+
+    } catch (error) {
+        console.error('Time-series error:', error);
+        res.status(error.status || 500).json({
+            error: 'Failed to fetch time-series data',
+            message: error.message
+        });
+    }
+});
+
+// Start the server
+app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+    console.log('Press Ctrl+C to quit.');
+});
