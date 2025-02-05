@@ -1,9 +1,24 @@
 const express = require('express');
 const cors = require('cors');
-const app = express();
-const port = process.env.PORT || 3000;
 const dotenv = require('dotenv');
-dotenv.config();
+
+// Load environment variables from .env file in development
+if (process.env.NODE_ENV !== 'production') {
+    dotenv.config();
+}
+
+// Log environment status
+console.log('Environment Status:', {
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    PORT: process.env.PORT || '8080',
+    CLIENT_ID_SET: !!process.env.CLIENT_ID,
+    CLIENT_SECRET_SET: !!process.env.CLIENT_SECRET,
+    ACTUAL_CLIENT_ID: process.env.CLIENT_ID, // Log the actual value for debugging
+    ACTUAL_CLIENT_SECRET: process.env.CLIENT_SECRET // Log the actual value for debugging
+});
+
+const app = express();
+const port = process.env.PORT || 8080;
 
 // Import Arduino IoT client code
 const IotApi = require('@arduino/arduino-iot-client');
@@ -26,17 +41,6 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static('public'));
-
-// Update environment check
-console.log('Full environment check:', {
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT,
-    CLIENT_ID: process.env.CLIENT_ID ? 'Set' : 'Not set',
-    CLIENT_SECRET: process.env.CLIENT_SECRET ? 'Set' : 'Not set',
-    // Print first 5 chars of credentials for verification
-    CLIENT_ID_START: process.env.CLIENT_ID?.substring(0, 5),
-    CLIENT_SECRET_START: process.env.CLIENT_SECRET?.substring(0, 5)
-});
 
 // Function to get OAuth token
 async function getToken() {
