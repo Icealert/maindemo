@@ -323,16 +323,33 @@
             showLoading();
             
             try {
-                // First check if server is healthy
                 const isHealthy = await checkServerHealth();
                 if (!isHealthy) {
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
 
                 const response = await fetch(`${API_URL}/api/devices`);
+                if (response.status === 401) {
+                    // Show login prompt if unauthorized
+                    const credentials = await showLoginPrompt();
+                    if (!credentials) {
+                        throw new Error('Authentication required');
+                    }
+                    // Retry with credentials
+                    const authResponse = await fetch(`${API_URL}/api/devices`, {
+                        headers: {
+                            'Authorization': 'Basic ' + btoa(credentials.username + ':' + credentials.password)
+                        }
+                    });
+                    if (!authResponse.ok) {
+                        throw new Error('Invalid credentials');
+                    }
+                    return authResponse.json();
+                }
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
+
                 const devices = await response.json();
                 
                 if (devices.error) {
@@ -2025,7 +2042,8 @@
       method: 'GET',
       headers: {
         'Accept': 'application/json',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        ...getAuthHeaders()
       }
     };
 
@@ -2721,6 +2739,59 @@
             return parseFloat(value) > thresholdF ? 
                 `<span class="text-red-600">${value}°F</span>` : 
                 `${value}°F`;
+        }
+
+        // Add login prompt function
+        function showLoginPrompt() {
+            return new Promise((resolve) => {
+                const loginHtml = `
+                    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
+                            <h2 class="text-xl font-bold mb-4">Login Required</h2>
+                            <form id="loginForm" class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Username</label>
+                                    <input type="text" id="username" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                                    <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                                </div>
+                                <div class="flex justify-end space-x-3">
+                                    <button type="button" onclick="closeLoginPrompt()" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md">Cancel</button>
+                                    <button type="submit" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md">Login</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+
+                const loginDiv = document.createElement('div');
+                loginDiv.innerHTML = loginHtml;
+                document.body.appendChild(loginDiv);
+
+                const form = document.getElementById('loginForm');
+                form.onsubmit = (e) => {
+                    e.preventDefault();
+                    const username = document.getElementById('username').value;
+                    const password = document.getElementById('password').value;
+                    document.body.removeChild(loginDiv);
+                    resolve({ username, password });
+                };
+
+                window.closeLoginPrompt = () => {
+                    document.body.removeChild(loginDiv);
+                    resolve(null);
+                };
+            });
+        }
+
+        // Add this helper function
+        function getAuthHeaders() {
+            const credentials = localStorage.getItem('credentials');
+            return credentials ? {
+                'Authorization': 'Basic ' + credentials
+            } : {};
         }
     </script>
 </body>

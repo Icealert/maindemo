@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const basicAuth = require('express-basic-auth');
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +48,13 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static('public'));
+
+// Basic authentication middleware
+app.use(basicAuth({
+    users: { 'Icealert': 'demo' },
+    challenge: true,
+    realm: 'Ice Alert Monitor'
+}));
 
 // Function to get OAuth token
 async function getToken() {
