@@ -467,7 +467,7 @@
                 }
 
                 // Using V2 API endpoint format and structure
-                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
 
                 // Construct payload exactly as per Arduino V2 API docs
                 const requestBody = {
@@ -1604,7 +1604,7 @@
                 logToConsole(`Updating sensor placement for device ${deviceId} to ${percentage}% (${decimalValue})`);
 
                 // Use the same API endpoint and structure that works for other variables
-                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
                 
                 fetch(apiUrl, {
                     method: 'PUT',
@@ -1651,7 +1651,7 @@
             try {
                 logToConsole(`Attempting to update ${statusType} to ${value} for device ${deviceId}`);
 
-                const apiUrl = `http://localhost:3000/api/iot/v2/devices/${deviceId}/properties`;
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
                 
                 fetch(apiUrl, {
                     method: 'PUT',
