@@ -1261,199 +1261,66 @@
 
         function showDeviceDetails(deviceIndex) {
             const device = window.lastDevicesData[deviceIndex];
-            const modal = document.getElementById('device-modal');
-            const modalTitle = document.getElementById('modal-title');
-            const modalContent = document.getElementById('modal-content');
-            const status = calculateDeviceStatus(device);
+            const properties = device.thing?.properties || [];
 
-            modalTitle.textContent = device.name || 'Device Details';
-            
-            // Generate the detailed view with improved layout
-            modalContent.innerHTML = `
-                <div class="space-y-6">
-                    <!-- Device Info Card -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-600">Device ID</p>
-                                <p class="font-medium text-gray-900">${device.id}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Type</p>
-                                <p class="font-medium text-gray-900">${device.type || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Connection Status</p>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }">
-                                    ${status.isConnected ? 'Connected' : 'Disconnected'}
-                                </span>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Current Status</p>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    status.isGreat ? 'bg-emerald-100 text-emerald-800' :
-                                    status.isWarning ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                }">
-                                    ${status.isGreat ? 'Great' : status.isWarning ? 'Warning' : 'Critical'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+            // Sort properties: READ_ONLY first, then READ_WRITE
+            const sortedProperties = [...properties].sort((a, b) => {
+                if (a.permission === 'READ_ONLY' && b.permission !== 'READ_ONLY') return -1;
+                if (a.permission !== 'READ_ONLY' && b.permission === 'READ_ONLY') return 1;
+                return 0;
+            });
 
-                    <!-- Time Series Graphs Section -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Time Series Data</h3>
-                        
-                        <!-- Temperature & Ice Level Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Temperature & Ice Level</h4>
-                                <div class="time-range-selector" id="temp-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="toggleTempGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="toggleTempGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="toggleTempGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
+            // Create modal content
+            const modalContent = `
+                <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800">${device.name || 'Unnamed Device'}</h2>
+                                <p class="text-sm text-gray-500">ID: ${device.id}</p>
                             </div>
-                            <!-- Add Statistics Summary Box -->
-                            <div id="tempStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">24h Range</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">24h Average</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Mode</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="tempChart"></canvas>
-                            </div>
+                            <button onclick="closeDeviceDetails()" class="text-gray-500 hover:text-gray-700">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                </svg>
+                            </button>
                         </div>
 
-                        <!-- Status Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Device Status</h4>
-                                <div class="time-range-selector" id="status-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateStatusGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateStatusGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateStatusGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Flow Time Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Time Since Flow</h4>
-                                <div class="time-range-selector" id="flow-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateFlowGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateFlowGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateFlowGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="flowChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Status Controls -->
-                    ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
-
-                    <!-- Properties Section -->
-                    ${device.thing ? `
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Properties</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${device.thing.properties ? 
-                                    device.thing.properties.map(prop => `
-                                        <div class="property-card ${getPropertyBgColor(prop.name)} p-4 rounded-lg">
+                        <div class="space-y-6">
+                            <!-- Properties Section -->
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-700 mb-4">Properties</h3>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    ${sortedProperties.map(property => `
+                                        <div class="bg-gray-50 p-4 rounded-lg">
                                             <div class="flex justify-between items-start mb-2">
                                                 <div>
-                                                    <p class="${getPropertyTextColor(prop.name)} font-medium">${prop.name}</p>
-                                                    <p class="text-xs text-gray-500">Type: ${prop.type}</p>
+                                                    <h4 class="font-medium text-gray-800">${property.name}</h4>
+                                                    <span class="text-xs ${
+                                                        property.permission === 'READ_ONLY' 
+                                                            ? 'bg-gray-100 text-gray-600' 
+                                                            : 'bg-blue-100 text-blue-600'
+                                                    } px-2 py-0.5 rounded">
+                                                        ${property.permission}
+                                                    </span>
                                                 </div>
-                                                ${prop.permission === 'READ_WRITE' ? 
-                                                    `<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Editable</span>` : 
-                                                    `<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Read Only</span>`
-                                                }
+                                                <span class="text-xs text-gray-500">Type: ${property.type}</span>
                                             </div>
-                                            ${prop.permission === 'READ_WRITE' ? `
-                                                <div class="mt-3">
-                                                    ${prop.name === 'sensorplacement' ? 
-                                                        getSensorPlacementSelector(device.id, prop)
-                                                    : prop.type === 'BOOL' || prop.type === 'STATUS' ? `
-                                                        <label class="inline-flex items-center">
-                                                            <input 
-                                                                type="checkbox"
-                                                                class="form-checkbox h-5 w-5 text-blue-600 rounded"
-                                                                ${prop.last_value === true || prop.last_value === 'true' ? 'checked' : ''}
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                                onchange="handlePropertyInputChange(event)"
-                                                            />
-                                                            <span class="ml-2 text-sm text-gray-700">
-                                                                ${prop.last_value === true || prop.last_value === 'true' ? 'On' : 'Off'}
-                                                            </span>
-                                                        </label>
-                                                    ` : `
-                                                        <div class="flex space-x-2">
-                                                            <input 
-                                                                type="${getPropertyInputType(prop)}"
-                                                                class="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                value="${prop.last_value || ''}"
-                                                                placeholder="Enter new value"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                                step="${getPropertyStep(prop)}"
-                                                                ${prop.type === 'INT' || prop.type === 'FLOAT' ? `min="0"` : ''}
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(prop).replace(/'/g, "&apos;")}'
-                                                                class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
-                                                    `}
-                                                </div>
-                                            ` : `
-                                                <p class="mt-2 text-lg font-medium ${getPropertyTextColor(prop.name)}">${formatPropertyValue(prop)}</p>
-                                            `}
-                                            <p class="text-xs text-gray-500 mt-2">Last Updated: ${new Date(prop.value_updated_at || prop.updated_at).toLocaleString()}</p>
+                                            ${getPropertyControl(device.id, property)}
                                         </div>
-                                    `).join('') 
-                                    : '<p class="text-gray-500">No properties available</p>'
-                                }
+                                    `).join('')}
+                                </div>
                             </div>
                         </div>
-                    ` : '<p class="text-gray-500">No thing data available</p>'}
+                    </div>
                 </div>
             `;
 
-            // Initialize the graphs
-            initializeGraphs(deviceIndex);
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            // Add modal to DOM
+            const modalContainer = document.createElement('div');
+            modalContainer.id = 'deviceDetailsModal';
+            modalContainer.innerHTML = modalContent;
+            document.body.appendChild(modalContainer);
         }
 
         function hideDeviceDetails() {
@@ -2870,98 +2737,6 @@
             const modal = document.getElementById('contact-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
-        }
-
-        function getLocationInput(deviceId, property) {
-            const currentValue = property.last_value || '';
-            return `
-                <div class="flex flex-col space-y-2">
-                    <div class="flex space-x-2">
-                        <input 
-                            type="text"
-                            class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            data-device-id="${deviceId}"
-                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                            id="location_${deviceId}"
-                            value="${currentValue}"
-                            placeholder="Enter location"
-                        />
-                        <button 
-                            onclick="handleLocationUpdate(document.getElementById('location_${deviceId}'))"
-                            class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            Update
-                        </button>
-                    </div>
-                    <p class="text-xs text-gray-600">
-                        Enter the physical location of this ice machine (e.g., "Kitchen 1", "Bar Area", "Back Storage").
-                        This helps identify where each machine is located in your facility.
-                    </p>
-                </div>
-            `;
-        }
-
-        function handleLocationUpdate(input) {
-            const deviceId = input.dataset.deviceId;
-            const newLocation = input.value.trim();
-            
-            try {
-                const property = JSON.parse(input.dataset.property);
-                
-                if (!deviceId) {
-                    throw new Error('Device ID is missing');
-                }
-
-                if (!newLocation) {
-                    throw new Error('Location cannot be empty');
-                }
-
-                logToConsole(`Updating location for device ${deviceId} to "${newLocation}"`);
-
-                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
-                
-                fetch(apiUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        propertiesValues: {
-                            input: true,
-                            properties: [{
-                                name: 'location',
-                                type: 'STRING',
-                                value: newLocation
-                            }]
-                        }
-                    })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    logToConsole(`Successfully updated location to "${newLocation}"`);
-                    fetchDevices();
-                })
-                .catch(error => {
-                    logToConsole(`Error updating location: ${error.message}`, 'error');
-                    showError(`Failed to update location: ${error.message}`);
-                });
-            } catch (error) {
-                logToConsole(`Error handling location update: ${error.message}`, 'error');
-                showError(`Failed to handle location update: ${error.message}`);
-            }
-        }
-
-        function getPropertyInput(deviceId, property) {
-            if (property.name === 'sensorplacement') {
-                return getSensorPlacementSelector(deviceId, property);
-            } else if (property.name === 'location') {
-                return getLocationInput(deviceId, property);
-            } else {
-                // ... existing property input logic ...
-            }
         }
     </script>
 </body>
