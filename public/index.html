@@ -1332,8 +1332,11 @@
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Last Activity</p>
-                                <p class="font-medium">${new Date(device.last_activity_at).toLocaleString()}</p>
+                                <p class="text-sm text-gray-500">Last Connected</p>
+                                <p class="font-medium">${new Date(device.last_activity_at).toLocaleString('en-US', {
+                                    dateStyle: 'short',
+                                    timeStyle: 'short'
+                                })}</p>
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">Device ID</p>
