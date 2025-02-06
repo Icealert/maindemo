@@ -1314,6 +1314,10 @@
                                 <p class="font-medium">${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}</p>
                             </div>
                             <div>
+                                <p class="text-sm text-gray-500">Ice Machine PN/SN</p>
+                                <p class="font-medium">${device.thing?.properties?.find(p => p.name === 'Icemachine_PN_SN')?.last_value || 'N/A'}</p>
+                            </div>
+                            <div>
                                 <p class="text-sm text-gray-500">Status</p>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                     status.isGreat ? 'bg-emerald-100 text-emerald-800' :
