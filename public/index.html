@@ -1036,14 +1036,18 @@
                 const status = calculateDeviceStatus(device);
 
                 return `
-                <div class="device-card bg-white rounded-lg shadow-sm border border-gray-200 p-3 hover:shadow-md transition-all">
-                    <div class="flex justify-between items-start mb-2">
+                <div class="device-card bg-white rounded-lg shadow-sm border border-gray-200 p-4 relative">
+                    <!-- Device Header -->
+                    <div class="flex justify-between items-start mb-4">
                         <div>
-                            <h2 class="text-base font-semibold text-gray-800">${device.name || 'Unnamed Device'}</h2>
-                            <p class="text-xs text-gray-500">ID: ${device.id.slice(0, 8)}...</p>
-                            ${status.alertEmail ? `<p class="text-xs text-blue-600">Alert Email: ${status.alertEmail}</p>` : ''}
+                            <h3 class="text-lg font-bold text-gray-800">
+                                Device ${device.name.replace(/[^0-9]/g, '')}
+                            </h3>
+                            <p class="text-sm text-gray-600">
+                                ${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}
+                            </p>
                         </div>
-                        <div class="text-right">
+                        <div class="flex items-center">
                             <span class="connected-badge px-1.5 py-0.5 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
                                 ${status.isConnected ? 'Connected' : 'Disconnected'}
                             </span>
