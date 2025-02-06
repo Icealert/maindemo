@@ -1422,8 +1422,11 @@
                                     recommendations.push({
                                         type: 'error',
                                         title: 'Connection Lost',
-                                        message: 'Device is currently offline. Check power supply and network connectivity.',
-                                        action: 'Verify device power and network connection. If issue persists, contact technical support.'
+                                        message: 'Device is currently offline. Please follow these troubleshooting steps:',
+                                        action: `1. Verify the ice machine is powered on and running
+2. If machine is on, check if the IceAlert device's power supply is connected and LED is lit
+3. If powered on, verify the IceAlert device's network connection (check WiFi/ethernet connection)
+4. If all above steps are confirmed and issue persists, contact technical support at icealertdevice@gmail.com`
                                     });
                                 }
 
