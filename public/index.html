@@ -1302,96 +1302,105 @@
             modalContent.innerHTML = `
                 <div class="space-y-6">
                     <!-- Device Info -->
-                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-6 mb-6">
-                        <div class="flex items-center space-x-2 mb-6">
+                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
+                        <div class="flex items-center space-x-2 mb-4">
                             <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                             </svg>
                             <h3 class="text-xl font-semibold text-gray-900">Device Information</h3>
                         </div>
-                        <div class="grid grid-cols-2 gap-6">
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Device Name</p>
-                                <p class="text-base font-semibold text-gray-900">Device ${device.name.replace(/[^0-9]/g, '')}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Location</p>
-                                <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Ice Machine PN/SN</p>
-                                <div class="flex items-center">
-                                    <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Icemachine_PN_SN')?.last_value || 'N/A'}</p>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            <!-- Basic Info Column -->
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500">Device Name</p>
+                                    <p class="text-sm font-semibold text-gray-900">Device ${device.name.replace(/[^0-9]/g, '')}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500">Location</p>
+                                    <p class="text-sm font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}</p>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500">Ice Machine PN/SN</p>
+                                    <p class="text-sm font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Icemachine_PN_SN')?.last_value || 'N/A'}</p>
                                 </div>
                             </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Status</p>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    status.isGreat ? 'bg-emerald-100 text-emerald-800' :
-                                    status.isWarning ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                }">
-                                    ${status.isGreat ? 'Great' : status.isWarning ? 'Warning' : 'Critical'}
-                                </span>
+
+                            <!-- Status Column -->
+                            <div class="space-y-3">
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500">Connection Status</p>
+                                    <div class="flex items-center mt-1">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                                            status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                                        }">
+                                            <span class="w-2 h-2 mr-1 rounded-full ${
+                                                status.isConnected ? 'bg-green-400' : 'bg-red-400'
+                                            }"></span>
+                                            ${status.isConnected ? 'Connected' : 'Disconnected'}
+                                        </span>
+                                    </div>
+                                    ${!status.isConnected && status.lastConnectedTime ? `
+                                        <p class="text-xs text-red-600 mt-1">Last seen: ${new Date(status.lastConnectedTime).toLocaleString('en-US', {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                        })}</p>
+                                    ` : ''}
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500">Device Status</p>
+                                    <span class="inline-flex items-center px-2 py-0.5 mt-1 rounded-full text-xs font-medium ${
+                                        status.isGreat ? 'bg-emerald-100 text-emerald-800' :
+                                        status.isWarning ? 'bg-yellow-100 text-yellow-800' :
+                                        'bg-red-100 text-red-800'
+                                    }">
+                                        ${status.isGreat ? 'Great' : status.isWarning ? 'Warning' : 'Critical'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-500">Device ID</p>
+                                    <p class="text-xs font-mono bg-gray-50 px-2 py-1 rounded border border-gray-200 select-all">${device.id}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Connection</p>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }">
-                                    ${status.isConnected ? 'Connected' : 'Disconnected'}
-                                </span>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Last Connected</p>
-                                ${!status.isConnected && status.lastConnectedTime ? `
-                                    <p class="text-base font-semibold text-red-600">${new Date(status.lastConnectedTime).toLocaleString('en-US', {
-                                        dateStyle: 'short',
-                                        timeStyle: 'short'
-                                    })}</p>
-                                ` : `
-                                    <p class="text-base font-semibold text-green-600">Currently Connected</p>
-                                `}
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Device ID</p>
-                                <p class="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded select-all">${device.id}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm font-medium text-gray-500 mb-1">Last Maintenance</p>
-                                <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value || 'Not recorded'}</p>
-                                ${(() => {
-                                    const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
-                                    if (lastMaintenance) {
-                                        const maintenanceDate = new Date(lastMaintenance);
-                                        const now = new Date();
-                                        const diffTime = Math.abs(now - maintenanceDate);
-                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                        const diffMonths = Math.floor(diffDays / 30);
-                                        const remainingDays = diffDays % 30;
-                                        
-                                        return `
-                                            <p class="text-sm ${diffDays > 180 ? 'text-red-600 font-medium' : 'text-gray-600'}">
-                                                ${diffMonths > 0 ? `${diffMonths} month${diffMonths > 1 ? 's' : ''}` : ''}
-                                                ${remainingDays > 0 ? `${diffMonths > 0 ? ' and ' : ''}${remainingDays} day${remainingDays > 1 ? 's' : ''}` : ''}
-                                                since last maintenance
-                                                ${diffDays > 180 ? ' (Maintenance Due)' : ''}
-                                            </p>
-                                        `;
-                                    }
-                                    return '';
-                                })()}
-                                <p class="text-xs text-gray-500">
-                                    ${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.value_updated_at ? 
-                                        `Updated: ${new Date(device.thing.properties.find(p => p.name === 'Last_Maintenance').value_updated_at).toLocaleDateString('en-US', {
-                                            year: 'numeric',
-                                            month: 'short',
-                                            day: 'numeric'
-                                        })}` : ''}
-                                </p>
-                            </div>
-                            <div class="col-span-2 mt-2 pt-4 border-t border-gray-100">
-                                <p class="text-xs text-gray-500">This device is monitored and managed by IceAlert's cloud-based system.</p>
+
+                            <!-- Maintenance Column -->
+                            <div class="col-span-2 md:col-span-1 space-y-3">
+                                <div class="bg-gray-50 p-3 rounded-lg">
+                                    <p class="text-xs font-medium text-gray-500">Last Maintenance</p>
+                                    <p class="text-sm font-semibold text-gray-900 mt-1">${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value || 'Not recorded'}</p>
+                                    ${(() => {
+                                        const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
+                                        if (lastMaintenance) {
+                                            const maintenanceDate = new Date(lastMaintenance);
+                                            const now = new Date();
+                                            const diffTime = Math.abs(now - maintenanceDate);
+                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                            const diffMonths = Math.floor(diffDays / 30);
+                                            const remainingDays = diffDays % 30;
+                                            
+                                            return `
+                                                <div class="flex items-center mt-2 ${diffDays > 180 ? 'bg-red-50 text-red-700 p-1.5 rounded' : ''}">
+                                                    ${diffDays > 180 ? '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' : ''}
+                                                    <span class="text-xs ${diffDays > 180 ? 'font-medium' : 'text-gray-600'}">
+                                                        ${diffMonths > 0 ? `${diffMonths} month${diffMonths > 1 ? 's' : ''}` : ''}
+                                                        ${remainingDays > 0 ? `${diffMonths > 0 ? ' and ' : ''}${remainingDays} day${remainingDays > 1 ? 's' : ''}` : ''}
+                                                        since last maintenance
+                                                        ${diffDays > 180 ? ' (Due)' : ''}
+                                                    </span>
+                                                </div>
+                                            `;
+                                        }
+                                        return '';
+                                    })()}
+                                    <p class="text-xs text-gray-500 mt-2">
+                                        ${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.value_updated_at ? 
+                                            `Updated: ${new Date(device.thing.properties.find(p => p.name === 'Last_Maintenance').value_updated_at).toLocaleDateString('en-US', {
+                                                year: 'numeric',
+                                                month: 'short',
+                                                day: 'numeric'
+                                            })}` : ''}
+                                    </p>
+                                </div>
                             </div>
                         </div>
                     </div>
