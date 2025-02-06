@@ -1301,6 +1301,25 @@
             // Generate the detailed view with improved layout
             modalContent.innerHTML = `
                 <div class="space-y-6">
+                    <!-- Device Info -->
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Device Information</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-gray-500">Device ID</p>
+                                <p class="font-medium">${device.id}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Name</p>
+                                <p class="font-medium">${device.name || 'Unnamed Device'}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Last Activity</p>
+                                <p class="font-medium">${new Date(device.last_activity_at).toLocaleString()}</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Device Info Card -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                         <div class="grid grid-cols-2 gap-4">
