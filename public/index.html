@@ -1086,6 +1086,9 @@
                             <div class="text-xs mt-1">
                                 ${(() => {
                                     const issues = [];
+                                    if (!status.isConnected) {
+                                        issues.push('Disconnected');
+                                    }
                                     if (status.cloudTemp > status.tempThresholdMax) {
                                         issues.push('Temperature High');
                                     }
