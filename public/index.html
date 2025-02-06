@@ -1342,38 +1342,6 @@
                         </div>
                     </div>
 
-                    <!-- Device Info Card -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <p class="text-sm text-gray-600">Device ID</p>
-                                <p class="font-medium text-gray-900">${device.id}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Type</p>
-                                <p class="font-medium text-gray-900">${device.type || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Connection Status</p>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                }">
-                                    ${status.isConnected ? 'Connected' : 'Disconnected'}
-                                </span>
-                            </div>
-                            <div>
-                                <p class="text-sm text-gray-600">Current Status</p>
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                    status.isGreat ? 'bg-emerald-100 text-emerald-800' :
-                                    status.isWarning ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-red-100 text-red-800'
-                                }">
-                                    ${status.isGreat ? 'Great' : status.isWarning ? 'Warning' : 'Critical'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Time Series Graphs Section -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                         <h3 class="text-lg font-medium text-gray-900 mb-4">Time Series Data</h3>
