@@ -1405,281 +1405,165 @@
                         </div>
                     </div>
 
-                    <!-- Time Series Graphs Section -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Time Series Data</h3>
-                        
-                        <!-- Temperature & Ice Level Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Temperature & Ice Level</h4>
-                                <div class="time-range-selector" id="temp-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="toggleTempGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="toggleTempGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="toggleTempGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <!-- Add Statistics Summary Box -->
-                            <div id="tempStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">24h Range</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">24h Average</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Mode</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="tempChart"></canvas>
-                            </div>
+                    <!-- Recommendations Section -->
+                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-gray-900">Recommendations</h3>
                         </div>
+                        <div class="space-y-3">
+                            ${(() => {
+                                const recommendations = [];
+                                
+                                // Connection Status Recommendations
+                                if (!status.isConnected) {
+                                    recommendations.push({
+                                        type: 'error',
+                                        title: 'Connection Lost',
+                                        message: 'Device is currently offline. Check power supply and network connectivity.',
+                                        action: 'Verify device power and network connection. If issue persists, contact technical support.'
+                                    });
+                                }
 
-                        <!-- Status Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Device Status</h4>
-                                <div class="time-range-selector" id="status-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateStatusGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateStatusGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateStatusGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
+                                // Temperature Recommendations
+                                if (status.cloudTemp > status.tempThresholdMax) {
+                                    recommendations.push({
+                                        type: 'warning',
+                                        title: 'High Temperature Detected',
+                                        message: `Temperature (${formatTemperature(status.cloudTemp)}) exceeds threshold (${formatTemperature(status.tempThresholdMax)}).`,
+                                        action: 'Check ice machine operation and ensure proper ventilation. Consider maintenance if issue persists.'
+                                    });
+                                }
 
-                        <!-- Flow Time Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Time Since Flow</h4>
-                                <div class="time-range-selector" id="flow-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateFlowGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateFlowGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateFlowGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="flowChart"></canvas>
-                            </div>
+                                // Flow Recommendations
+                                if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
+                                    recommendations.push({
+                                        type: 'warning',
+                                        title: 'No Flow Detected',
+                                        message: `No water flow detected for ${formatTimeDuration(status.timeSinceFlowMs)}. Critical time: ${status.noFlowCriticalTime}h`,
+                                        action: 'Check water supply and verify ice machine operation. Inspect for potential blockages.'
+                                    });
+                                }
+
+                                // Maintenance Recommendations
+                                const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
+                                if (lastMaintenance) {
+                                    const maintenanceDate = new Date(lastMaintenance);
+                                    const now = new Date();
+                                    const diffDays = Math.ceil(Math.abs(now - maintenanceDate) / (1000 * 60 * 60 * 24));
+                                    
+                                    if (diffDays > 180) {
+                                        recommendations.push({
+                                            type: 'warning',
+                                            title: 'Maintenance Overdue',
+                                            message: 'Regular maintenance is overdue by ' + (diffDays - 180) + ' days.',
+                                            action: 'Schedule maintenance service as soon as possible to ensure optimal performance.'
+                                        });
+                                    } else if (diffDays > 150) {
+                                        recommendations.push({
+                                            type: 'info',
+                                            title: 'Maintenance Due Soon',
+                                            message: 'Regular maintenance will be due in ' + (180 - diffDays) + ' days.',
+                                            action: 'Plan to schedule maintenance service in the coming weeks.'
+                                        });
+                                    }
+                                }
+
+                                if (recommendations.length === 0 && status.isGreat) {
+                                    recommendations.push({
+                                        type: 'success',
+                                        title: 'System Operating Normally',
+                                        message: 'All parameters are within normal ranges.',
+                                        action: 'Continue regular monitoring and maintenance schedule.'
+                                    });
+                                }
+
+                                return recommendations.length > 0 ? recommendations.map(rec => `
+                                    <div class="flex items-start p-3 rounded-lg ${
+                                        rec.type === 'error' ? 'bg-red-50 border border-red-200' :
+                                        rec.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                                        rec.type === 'info' ? 'bg-blue-50 border border-blue-200' :
+                                        'bg-emerald-50 border border-emerald-200'
+                                    }">
+                                        <div class="flex-shrink-0">
+                                            <svg class="w-5 h-5 ${
+                                                rec.type === 'error' ? 'text-red-600' :
+                                                rec.type === 'warning' ? 'text-yellow-600' :
+                                                rec.type === 'info' ? 'text-blue-600' :
+                                                'text-emerald-600'
+                                            }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                ${rec.type === 'error' ? 
+                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
+                                                    rec.type === 'warning' ?
+                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
+                                                    rec.type === 'info' ?
+                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />' :
+                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                                                }
+                                            </svg>
+                                        </div>
+                                        <div class="ml-3 flex-1">
+                                            <h5 class="text-sm font-medium ${
+                                                rec.type === 'error' ? 'text-red-800' :
+                                                rec.type === 'warning' ? 'text-yellow-800' :
+                                                rec.type === 'info' ? 'text-blue-800' :
+                                                'text-emerald-800'
+                                            }">${rec.title}</h5>
+                                            <p class="mt-1 text-xs ${
+                                                rec.type === 'error' ? 'text-red-700' :
+                                                rec.type === 'warning' ? 'text-yellow-700' :
+                                                rec.type === 'info' ? 'text-blue-700' :
+                                                'text-emerald-700'
+                                            }">${rec.message}</p>
+                                            <p class="mt-1 text-xs font-medium ${
+                                                rec.type === 'error' ? 'text-red-900' :
+                                                rec.type === 'warning' ? 'text-yellow-900' :
+                                                rec.type === 'info' ? 'text-blue-900' :
+                                                'text-emerald-900'
+                                            }">Recommended Action: ${rec.action}</p>
+                                        </div>
+                                    </div>
+                                `).join('') : '<p class="text-gray-500 text-sm">No recommendations at this time.</p>';
+                            })()}
                         </div>
                     </div>
 
-                    <!-- Status Controls -->
-                    ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
-
-                    <!-- Properties Section -->
-                    ${device.thing ? `
-                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-                            <h3 class="text-lg font-medium text-gray-900 mb-4">Properties</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                ${device.thing?.properties ? 
-                                    sortProperties(device.thing.properties).map(property => `
-                                        <div class="property-card ${getPropertyBgColor(property.name)} p-4 rounded-lg">
-                                            <div class="flex justify-between items-start mb-2">
-                                                <div>
-                                                    <p class="${getPropertyTextColor(property.name)} font-medium">${property.name}</p>
-                                                    <p class="text-xs text-gray-500">Type: ${property.type}</p>
-                                                </div>
-                                                ${property.permission === 'READ_WRITE' ? 
-                                                    `<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Editable</span>` : 
-                                                    `<span class="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">Read Only</span>`
-                                                }
-                                            </div>
-                                            ${property.permission === 'READ_WRITE' ? `
-                                                <div class="mt-3">
-                                                    ${property.name === 'sensorplacement' ? 
-                                                        getSensorPlacementSelector(device.id, property)
-                                                    : property.type === 'BOOL' || property.type === 'STATUS' ? `
-                                                        <label class="inline-flex items-center">
-                                                            <input 
-                                                                type="checkbox"
-                                                                class="form-checkbox h-5 w-5 text-blue-600 rounded"
-                                                                ${property.last_value === true || property.last_value === 'true' ? 'checked' : ''}
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onchange="handlePropertyInputChange(event)"
-                                                            />
-                                                            <span class="ml-2 text-sm text-gray-700">
-                                                                ${property.last_value === true || property.last_value === 'true' ? 'On' : 'Off'}
-                                                            </span>
-                                                        </label>
-                                                    ` : `
-                                                        <div class="flex space-x-2">
-                                                            <input 
-                                                                type="${getPropertyInputType(property)}"
-                                                                class="flex-1 px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                                value="${property.last_value || ''}"
-                                                                placeholder="Enter new value"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                                step="${getPropertyStep(property)}"
-                                                                ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                class="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
-                                                    `}
-                                                </div>
-                                            ` : `
-                                                <p class="mt-2 text-lg font-medium ${getPropertyTextColor(property.name)}">${formatPropertyValue(property)}</p>
-                                            `}
-                                            <p class="text-xs text-gray-500 mt-2">Last Updated: ${new Date(device.last_activity_at).toLocaleString('en-US', {
-                                                dateStyle: 'short',
-                                                timeStyle: 'short'
-                                            })}</p>
-                                        </div>
-                                    `).join('') 
-                                    : '<p class="text-gray-500">No properties available</p>'
-                                }
-                            </div>
+                    <!-- Time Series Graphs Section -->
+                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-gray-900">Time Series Graphs</h3>
                         </div>
-                    ` : '<p class="text-gray-500">No thing data available</p>'}
-
-                    <!-- Recommendations Section -->
-                    ${(() => {
-                        const recommendations = [];
-                        
-                        // Connection Status Recommendations
-                        if (!status.isConnected) {
-                            recommendations.push({
-                                type: 'error',
-                                title: 'Connection Lost',
-                                message: 'Device is currently offline. Check power supply and network connectivity.',
-                                action: 'Verify device power and network connection. If issue persists, contact technical support.'
-                            });
-                        }
-
-                        // Temperature Recommendations
-                        if (status.cloudTemp > status.tempThresholdMax) {
-                            recommendations.push({
-                                type: 'warning',
-                                title: 'High Temperature Detected',
-                                message: `Temperature (${formatTemperature(status.cloudTemp)}) exceeds threshold (${formatTemperature(status.tempThresholdMax)}).`,
-                                action: 'Check ice machine operation and ensure proper ventilation. Consider maintenance if issue persists.'
-                            });
-                        }
-
-                        // Flow Recommendations
-                        if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
-                            recommendations.push({
-                                type: 'warning',
-                                title: 'No Flow Detected',
-                                message: `No water flow detected for ${formatTimeDuration(status.timeSinceFlowMs)}. Critical time: ${status.noFlowCriticalTime}h`,
-                                action: 'Check water supply and verify ice machine operation. Inspect for potential blockages.'
-                            });
-                        }
-
-                        // Maintenance Recommendations
-                        const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
-                        if (lastMaintenance) {
-                            const maintenanceDate = new Date(lastMaintenance);
-                            const now = new Date();
-                            const diffDays = Math.ceil(Math.abs(now - maintenanceDate) / (1000 * 60 * 60 * 24));
-                            
-                            if (diffDays > 180) {
-                                recommendations.push({
-                                    type: 'warning',
-                                    title: 'Maintenance Overdue',
-                                    message: 'Regular maintenance is overdue by ' + (diffDays - 180) + ' days.',
-                                    action: 'Schedule maintenance service as soon as possible to ensure optimal performance.'
-                                });
-                            } else if (diffDays > 150) {
-                                recommendations.push({
-                                    type: 'info',
-                                    title: 'Maintenance Due Soon',
-                                    message: 'Regular maintenance will be due in ' + (180 - diffDays) + ' days.',
-                                    action: 'Plan to schedule maintenance service in the coming weeks.'
-                                });
-                            }
-                        }
-
-                        if (recommendations.length === 0 && status.isGreat) {
-                            recommendations.push({
-                                type: 'success',
-                                title: 'System Operating Normally',
-                                message: 'All parameters are within normal ranges.',
-                                action: 'Continue regular monitoring and maintenance schedule.'
-                            });
-                        }
-
-                        return recommendations.length > 0 ? `
-                            <div class="col-span-full mt-4">
-                                <div class="border-t border-gray-200 pt-4">
-                                    <h4 class="text-sm font-medium text-gray-900 mb-3 flex items-center">
-                                        <svg class="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                                        </svg>
-                                        Recommendations
-                                    </h4>
-                                    <div class="space-y-3">
-                                        ${recommendations.map(rec => `
-                                            <div class="flex items-start p-3 rounded-lg ${
-                                                rec.type === 'error' ? 'bg-red-50 border border-red-200' :
-                                                rec.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-                                                rec.type === 'info' ? 'bg-blue-50 border border-blue-200' :
-                                                'bg-emerald-50 border border-emerald-200'
-                                            }">
-                                                <div class="flex-shrink-0">
-                                                    <svg class="w-5 h-5 ${
-                                                        rec.type === 'error' ? 'text-red-600' :
-                                                        rec.type === 'warning' ? 'text-yellow-600' :
-                                                        rec.type === 'info' ? 'text-blue-600' :
-                                                        'text-emerald-600'
-                                                    }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        ${rec.type === 'error' ? 
-                                                            '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
-                                                              rec.type === 'warning' ?
-                                                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
-                                                              rec.type === 'info' ?
-                                                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />' :
-                                                                '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                                                            }
-                                                    </svg>
-                                                </div>
-                                                <div class="ml-3 flex-1">
-                                                    <h5 class="text-sm font-medium ${
-                                                        rec.type === 'error' ? 'text-red-800' :
-                                                        rec.type === 'warning' ? 'text-yellow-800' :
-                                                        rec.type === 'info' ? 'text-blue-800' :
-                                                        'text-emerald-800'
-                                                    }">${rec.title}</h5>
-                                                    <p class="mt-1 text-xs ${
-                                                        rec.type === 'error' ? 'text-red-700' :
-                                                        rec.type === 'warning' ? 'text-yellow-700' :
-                                                        rec.type === 'info' ? 'text-blue-700' :
-                                                        'text-emerald-700'
-                                                    }">${rec.message}</p>
-                                                    <p class="mt-1 text-xs font-medium ${
-                                                        rec.type === 'error' ? 'text-red-900' :
-                                                        rec.type === 'warning' ? 'text-yellow-900' :
-                                                        rec.type === 'info' ? 'text-blue-900' :
-                                                        'text-emerald-900'
-                                                    }">Recommended Action: ${rec.action}</p>
-                                                </div>
-                                            </div>
-                                        `).join('')}
-                                    </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <!-- Temperature Graph -->
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                <h4 class="text-lg font-medium mb-2">Temperature</h4>
+                                <div class="chart-container">
+                                    <canvas id="tempChart"></canvas>
                                 </div>
                             </div>
-                        ` : '';
-                    })()}
+
+                            <!-- Status Graph -->
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                <h4 class="text-lg font-medium mb-2">Status</h4>
+                                <div class="chart-container">
+                                    <canvas id="statusChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Flow Graph -->
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                                <h4 class="text-lg font-medium mb-2">Flow</h4>
+                                <div class="chart-container">
+                                    <canvas id="flowChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
 
