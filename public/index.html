@@ -1422,11 +1422,25 @@
                                     recommendations.push({
                                         type: 'error',
                                         title: 'Connection Lost',
-                                        message: 'Device is currently offline. Please follow these troubleshooting steps:',
-                                        action: `1. Verify the ice machine is powered on and running
-2. If machine is on, check if the IceAlert device's power supply is connected and LED is lit
-3. If powered on, verify the IceAlert device's network connection (check WiFi/ethernet connection)
-4. If all above steps are confirmed and issue persists, contact technical support at icealertdevice@gmail.com`
+                                        message: 'Device is currently offline. Please follow these troubleshooting steps in order:',
+                                        action: `<div class="space-y-2 mt-2">
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">1</span>
+                                                <p class="text-red-700">Verify the ice machine is powered on and running</p>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">2</span>
+                                                <p class="text-red-700">Check if the IceAlert device's power supply is connected and LED is lit</p>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">3</span>
+                                                <p class="text-red-700">Verify the IceAlert device's WiFi connection</p>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">4</span>
+                                                <p class="text-red-700">If all above steps are confirmed and issue persists, contact technical support at <a href="mailto:icealertdevice@gmail.com" class="underline font-medium">icealertdevice@gmail.com</a></p>
+                                            </div>
+                                        </div>`
                                     });
                                 }
 
