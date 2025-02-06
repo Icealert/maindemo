@@ -2871,61 +2871,6 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
-
-        function getPropertyDescription(property) {
-            const descriptions = {
-                'cloudtemp': 'Current temperature reading from the sensor in Fahrenheit. Used to monitor ice machine temperature.',
-                'cloudflowrate': 'Rate of water flow through the system. Used to detect water flow activity.',
-                'sensorplacement': 'Position of the temperature sensor in the ice machine (percentage from bottom). Used to determine ice level.',
-                'tempThresholdMax': 'Maximum allowed temperature in Fahrenheit. Alerts are triggered if temperature exceeds this value.',
-                'noFlowCriticalTime': 'Maximum allowed time (in hours) without water flow before triggering an alert.',
-                'warning': 'Warning status flag. Indicates if the device is in a warning state.',
-                'critical': 'Critical status flag. Indicates if the device is in a critical state.',
-                'default': 'No description available for this property.'
-            };
-
-            return descriptions[property.name] || descriptions.default;
-        }
-
-        function getPropertyDisplay(deviceId, property) {
-            // Special handling for sensor placement
-            if (property.name === 'sensorplacement') {
-                return getSensorPlacementSelector(deviceId, property);
-            }
-
-            // For all other properties
-            return `
-                <div class="flex flex-col space-y-2">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1">
-                            <input
-                                type="${getPropertyInputType(property)}"
-                                value="${formatPropertyValue(property)}"
-                                step="${getPropertyStep(property)}"
-                                class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                onkeydown="handlePropertyInputKeydown(event)"
-                                data-device-id="${deviceId}"
-                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                ${property.type === 'BOOL' ? (property.last_value ? 'checked' : '') : ''}
-                                ${property.permission === 'READ' ? 'disabled' : ''}
-                            />
-                        </div>
-                        ${property.permission !== 'READ' ? `
-                            <button 
-                                onclick="handlePropertyInputChange(event)"
-                                class="ml-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
-                                Update
-                            </button>
-                        ` : ''}
-                    </div>
-                    <p class="text-xs text-gray-600">
-                        ${getPropertyDescription(property)}
-                        ${property.permission === 'READ' ? '<br><span class="text-blue-600">(Read-only property)</span>' : ''}
-                    </p>
-                </div>
-            `;
-        }
     </script>
 </body>
 </html> 
