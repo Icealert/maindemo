@@ -1480,7 +1480,10 @@
                                             ` : `
                                                 <p class="mt-2 text-lg font-medium ${getPropertyTextColor(property.name)}">${formatPropertyValue(property)}</p>
                                             `}
-                                            <p class="text-xs text-gray-500 mt-2">Last Updated: ${new Date(property.value_updated_at || property.updated_at).toLocaleString()}</p>
+                                            <p class="text-xs text-gray-500 mt-2">Last Updated: ${new Date(device.last_activity_at).toLocaleString('en-US', {
+                                                dateStyle: 'short',
+                                                timeStyle: 'short'
+                                            })}</p>
                                         </div>
                                     `).join('') 
                                     : '<p class="text-gray-500">No properties available</p>'
