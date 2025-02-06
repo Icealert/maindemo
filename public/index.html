@@ -2871,6 +2871,88 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
+
+        function getLocationInput(deviceId, property) {
+            const currentValue = property.last_value || '';
+            return `
+                <div class="flex flex-col space-y-2">
+                    <div class="flex space-x-2">
+                        <input 
+                            type="text"
+                            class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            data-device-id="${deviceId}"
+                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                            id="location_${deviceId}"
+                            value="${currentValue}"
+                            placeholder="Enter location"
+                        />
+                        <button 
+                            onclick="handleLocationUpdate(document.getElementById('location_${deviceId}'))"
+                            class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                            Update
+                        </button>
+                    </div>
+                    <p class="text-xs text-gray-600">
+                        Enter the physical location of this ice machine (e.g., "Kitchen 1", "Bar Area", "Back Storage").
+                        This helps identify where each machine is located in your facility.
+                    </p>
+                </div>
+            `;
+        }
+
+        function handleLocationUpdate(input) {
+            const deviceId = input.dataset.deviceId;
+            const newLocation = input.value.trim();
+            
+            try {
+                const property = JSON.parse(input.dataset.property);
+                
+                if (!deviceId) {
+                    throw new Error('Device ID is missing');
+                }
+
+                if (!newLocation) {
+                    throw new Error('Location cannot be empty');
+                }
+
+                logToConsole(`Updating location for device ${deviceId} to "${newLocation}"`);
+
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
+                
+                fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        propertiesValues: {
+                            input: true,
+                            properties: [{
+                                name: 'location',
+                                type: 'STRING',
+                                value: newLocation
+                            }]
+                        }
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    logToConsole(`Successfully updated location to "${newLocation}"`);
+                    fetchDevices();
+                })
+                .catch(error => {
+                    logToConsole(`Error updating location: ${error.message}`, 'error');
+                    showError(`Failed to update location: ${error.message}`);
+                });
+            } catch (error) {
+                logToConsole(`Error handling location update: ${error.message}`, 'error');
+                showError(`Failed to handle location update: ${error.message}`);
+            }
+        }
     </script>
 </body>
 </html> 
