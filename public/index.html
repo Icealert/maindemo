@@ -1333,10 +1333,14 @@
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">Last Connected</p>
-                                <p class="font-medium">${new Date(device.last_activity_at).toLocaleString('en-US', {
-                                    dateStyle: 'short',
-                                    timeStyle: 'short'
-                                })}</p>
+                                ${!status.isConnected && status.lastConnectedTime ? `
+                                    <p class="font-medium text-red-600">${new Date(status.lastConnectedTime).toLocaleString('en-US', {
+                                        dateStyle: 'short',
+                                        timeStyle: 'short'
+                                    })}</p>
+                                ` : `
+                                    <p class="font-medium text-green-600">Currently Connected</p>
+                                `}
                             </div>
                             <div>
                                 <p class="text-sm text-gray-500">Device ID</p>
