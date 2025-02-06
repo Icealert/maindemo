@@ -1083,6 +1083,20 @@
                                     'Not Available'
                                 }
                             </p>
+                            <div class="text-xs mt-1">
+                                ${(() => {
+                                    const issues = [];
+                                    if (status.cloudTemp > status.tempThresholdMax) {
+                                        issues.push('Temperature High');
+                                    }
+                                    if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
+                                        issues.push('No Flow');
+                                    }
+                                    return issues.length > 0 ? 
+                                        `<p class="text-red-600">${issues.join(', ')}</p>` : 
+                                        status.isGreat ? '<p class="text-emerald-600">All Systems Normal</p>' : '';
+                                })()}
+                            </div>
                         </div>
                     </div>
 
