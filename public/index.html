@@ -1357,6 +1357,18 @@
                                 <p class="text-sm font-medium text-gray-500 mb-1">Device ID</p>
                                 <p class="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded select-all">${device.id}</p>
                             </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Last Maintenance</p>
+                                <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value || 'Not recorded'}</p>
+                                <p class="text-xs text-gray-500">
+                                    ${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.value_updated_at ? 
+                                        `Updated: ${new Date(device.thing.properties.find(p => p.name === 'Last_Maintenance').value_updated_at).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'short',
+                                            day: 'numeric'
+                                        })}` : ''}
+                                </p>
+                            </div>
                             <div class="col-span-2 mt-2 pt-4 border-t border-gray-100">
                                 <p class="text-xs text-gray-500">This device is monitored and managed by IceAlert's cloud-based system.</p>
                             </div>
