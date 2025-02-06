@@ -1302,23 +1302,30 @@
             modalContent.innerHTML = `
                 <div class="space-y-6">
                     <!-- Device Info -->
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-4">
-                        <h3 class="text-lg font-medium text-gray-900 mb-4">Device Information</h3>
-                        <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-6 mb-6">
+                        <div class="flex items-center space-x-2 mb-6">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-gray-900">Device Information</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
                             <div>
-                                <p class="text-sm text-gray-500">Device Name</p>
-                                <p class="font-medium">Device ${device.name.replace(/[^0-9]/g, '')}</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Device Name</p>
+                                <p class="text-base font-semibold text-gray-900">Device ${device.name.replace(/[^0-9]/g, '')}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Location</p>
-                                <p class="font-medium">${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Location</p>
+                                <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}</p>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Ice Machine PN/SN</p>
-                                <p class="font-medium">${device.thing?.properties?.find(p => p.name === 'Icemachine_PN_SN')?.last_value || 'N/A'}</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Ice Machine PN/SN</p>
+                                <div class="flex items-center">
+                                    <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Icemachine_PN_SN')?.last_value || 'N/A'}</p>
+                                </div>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Status</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Status</p>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                     status.isGreat ? 'bg-emerald-100 text-emerald-800' :
                                     status.isWarning ? 'bg-yellow-100 text-yellow-800' :
@@ -1328,7 +1335,7 @@
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Connection</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Connection</p>
                                 <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                                     status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                                 }">
@@ -1336,19 +1343,22 @@
                                 </span>
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Last Connected</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Last Connected</p>
                                 ${!status.isConnected && status.lastConnectedTime ? `
-                                    <p class="font-medium text-red-600">${new Date(status.lastConnectedTime).toLocaleString('en-US', {
+                                    <p class="text-base font-semibold text-red-600">${new Date(status.lastConnectedTime).toLocaleString('en-US', {
                                         dateStyle: 'short',
                                         timeStyle: 'short'
                                     })}</p>
                                 ` : `
-                                    <p class="font-medium text-green-600">Currently Connected</p>
+                                    <p class="text-base font-semibold text-green-600">Currently Connected</p>
                                 `}
                             </div>
                             <div>
-                                <p class="text-sm text-gray-500">Device ID</p>
-                                <p class="font-medium text-xs">${device.id}</p>
+                                <p class="text-sm font-medium text-gray-500 mb-1">Device ID</p>
+                                <p class="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded select-all">${device.id}</p>
+                            </div>
+                            <div class="col-span-2 mt-2 pt-4 border-t border-gray-100">
+                                <p class="text-xs text-gray-500">This device is monitored and managed by IceAlert's cloud-based system.</p>
                             </div>
                         </div>
                     </div>
