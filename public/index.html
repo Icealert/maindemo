@@ -1056,7 +1056,14 @@
                             </p>
                             <p class="text-xs text-green-600">
                                 Critical: ${status.noFlowCriticalTime !== undefined ? status.noFlowCriticalTime + 'h' : 'N/A'}<br>
-                                Last: ${status.flowLastUpdate ? new Date(status.flowLastUpdate).toLocaleTimeString() : 'N/A'}
+                                Last: ${status.flowLastUpdate ? new Date(status.flowLastUpdate).toLocaleString('en-US', {
+                                    year: 'numeric',
+                                    month: 'numeric',
+                                    day: 'numeric',
+                                    hour: 'numeric',
+                                    minute: 'numeric',
+                                    hour12: true
+                                }) : 'N/A'}
                             </p>
                         </div>
                         
