@@ -2897,6 +2897,16 @@
                 return getSensorPlacementSelector(deviceId, property);
             }
 
+            const descriptions = {
+                'cloudtemp': 'Current temperature reading from the sensor. Used to monitor ice machine temperature and determine ice levels.',
+                'cloudflowrate': 'Measures water flow rate through the system. Used to detect potential flow issues or blockages.',
+                'tempThresholdMax': 'Maximum allowed temperature threshold. Alerts will be triggered if temperature exceeds this value.',
+                'noFlowCriticalTime': 'Maximum allowed time (in hours) without water flow before triggering a critical alert.',
+                'warning': 'Warning status indicator. Shows if the device is in a warning state due to temperature or flow issues.',
+                'critical': 'Critical status indicator. Shows if the device requires immediate attention.',
+                'default': 'System parameter used for ice machine monitoring.'
+            };
+
             return `
                 <div class="flex flex-col space-y-2">
                     <div class="flex items-center space-x-2">
@@ -2927,9 +2937,9 @@
                             </button>
                         `}
                     </div>
-                    <p class="text-xs text-gray-600">
-                        ${getPropertyDescription(property)}
-                    </p>
+                    <div class="text-xs text-gray-600">
+                        ${descriptions[property.name.toLowerCase()] || descriptions.default}
+                    </div>
                     ${property.last_value !== undefined && property.last_value !== null ? `
                         <p class="text-xs text-gray-500">
                             Current value: ${currentValue}
