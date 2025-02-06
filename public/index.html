@@ -2874,77 +2874,55 @@
 
         function getPropertyDescription(property) {
             const descriptions = {
-                'cloudtemp': 'Current temperature reading from the sensor. Used to monitor ice machine temperature and determine ice levels.',
-                'cloudflowrate': 'Measures water flow rate through the system. Used to detect potential flow issues or blockages.',
-                'sensorplacement': 'Position of the temperature sensor in the ice machine (percentage from bottom). Used to determine ice level based on temperature readings.',
-                'tempThresholdMax': 'Maximum allowed temperature threshold. Alerts will be triggered if temperature exceeds this value.',
-                'noFlowCriticalTime': 'Maximum allowed time (in hours) without water flow before triggering a critical alert.',
-                'warning': 'Warning status indicator. Shows if the device is in a warning state due to temperature or flow issues.',
-                'critical': 'Critical status indicator. Shows if the device requires immediate attention.',
-                'default': 'System parameter used for ice machine monitoring.'
+                'cloudtemp': 'Current temperature reading from the sensor in Fahrenheit. Used to monitor ice machine temperature.',
+                'cloudflowrate': 'Rate of water flow through the system. Used to detect water flow activity.',
+                'sensorplacement': 'Position of the temperature sensor in the ice machine (percentage from bottom). Used to determine ice level.',
+                'tempThresholdMax': 'Maximum allowed temperature in Fahrenheit. Alerts are triggered if temperature exceeds this value.',
+                'noFlowCriticalTime': 'Maximum allowed time (in hours) without water flow before triggering an alert.',
+                'warning': 'Warning status flag. Indicates if the device is in a warning state.',
+                'critical': 'Critical status flag. Indicates if the device is in a critical state.',
+                'default': 'No description available for this property.'
             };
 
-            return descriptions[property.name.toLowerCase()] || descriptions.default;
+            return descriptions[property.name] || descriptions.default;
         }
 
         function getPropertyDisplay(deviceId, property) {
-            const inputType = getPropertyInputType(property);
-            const step = getPropertyStep(property);
-            const currentValue = formatPropertyValue(property);
-
-            // Special case for sensor placement
+            // Special handling for sensor placement
             if (property.name === 'sensorplacement') {
                 return getSensorPlacementSelector(deviceId, property);
             }
 
-            const descriptions = {
-                'cloudtemp': 'Current temperature reading from the sensor. Used to monitor ice machine temperature and determine ice levels.',
-                'cloudflowrate': 'Measures water flow rate through the system. Used to detect potential flow issues or blockages.',
-                'tempThresholdMax': 'Maximum allowed temperature threshold. Alerts will be triggered if temperature exceeds this value.',
-                'noFlowCriticalTime': 'Maximum allowed time (in hours) without water flow before triggering a critical alert.',
-                'warning': 'Warning status indicator. Shows if the device is in a warning state due to temperature or flow issues.',
-                'critical': 'Critical status indicator. Shows if the device requires immediate attention.',
-                'default': 'System parameter used for ice machine monitoring.'
-            };
-
+            // For all other properties
             return `
                 <div class="flex flex-col space-y-2">
-                    <div class="flex items-center space-x-2">
-                        ${inputType === 'checkbox' ? `
-                            <input 
-                                type="checkbox" 
-                                ${property.last_value ? 'checked' : ''} 
-                                onchange="handlePropertyInputChange(event)" 
-                                data-device-id="${deviceId}"
-                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}' 
-                                class="form-checkbox h-4 w-4 text-blue-600 rounded focus:ring-blue-500"
-                            >
-                        ` : `
-                            <input 
-                                type="${inputType}" 
-                                value="${currentValue}" 
-                                step="${step}"
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <input
+                                type="${getPropertyInputType(property)}"
+                                value="${formatPropertyValue(property)}"
+                                step="${getPropertyStep(property)}"
+                                class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 onkeydown="handlePropertyInputKeydown(event)"
                                 data-device-id="${deviceId}"
-                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}' 
-                                class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            >
+                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                ${property.type === 'BOOL' ? (property.last_value ? 'checked' : '') : ''}
+                                ${property.permission === 'READ' ? 'disabled' : ''}
+                            />
+                        </div>
+                        ${property.permission !== 'READ' ? `
                             <button 
-                                onclick="handlePropertyInputChange(event.target.previousElementSibling)" 
-                                class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onclick="handlePropertyInputChange(event)"
+                                class="ml-2 px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 Update
                             </button>
-                        `}
+                        ` : ''}
                     </div>
-                    <div class="text-xs text-gray-600">
-                        ${descriptions[property.name.toLowerCase()] || descriptions.default}
-                    </div>
-                    ${property.last_value !== undefined && property.last_value !== null ? `
-                        <p class="text-xs text-gray-500">
-                            Current value: ${currentValue}
-                        </p>
-                    ` : ''}
+                    <p class="text-xs text-gray-600">
+                        ${getPropertyDescription(property)}
+                        ${property.permission === 'READ' ? '<br><span class="text-blue-600">(Read-only property)</span>' : ''}
+                    </p>
                 </div>
             `;
         }
