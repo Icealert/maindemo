@@ -2953,6 +2953,16 @@
                 showError(`Failed to handle location update: ${error.message}`);
             }
         }
+
+        function getPropertyInput(deviceId, property) {
+            if (property.name === 'sensorplacement') {
+                return getSensorPlacementSelector(deviceId, property);
+            } else if (property.name === 'location') {
+                return getLocationInput(deviceId, property);
+            } else {
+                // ... existing property input logic ...
+            }
+        }
     </script>
 </body>
 </html> 
