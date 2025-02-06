@@ -1360,6 +1360,27 @@
                             <div>
                                 <p class="text-sm font-medium text-gray-500 mb-1">Last Maintenance</p>
                                 <p class="text-base font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value || 'Not recorded'}</p>
+                                ${(() => {
+                                    const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
+                                    if (lastMaintenance) {
+                                        const maintenanceDate = new Date(lastMaintenance);
+                                        const now = new Date();
+                                        const diffTime = Math.abs(now - maintenanceDate);
+                                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                                        const diffMonths = Math.floor(diffDays / 30);
+                                        const remainingDays = diffDays % 30;
+                                        
+                                        return `
+                                            <p class="text-sm ${diffDays > 180 ? 'text-red-600 font-medium' : 'text-gray-600'}">
+                                                ${diffMonths > 0 ? `${diffMonths} month${diffMonths > 1 ? 's' : ''}` : ''}
+                                                ${remainingDays > 0 ? `${diffMonths > 0 ? ' and ' : ''}${remainingDays} day${remainingDays > 1 ? 's' : ''}` : ''}
+                                                since last maintenance
+                                                ${diffDays > 180 ? ' (Maintenance Due)' : ''}
+                                            </p>
+                                        `;
+                                    }
+                                    return '';
+                                })()}
                                 <p class="text-xs text-gray-500">
                                     ${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.value_updated_at ? 
                                         `Updated: ${new Date(device.thing.properties.find(p => p.name === 'Last_Maintenance').value_updated_at).toLocaleDateString('en-US', {
