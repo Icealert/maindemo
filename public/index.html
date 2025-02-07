@@ -2630,7 +2630,11 @@
                                         if (value === null) return `${context.dataset.label}: No data`;
                                         
                                         if (context.dataset.yAxisID === 'y-ice') {
-                                            return `Ice Level: ${value === 1 ? 'Above' : 'Below'} Sensor`;
+                                            // Only show ice level if there's data
+                                            if (value === 1 || value === 0) {
+                                                return `Ice Level: ${value === 1 ? 'Above' : 'Below'} Sensor`;
+                                            }
+                                            return null; // Don't show anything if no data
                                         }
                                         
                                         const temp = value.toFixed(1);
