@@ -2629,13 +2629,17 @@
                                         const value = context.raw;
                                         if (value === null) return `${context.dataset.label}: No data`;
                                         
+                                        if (context.dataset.yAxisID === 'y-ice') {
+                                            return `Ice Level: ${value.toFixed(0)}%`;
+                                        }
+                                        
                                         const temp = value.toFixed(1);
                                         let text = `Temperature: ${temp}°F`;
                                         
                                         if (value > deviceThreshold) {
-                                            text += ' 🔴 Above threshold!';
+                                            text += ' 🔴 Ice below sensor';
                                         } else {
-                                            text += ' ✅ Below threshold';
+                                            text += ' ✅ Ice above sensor';
                                         }
                                         
                                         return text;
@@ -2667,9 +2671,10 @@
                                     drawOnChartArea: true
                                 }
                             },
-                            y: {
+                            'y-temp': {
                                 type: 'linear',
                                 display: true,
+                                position: 'left',
                                 title: {
                                     display: true,
                                     text: 'Temperature (°F)'
@@ -2680,6 +2685,23 @@
                                 },
                                 ticks: {
                                     callback: value => `${value}°F`
+                                }
+                            },
+                            'y-ice': {
+                                type: 'linear',
+                                display: true,
+                                position: 'right',
+                                title: {
+                                    display: true,
+                                    text: 'Ice Level (%)'
+                                },
+                                min: 0,
+                                max: 100,
+                                grid: {
+                                    display: false
+                                },
+                                ticks: {
+                                    callback: value => `${value}%`
                                 }
                             }
                         }
@@ -3237,6 +3259,12 @@
             const dayEnd = new Date(dayStart);
             dayEnd.setHours(23, 59, 59, 999);
 
+            // Get the device's temperature threshold and sensor placement
+            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
+            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+            const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
+            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
+
             // Process each temperature reading
             for (let i = 0; i < timestamps.length; i++) {
                 const timestamp = new Date(timestamps[i]);
@@ -3252,6 +3280,7 @@
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = {
                         temps: [],
+                        iceLevels: [],
                         hour,
                         date: new Date(timestamp)
                     };
@@ -3259,13 +3288,12 @@
                 
                 // Convert Celsius to Fahrenheit
                 const tempF = (temp * 9/5) + 32;
+                // If temperature is below threshold, ice level is above sensor placement
+                const iceLevel = tempF <= thresholdF ? 100 : (sensorPlacement * 100);
+                
                 hourlyData[hour].temps.push(tempF);
+                hourlyData[hour].iceLevels.push(iceLevel);
             }
-
-            // Get the device's temperature threshold
-            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
-            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
 
             // Helper function to calculate statistics
             function calculateStats(values) {
@@ -3302,6 +3330,7 @@
             const tempData = {
                 label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Temperature)`,
                 data: Array(24).fill(null),
+                yAxisID: 'y-temp',
                 borderColor: function(context) {
                     const value = context.raw;
                     return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
@@ -3321,9 +3350,22 @@
                 order: 1
             };
 
+            // Create dataset for ice level
+            const iceLevelData = {
+                label: 'Ice Level',
+                data: Array(24).fill(null),
+                yAxisID: 'y-ice',
+                borderColor: 'rgba(147, 197, 253, 0.8)',
+                backgroundColor: 'rgba(147, 197, 253, 0.2)',
+                tension: 0.1,
+                fill: true,
+                order: 2
+            };
+
             const thresholdData = {
                 label: 'Temperature Threshold',
                 data: Array(24).fill(thresholdF),
+                yAxisID: 'y-temp',
                 borderColor: 'rgba(0, 0, 0, 0.5)',
                 borderDash: [5, 5],
                 tension: 0,
@@ -3333,6 +3375,7 @@
 
             // Fill in the data for each hour
             let allTemps = [];
+            let allIceLevels = [];
 
             for (let hour = 0; hour < 24; hour++) {
                 if (selectedDay === 0 && hour > currentHour) continue;
@@ -3341,10 +3384,16 @@
                 
                 if (hourData && hourData.temps.length > 0) {
                     const tempStats = calculateStats(hourData.temps);
+                    const iceLevelStats = calculateStats(hourData.iceLevels);
                     
                     if (tempStats) {
                         tempData.data[hour] = tempStats.avg;
                         allTemps = allTemps.concat(hourData.temps);
+                    }
+                    
+                    if (iceLevelStats) {
+                        iceLevelData.data[hour] = iceLevelStats.avg;
+                        allIceLevels = allIceLevels.concat(hourData.iceLevels);
                     }
                 }
             }
@@ -3359,7 +3408,7 @@
             }
 
             return {
-                datasets: [thresholdData, tempData],
+                datasets: [thresholdData, tempData, iceLevelData],
                 thresholdF
             };
         }
