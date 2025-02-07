@@ -2637,6 +2637,11 @@
                                             return null; // Don't show anything if no data
                                         }
                                         
+                                        // Check if this is the threshold line
+                                        if (context.dataset.label === 'Temperature Threshold') {
+                                            return `Temperature Threshold: ${value.toFixed(1)}°F`;
+                                        }
+                                        
                                         const temp = value.toFixed(1);
                                         return `Temperature: ${temp}°F`;
                                     }
