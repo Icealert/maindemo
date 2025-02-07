@@ -3386,12 +3386,24 @@
                 label: 'Ice Level',
                 data: Array(24).fill(null),
                 yAxisID: 'y-ice',
-                borderColor: 'rgba(147, 197, 253, 0.8)',
-                backgroundColor: 'rgba(147, 197, 253, 0.2)',
+                borderColor: function(context) {
+                    const value = context.raw;
+                    return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
+                },
+                backgroundColor: function(context) {
+                    const value = context.raw;
+                    return value === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(147, 197, 253, 0.2)';
+                },
                 tension: 0.1,
                 fill: true,
                 order: 2,
-                stepped: true
+                stepped: true,
+                segment: {
+                    borderColor: ctx => {
+                        const value = ctx.p1.parsed.y;
+                        return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
+                    }
+                }
             };
 
             const thresholdData = {
