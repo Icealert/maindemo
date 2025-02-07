@@ -2760,7 +2760,17 @@
     const thingId = device.thing.id;
     const properties = device.thing.properties || [];
 
-    // Find relevant properties
+    // Helper function to check if a property is numeric
+    function isNumericProperty(prop) {
+      const numericTypes = [
+        'FLOAT', 'INT', 'NUMBER', 'DOUBLE', 'LONG',
+        'TEMPERATURE', // Add custom numeric types
+        'FLOW_RATE'
+      ];
+      return numericTypes.includes(prop.type?.toUpperCase());
+    }
+
+    // Find relevant properties, ensuring they are numeric
     const tempProperty = properties.find(p => p.name === 'cloudtemp');
     const flowProperty = properties.find(p => p.name === 'cloudflowrate');
     const warningProperty = properties.find(p => p.name === 'warning');
@@ -2772,11 +2782,11 @@
       logToConsole(`${p.name}: ${p.type}`, 'info');
     });
 
-    // Log property IDs
-    if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
-    if (flowProperty) logToConsole(`Flow property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
-    if (warningProperty) logToConsole(`Warning property ID: ${warningProperty.id} (${warningProperty.type})`, 'info');
-    if (criticalProperty) logToConsole(`Critical property ID: ${criticalProperty.id} (${criticalProperty.type})`, 'info');
+    if (!tempProperty) {
+      logToConsole('Temperature property not found', 'warning');
+    } else if (!isNumericProperty(tempProperty)) {
+      logToConsole(`Temperature property type ${tempProperty.type} is not numeric`, 'warning');
+    }
 
     // 2) Compute interval to stay under 1000 points
     const timeRangeSeconds = hours * 3600;
@@ -2801,6 +2811,13 @@
         desc: 'false'
       }).toString();
     }
+
+    // Log the request details for debugging
+    logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
+    if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+    if (flowProperty) logToConsole(`Flow property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+    if (warningProperty) logToConsole(`Warning property ID: ${warningProperty.id} (${warningProperty.type})`, 'info');
+    if (criticalProperty) logToConsole(`Critical property ID: ${criticalProperty.id} (${criticalProperty.type})`, 'info');
 
     // 4) Make parallel fetch calls for each property
     const [tempData, flowData, warningData, criticalData] = await Promise.all([
@@ -2875,13 +2892,6 @@
     const warningResult = parseTsArray(warningData.data || []);
     const criticalResult = parseTsArray(criticalData.data || []);
 
-    // 6) Use the first available time series for timestamps
-    const primaryTimes = tempResult.times.length ? tempResult.times :
-                        flowResult.times.length ? flowResult.times : 
-                        warningResult.times.length ? warningResult.times :
-                        criticalResult.times.length ? criticalResult.times :
-                        [new Date().toISOString()];
-
     // Helper function to normalize boolean values
     const normalizeBoolean = (value) => {
         if (value === 'true' || value === true || value === 1 || value === '1') return 1;
@@ -2892,6 +2902,13 @@
     // Process warning and critical values
     const warningValues = warningResult.values.map(v => normalizeBoolean(v));
     const criticalValues = criticalResult.values.map(v => normalizeBoolean(v));
+
+    // 6) Use the first available time series for timestamps
+    const primaryTimes = tempResult.times.length ? tempResult.times :
+                        flowResult.times.length ? flowResult.times : 
+                        warningResult.times.length ? warningResult.times :
+                        criticalResult.times.length ? criticalResult.times :
+                        [new Date().toISOString()];
 
     // Log processed data
     logToConsole('Processed data:', 'info');
