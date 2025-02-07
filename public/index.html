@@ -1743,6 +1743,147 @@
                                     });
                                 }
 
+                                // No Flow Recommendations
+                                if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
+                                    recommendations.push({
+                                        type: 'warning',
+                                        title: 'No Flow Detected',
+                                        message: 'No water flow has been detected for an extended period. Follow these steps to troubleshoot:',
+                                        action: `<div class="space-y-3 mt-2">
+                                            <details class="group bg-yellow-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
+                                                        <span>Check Water Supply</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-yellow-700">
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Verify Water Source:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Check if the main water supply valve is open</li>
+                                                                <li>Verify water pressure is adequate</li>
+                                                                <li>Look for any visible leaks in supply lines</li>
+                                                                <li>Ensure no maintenance work is affecting water supply</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-yellow-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
+                                                        <span>Inspect for Blockages</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-yellow-700">
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Check Common Blockage Points:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Inspect and clean the water filter if necessary</li>
+                                                                <li>Check for kinked or bent water lines</li>
+                                                                <li>Look for mineral buildup in water lines</li>
+                                                                <li>Verify the water inlet valve is functioning</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-yellow-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
+                                                        <span>Test Water Flow</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-yellow-700">
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Flow Testing Steps:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Initiate a manual water fill cycle if possible</li>
+                                                                <li>Listen for water flow sounds</li>
+                                                                <li>Check if water is reaching the ice making unit</li>
+                                                                <li>Measure water pressure if a gauge is available</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-yellow-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
+                                                        <span>Reset and Monitor</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-yellow-700">
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Reset Procedure:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Power cycle the ice machine:</li>
+                                                                <ul class="ml-4 list-circle">
+                                                                    <li>Turn off the machine</li>
+                                                                    <li>Wait for 5 minutes</li>
+                                                                    <li>Turn the machine back on</li>
+                                                                </ul>
+                                                                <li>Monitor for normal operation</li>
+                                                                <li>Check if water flow resumes</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-yellow-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
+                                                        <span>If Issue Persists</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-yellow-700">
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Next Steps:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>If all troubleshooting steps fail:</li>
+                                                                <ul class="ml-4 list-circle">
+                                                                    <li>Contact your maintenance team</li>
+                                                                    <li>Schedule a professional inspection</li>
+                                                                    <li>Document all steps taken for maintenance reference</li>
+                                                                </ul>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </details>
+                                        </div>`
+                                    });
+                                }
+
                                 return recommendations.length > 0 ? recommendations.map(rec => `
                                     <div class="flex items-start p-3 rounded-lg ${
                                         rec.type === 'error' ? 'bg-red-50 border border-red-200' :
