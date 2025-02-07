@@ -2895,11 +2895,29 @@
             const device = window.lastDevicesData[deviceIndex];
             updateTimeRangeButtons('status-time-range', selectedDay);
             
+            logToConsole('Starting updateStatusGraph:', {
+                deviceIndex,
+                selectedDay,
+                deviceId: device.id
+            });
+            
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
                     logToConsole('No data returned from fetchTimeSeriesData', 'error');
                     return;
                 }
+
+                // Log raw data received
+                logToConsole('Raw data received:', {
+                    timestamps: data.timestamps?.length || 0,
+                    warningStatus: data.warningStatus?.length || 0,
+                    criticalStatus: data.criticalStatus?.length || 0,
+                    sampleData: {
+                        timestamps: data.timestamps?.slice(0, 3),
+                        warningStatus: data.warningStatus?.slice(0, 3),
+                        criticalStatus: data.criticalStatus?.slice(0, 3)
+                    }
+                });
 
                 // Get the start and end of the selected day
                 const now = new Date();
@@ -2910,11 +2928,14 @@
                 const dayEnd = new Date(dayStart);
                 dayEnd.setHours(23, 59, 59, 999);
 
-                // Log the date ranges for debugging
-                logToConsole('Date range for filtering:', {
-                    selectedDay,
+                // For today, only show data up to current time
+                const currentTime = selectedDay === 0 ? now : dayEnd;
+
+                // Log time ranges
+                logToConsole('Time ranges:', {
                     dayStart: dayStart.toISOString(),
-                    dayEnd: dayEnd.toISOString()
+                    dayEnd: dayEnd.toISOString(),
+                    currentTime: currentTime.toISOString()
                 });
 
                 // Process the data
@@ -2922,9 +2943,6 @@
                 const timestamps = data.timestamps || [];
                 const warningStatus = data.warningStatus || [];
                 const criticalStatus = data.criticalStatus || [];
-
-                // For today, only show data up to current time
-                const currentTime = selectedDay === 0 ? now : dayEnd;
 
                 timestamps.forEach((timestamp, index) => {
                     const date = new Date(timestamp);
@@ -2936,17 +2954,22 @@
                             timestamp: date,
                             warning: warning ? 1 : 0,
                             critical: critical ? 1 : 0,
-                            // Device is in great state if neither warning nor critical is true
                             great: (!warning && !critical) ? 1 : 0
                         });
                     }
                 });
 
+                // Log processed data
+                logToConsole('Processed data:', {
+                    totalPoints: processedData.length,
+                    samplePoints: processedData.slice(0, 3),
+                    warningCount: processedData.filter(d => d.warning === 1).length,
+                    criticalCount: processedData.filter(d => d.critical === 1).length,
+                    greatCount: processedData.filter(d => d.great === 1).length
+                });
+
                 // Sort data by timestamp
                 processedData.sort((a, b) => a.timestamp - b.timestamp);
-
-                // Log processed data for debugging
-                logToConsole(`Processed ${processedData.length} data points for day ${selectedDay}`);
 
                 // Create datasets with improved styling
                 const datasets = [
@@ -2996,6 +3019,13 @@
                         order: 1
                     }
                 ];
+
+                // Log dataset information
+                logToConsole('Dataset info:', datasets.map(d => ({
+                    label: d.label,
+                    dataPoints: d.data.filter(v => v !== null).length,
+                    sampleData: d.data.slice(0, 3)
+                })));
 
                 // Format timestamps for display
                 const labels = processedData.map(d => {
