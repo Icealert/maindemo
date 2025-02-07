@@ -2632,7 +2632,10 @@
                                         if (context.dataset.yAxisID === 'y-ice') {
                                             // Only show ice level if there's data
                                             if (value === 1 || value === 0) {
-                                                return `Ice Level: ${value === 1 ? 'Above' : 'Below'} Sensor`;
+                                                const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
+                                                const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
+                                                const placement = (sensorPlacement * 100).toFixed(0);
+                                                return `Ice Level: ${value === 1 ? `More than ${placement}%` : `Less than ${placement}%`} full`;
                                             }
                                             return null; // Don't show anything if no data
                                         }
