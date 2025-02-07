@@ -1422,85 +1422,131 @@
                                     recommendations.push({
                                         type: 'error',
                                         title: 'Connection Lost',
-                                        message: 'Device is currently offline. Please follow these troubleshooting steps in order:',
-                                        action: `<div class="space-y-2 mt-2">
-                                            <div class="flex items-start space-x-2">
-                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">1</span>
-                                                <div class="text-red-700">
-                                                    <p class="font-medium">Verify Ice Machine Operation</p>
-                                                    <ul class="mt-1 ml-4 list-disc text-sm">
-                                                        <li>Check if the ice machine is powered on and running</li>
-                                                        <li>If the machine is off, turn it on and wait for it to start</li>
-                                                    </ul>
+                                        message: 'Device is currently offline.',
+                                        action: `
+                                        <div class="mt-2">
+                                            <button 
+                                                onclick="toggleRecommendations(this)" 
+                                                class="w-full flex items-center justify-between px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors duration-200"
+                                                aria-expanded="false"
+                                            >
+                                                <span class="font-medium text-red-800">View Troubleshooting Steps</span>
+                                                <svg class="w-5 h-5 text-red-800 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                                                </svg>
+                                            </button>
+                                            
+                                            <div class="hidden mt-3 recommendations-content rounded-lg border border-red-200 bg-red-50">
+                                                <div class="p-4 space-y-4">
+                                                    <p class="text-red-800 font-medium mb-2">Please follow these troubleshooting steps in order:</p>
+                                                    <div class="space-y-4">
+                                                        <div class="flex items-start space-x-3">
+                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">1</span>
+                                                            <div class="flex-grow">
+                                                                <p class="font-medium text-red-800">Verify Ice Machine Operation</p>
+                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
+                                                                    <li>Check if the ice machine is powered on and running</li>
+                                                                    <li>If the machine is off, turn it on and wait for it to start</li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="flex items-start space-x-3">
+                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">2</span>
+                                                            <div class="flex-grow">
+                                                                <p class="font-medium text-red-800">Check the Ice-Alert Device's Power Supply</p>
+                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
+                                                                    <li>Ensure the Ice-Alert device is receiving power:
+                                                                        <ul class="ml-4 mt-1 list-circle">
+                                                                            <li>Inspect the power cable to confirm it is securely connected</li>
+                                                                            <li>Check the wall socket where the power adapter is plugged in</li>
+                                                                            <li>Look for the LED indicator on the power supply—it should be lit</li>
+                                                                            <li>Try plugging the power supply into a different socket</li>
+                                                                        </ul>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="flex items-start space-x-3">
+                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">3</span>
+                                                            <div class="flex-grow">
+                                                                <p class="font-medium text-red-800">Verify WiFi Connection</p>
+                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
+                                                                    <li>Confirm network connectivity:
+                                                                        <ul class="ml-4 mt-1 list-circle">
+                                                                            <li>Check if other devices on the same WiFi network are working</li>
+                                                                            <li>If WiFi is down, restart the router and wait for network recovery</li>
+                                                                            <li>Ensure the device is within range of the router</li>
+                                                                        </ul>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="flex items-start space-x-3">
+                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">4</span>
+                                                            <div class="flex-grow">
+                                                                <p class="font-medium text-red-800">Restart the Device</p>
+                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
+                                                                    <li>Perform a manual reboot:
+                                                                        <ul class="ml-4 mt-1 list-circle">
+                                                                            <li>Unplug the power supply from the wall socket</li>
+                                                                            <li>Wait for 10 seconds</li>
+                                                                            <li>Plug the power supply back in</li>
+                                                                            <li>Allow a few minutes for reconnection</li>
+                                                                        </ul>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div class="flex items-start space-x-3">
+                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">5</span>
+                                                            <div class="flex-grow">
+                                                                <p class="font-medium text-red-800">Contact Support</p>
+                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
+                                                                    <li>If the issue persists after trying all steps:
+                                                                        <ul class="ml-4 mt-1 list-circle">
+                                                                            <li>Support is for Ice-Alert device issues only</li>
+                                                                            <li>For ice machine issues, refer to machine's guide</li>
+                                                                        </ul>
+                                                                    </li>
+                                                                    <li class="mt-2">
+                                                                        <a href="mailto:icealertdevice@gmail.com" class="inline-flex items-center space-x-1 text-red-800 hover:text-red-900">
+                                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                                                            </svg>
+                                                                            <span class="underline">icealertdevice@gmail.com</span>
+                                                                        </a>
+                                                                    </li>
+                                                                </ul>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div class="flex items-start space-x-2">
-                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">2</span>
-                                                <div class="text-red-700">
-                                                    <p class="font-medium">Check the Ice-Alert Device's Power Supply</p>
-                                                    <ul class="mt-1 ml-4 list-disc text-sm">
-                                                        <li>Ensure the Ice-Alert device is receiving power:
-                                                            <ul class="ml-4 mt-1 list-circle">
-                                                                <li>Inspect the power cable to confirm it is securely connected to the Ice-Alert device</li>
-                                                                <li>Check the wall socket where the power adapter is plugged in</li>
-                                                                <li>Look for the LED indicator on the power supply—it should be lit to confirm power</li>
-                                                                <li>Try plugging the power supply into a different socket to rule out a faulty outlet</li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-start space-x-2">
-                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">3</span>
-                                                <div class="text-red-700">
-                                                    <p class="font-medium">Verify the Ice-Alert Device's WiFi Connection</p>
-                                                    <ul class="mt-1 ml-4 list-disc text-sm">
-                                                        <li>Confirm that the Ice-Alert device is connected to the network:
-                                                            <ul class="ml-4 mt-1 list-circle">
-                                                                <li>Check if other devices on the same WiFi network are working</li>
-                                                                <li>If WiFi is down, restart the router and reconnect the Ice-Alert device once the network is back online</li>
-                                                                <li>If the Ice-Alert device was recently moved or relocated, ensure it is within range of the router</li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-start space-x-2">
-                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">4</span>
-                                                <div class="text-red-700">
-                                                    <p class="font-medium">Restart the Ice-Alert Device</p>
-                                                    <ul class="mt-1 ml-4 list-disc text-sm">
-                                                        <li>Perform a manual reboot to reset the connection:
-                                                            <ul class="ml-4 mt-1 list-circle">
-                                                                <li>Unplug the power supply from the wall socket</li>
-                                                                <li>Wait for 10 seconds</li>
-                                                                <li>Plug the power supply back in and allow the device to restart</li>
-                                                                <li>Monitor the system to see if it reconnects</li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                            <div class="flex items-start space-x-2">
-                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">5</span>
-                                                <div class="text-red-700">
-                                                    <p class="font-medium">Contact Technical Support (For Ice-Alert Device Only)</p>
-                                                    <ul class="mt-1 ml-4 list-disc text-sm">
-                                                        <li>If all the above steps are completed and the Ice-Alert device is still offline:
-                                                            <ul class="ml-4 mt-1 list-circle">
-                                                                <li>Support is strictly for troubleshooting the Ice-Alert device, not the ice machine itself</li>
-                                                                <li>If the ice machine is experiencing issues, please follow the appropriate troubleshooting guide for that problem</li>
-                                                            </ul>
-                                                        </li>
-                                                        <li class="mt-2">Contact Ice-Alert Technical Support:
-                                                            <ul class="ml-4 mt-1 list-circle">
-                                                                <li>Email: <a href="mailto:icealertdevice@gmail.com" class="underline font-medium">icealertdevice@gmail.com</a></li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </div>
-                                        </div>`
+                                        </div>
+                                        <script>
+                                            function toggleRecommendations(button) {
+                                                const content = button.nextElementSibling;
+                                                const arrow = button.querySelector('svg');
+                                                const isExpanded = button.getAttribute('aria-expanded') === 'true';
+                                                
+                                                // Toggle visibility
+                                                content.classList.toggle('hidden');
+                                                
+                                                // Update aria-expanded
+                                                button.setAttribute('aria-expanded', !isExpanded);
+                                                
+                                                // Rotate arrow
+                                                if (isExpanded) {
+                                                    arrow.style.transform = '';
+                                                } else {
+                                                    arrow.style.transform = 'rotate(180deg)';
+                                                }
+                                            }
+                                        </script>`
                                     });
                                 }
 
