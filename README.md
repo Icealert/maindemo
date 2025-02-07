@@ -16,7 +16,14 @@ A real-time web dashboard for monitoring and controlling Arduino IoT devices, sp
 
 ## Contact & Support
 
-For questions, support, or feedback please contact:
+### Business & Sales Inquiries
+For information about purchasing IceAlert units or exploring customized monitoring solutions for your business, please contact:
+
+**Aarya Shah**  
+Email: icealertdevice@gmail.com
+
+### Technical Support & Development
+For technical questions about the system's features, hardware specifications, or development inquiries, please contact:
 
 **Kunj Tapiawala**  
 Email: icealertdevice@gmail.com
