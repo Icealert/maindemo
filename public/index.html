@@ -2760,19 +2760,11 @@
     const thingId = device.thing.id;
     const properties = device.thing.properties || [];
 
-    // Helper function to check if a property is numeric
-    function isNumericProperty(prop) {
-      const numericTypes = [
-        'FLOAT', 'INT', 'NUMBER', 'DOUBLE', 'LONG',
-        'TEMPERATURE', // Add custom numeric types
-        'FLOW_RATE'
-      ];
-      return numericTypes.includes(prop.type?.toUpperCase());
-    }
-
-    // Find relevant properties, ensuring they are numeric
+    // Find relevant properties
     const tempProperty = properties.find(p => p.name === 'cloudtemp');
     const flowProperty = properties.find(p => p.name === 'cloudflowrate');
+    const warningProperty = properties.find(p => p.name === 'warning');
+    const criticalProperty = properties.find(p => p.name === 'critical');
 
     // Log property types for debugging
     logToConsole('Property types:', 'info');
@@ -2780,11 +2772,11 @@
       logToConsole(`${p.name}: ${p.type}`, 'info');
     });
 
-    if (!tempProperty) {
-      logToConsole('Temperature property not found', 'warning');
-    } else if (!isNumericProperty(tempProperty)) {
-      logToConsole(`Temperature property type ${tempProperty.type} is not numeric`, 'warning');
-    }
+    // Log property IDs
+    if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+    if (flowProperty) logToConsole(`Flow property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+    if (warningProperty) logToConsole(`Warning property ID: ${warningProperty.id} (${warningProperty.type})`, 'info');
+    if (criticalProperty) logToConsole(`Critical property ID: ${criticalProperty.id} (${criticalProperty.type})`, 'info');
 
     // 2) Compute interval to stay under 1000 points
     const timeRangeSeconds = hours * 3600;
@@ -2810,13 +2802,8 @@
       }).toString();
     }
 
-    // Log the request details for debugging
-    logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
-    if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
-    if (flowProperty) logToConsole(`Flow property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
-
-    // 4) Make parallel fetch calls for each numeric property
-    const [tempData, flowData] = await Promise.all([
+    // 4) Make parallel fetch calls for each property
+    const [tempData, flowData, warningData, criticalData] = await Promise.all([
       // Temperature
       tempProperty
         ? fetch(
@@ -2843,42 +2830,83 @@
             }
             return res.json();
           })
+        : Promise.resolve({ data: [] }),
+
+      // Warning
+      warningProperty
+        ? fetch(
+            `${API_URL}/api/proxy/timeseries/${thingId}/${warningProperty.id}?${buildQuery()}`,
+            fetchOptions
+          ).then(async res => {
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(`Warning fetch failed: ${res.status} - ${errorText}`);
+            }
+            return res.json();
+          })
+        : Promise.resolve({ data: [] }),
+
+      // Critical
+      criticalProperty
+        ? fetch(
+            `${API_URL}/api/proxy/timeseries/${thingId}/${criticalProperty.id}?${buildQuery()}`,
+            fetchOptions
+          ).then(async res => {
+            if (!res.ok) {
+              const errorText = await res.text();
+              throw new Error(`Critical fetch failed: ${res.status} - ${errorText}`);
+            }
+            return res.json();
+          })
         : Promise.resolve({ data: [] })
     ]);
 
     // Log raw response data
     logToConsole('Raw temperature response:', 'info');
     logToConsole(tempData, 'info');
+    logToConsole('Raw warning response:', 'info');
+    logToConsole(warningData, 'info');
+    logToConsole('Raw critical response:', 'info');
+    logToConsole(criticalData, 'info');
 
     // 5) Process the data using parseTsArray
     const tempResult = parseTsArray(tempData.data || []);
     const flowResult = parseTsArray(flowData.data || []);
-
-    // For warning and critical status, we'll use the current values since they're boolean
-    const warningProperty = properties.find(p => p.name === 'warning');
-    const criticalProperty = properties.find(p => p.name === 'critical');
-    
-    const currentWarningValue = warningProperty?.last_value === true || warningProperty?.last_value === 'true' ? 1 : 0;
-    const currentCriticalValue = criticalProperty?.last_value === true || criticalProperty?.last_value === 'true' ? 1 : 0;
+    const warningResult = parseTsArray(warningData.data || []);
+    const criticalResult = parseTsArray(criticalData.data || []);
 
     // 6) Use the first available time series for timestamps
     const primaryTimes = tempResult.times.length ? tempResult.times :
                         flowResult.times.length ? flowResult.times : 
+                        warningResult.times.length ? warningResult.times :
+                        criticalResult.times.length ? criticalResult.times :
                         [new Date().toISOString()];
+
+    // Helper function to normalize boolean values
+    const normalizeBoolean = (value) => {
+        if (value === 'true' || value === true || value === 1 || value === '1') return 1;
+        if (value === 'false' || value === false || value === 0 || value === '0') return 0;
+        return 0; // default value
+    };
+
+    // Process warning and critical values
+    const warningValues = warningResult.values.map(v => normalizeBoolean(v));
+    const criticalValues = criticalResult.values.map(v => normalizeBoolean(v));
 
     // Log processed data
     logToConsole('Processed data:', 'info');
     logToConsole(`Temperature times: ${tempResult.times.length}`, 'info');
     logToConsole(`Temperature values: ${tempResult.values.length}`, 'info');
+    logToConsole(`Warning values: ${warningValues.length}`, 'info');
+    logToConsole(`Critical values: ${criticalValues.length}`, 'info');
 
     // 7) Return formatted data for the charts
     return {
       timestamps: primaryTimes.map(t => new Date(t).toLocaleString()),
       temperature: tempResult.values,
       timeSinceFlow: flowResult.values,
-      // For boolean properties, return arrays with the current value repeated
-      warningStatus: new Array(primaryTimes.length).fill(currentWarningValue),
-      criticalStatus: new Array(primaryTimes.length).fill(currentCriticalValue),
+      warningStatus: warningValues,
+      criticalStatus: criticalValues,
       iceLevel: tempResult.values?.map(celsius => {
         if (celsius === null || celsius === undefined) return null;
         const f = (celsius * 9) / 5 + 32;
