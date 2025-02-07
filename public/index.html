@@ -1528,8 +1528,133 @@
                                     recommendations.push({
                                         type: 'warning',
                                         title: 'No Flow Detected',
-                                        message: `No water flow detected for ${formatTimeDuration(status.timeSinceFlowMs)}. Critical time: ${status.noFlowCriticalTime}h`,
-                                        action: 'Check water supply and verify ice machine operation. Inspect for potential blockages.'
+                                        message: `No water flow detected for ${formatTimeDuration(status.timeSinceFlowMs)}. Critical time: ${status.noFlowCriticalTime}h. This can result in ice production failure.`,
+                                        action: `<div class="space-y-2 mt-2">
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Verify Ice Machine Operation</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Check if the machine is powered on and running
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>If the machine is off, turn it on and observe for water flow initiation</li>
+                                                                <li>Listen for normal operational sounds, including water filling cycles</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>Confirm the machine is not in a paused or standby mode
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Some machines may enter standby mode if a fault is detected</li>
+                                                                <li>Reset the machine if necessary and attempt to restart the cycle</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Inspect Water Supply</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Verify that the water supply valve is open
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Locate the main water shutoff valve feeding the ice machine</li>
+                                                                <li>Ensure it is fully open to allow proper flow</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>Check for water line issues
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Inspect the inlet water hose for kinks, twists, or visible damage</li>
+                                                                <li>If the hose is pinched or bent, straighten it and test for flow</li>
+                                                                <li>If the hose is cracked or leaking, replace it immediately</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Check for Blockages</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Examine the water filter (if installed)
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>A clogged filter can restrict water flow</li>
+                                                                <li>If the filter is old, replace it and monitor flow</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>Inspect the water inlet valve for debris or mineral buildup
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Remove the valve if necessary and flush it to clear obstructions</li>
+                                                                <li>If the valve doesn't open when the machine calls for water, it may need replacement</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>Check the float switch (if applicable)
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Some ice machines use a float switch to control water levels</li>
+                                                                <li>If the float is stuck in the "full" position, it may prevent water from entering</li>
+                                                                <li>Clean and reposition the float to ensure proper function</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Test Water Pressure</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Measure water pressure at the inlet
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Connect a pressure gauge to the supply line</li>
+                                                                <li>Optimal pressure should be within manufacturer's recommended range</li>
+                                                                <li>If pressure is too low, the issue may be with building's plumbing</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Reset and Monitor the Machine</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>After completing all checks, reset the ice machine
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Power cycle the unit and initiate a new ice-making cycle</li>
+                                                                <li>Observe for proper water flow during the fill stage</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>Monitor system performance
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>If water flow resumes, continue monitoring to ensure consistent operation</li>
+                                                                <li>If flow is still not detected, proceed to step 6</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">6</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Escalation (If Issue Persists)</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Internal component failures may be preventing water flow
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>The internal pump, solenoid valve, or distribution system may be faulty</li>
+                                                                <li>Further diagnostics may be needed</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li>Contact technical support at <a href="mailto:icealertdevice@gmail.com" class="underline font-medium">icealertdevice@gmail.com</a> for assistance with:
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Advanced troubleshooting steps</li>
+                                                                <li>Component replacement guidance</li>
+                                                                <li>Maintenance scheduling</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>`
                                     });
                                 }
 
