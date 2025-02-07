@@ -1966,16 +1966,28 @@
                                         <button class="time-range-button" data-days="1" onclick="toggleTempGraph(deviceIndex, 1)">Yesterday</button>
                                         <button class="time-range-button" data-days="2" onclick="toggleTempGraph(deviceIndex, 2)">2 Days Ago</button>
                                     </div>
-                                    <label class="flex items-center space-x-2 cursor-pointer">
-                                        <input 
-                                            type="checkbox" 
-                                            id="ice-level-toggle" 
-                                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                            onclick="toggleIceLevel()"
-                                            checked
-                                        >
-                                        <span class="text-sm text-gray-700">Show Ice Level</span>
-                                    </label>
+                                    <div class="flex items-center space-x-4">
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                id="temp-line-toggle" 
+                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                onclick="toggleTempLine()"
+                                                checked
+                                            >
+                                            <span class="text-sm text-gray-700">Show Temperature</span>
+                                        </label>
+                                        <label class="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                id="ice-level-toggle" 
+                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                                                onclick="toggleIceLevel()"
+                                                checked
+                                            >
+                                            <span class="text-sm text-gray-700">Show Ice Level</span>
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                             <!-- Add Statistics Summary Box -->
@@ -2586,6 +2598,24 @@
             updateTempGraph(deviceIndex, activeDays);
         }
 
+        // Add function to toggle temperature line visibility
+        function toggleTempLine() {
+            const checkbox = document.getElementById('temp-line-toggle');
+            const isVisible = checkbox.checked;
+            
+            // Store the visibility state
+            window.tempLineVisible = isVisible;
+            
+            // Get the current device index and active days
+            const deviceIndex = window.currentDeviceIndex || 0;
+            const activeDays = Array.from(document.querySelectorAll('#temp-time-range button.active'))
+                .map(btn => parseInt(btn.dataset.days));
+            
+            // Update graph
+            updateTempGraph(deviceIndex, activeDays);
+        }
+
+        // Update the updateTempGraph function to handle both toggles
         function updateTempGraph(deviceIndex, selectedDays) {
             if (!Array.isArray(selectedDays)) {
                 selectedDays = [selectedDays];
@@ -2614,10 +2644,12 @@
                 for (const day of selectedDays) {
                     const { datasets, thresholdF } = processTemperatureByHour(data.timestamps, data.temperature, day);
                     
-                    // Filter out ice level dataset if hidden
-                    const filteredDatasets = window.iceLevelVisible === false ? 
-                        datasets.filter(d => d.label !== 'Ice Level') : 
-                        datasets;
+                    // Filter out datasets based on visibility toggles
+                    const filteredDatasets = datasets.filter(d => {
+                        if (d.label === 'Ice Level' && window.iceLevelVisible === false) return false;
+                        if (d.label.includes('Temperature') && d.label !== 'Temperature Threshold' && window.tempLineVisible === false) return false;
+                        return true;
+                    });
                     
                     allDatasets.push(...filteredDatasets);
                     deviceThreshold = thresholdF;
@@ -2631,7 +2663,7 @@
                 // Get the canvas context
                 const ctx = document.getElementById('tempChart').getContext('2d');
                 
-                // Build the new chart
+                // Build the new chart with updated options
                 new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -2705,7 +2737,7 @@
                             },
                             'y-temp': {
                                 type: 'linear',
-                                display: true,
+                                display: window.tempLineVisible !== false,
                                 position: 'left',
                                 title: {
                                     display: true,
@@ -2721,7 +2753,7 @@
                             },
                             'y-ice': {
                                 type: 'linear',
-                                display: window.iceLevelVisible !== false, // Hide scale if ice level is hidden
+                                display: window.iceLevelVisible !== false,
                                 position: 'right',
                                 title: {
                                     display: true,
