@@ -1548,13 +1548,13 @@
                                     recommendations.push({
                                         type: 'warning',
                                         title: 'High Temperature Detected',
-                                        message: 'High temperature likely means there is no ice at the sensor level. Follow these steps to troubleshoot:',
+                                        message: 'High temperature likely means there is no ice at the sensor level. Follow these steps in order:',
                                         action: `<div class="space-y-3 mt-2">
                                             <details class="group bg-yellow-50 rounded-lg">
                                                 <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
-                                                        <span>Check Ice Usage Patterns</span>
+                                                        <span>Check Ice Usage</span>
                                                     </div>
                                                     <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -1562,22 +1562,12 @@
                                                 </summary>
                                                 <div class="p-3 pt-0 text-yellow-700">
                                                     <div class="space-y-3">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Review Recent Usage:</p>
-                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
-                                                                <li>Check if there has been unusually high ice demand</li>
-                                                                <li>Note any patterns of increased usage during specific times</li>
-                                                                <li>Compare current usage to typical consumption patterns</li>
-                                                            </ul>
-                                                        </div>
-                                                        <div>
-                                                            <p class="font-medium">🔹 Assess Recovery Time:</p>
-                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
-                                                                <li>Allow 2-4 hours for ice to rebuild after heavy usage</li>
-                                                                <li>Monitor ice production rate during recovery</li>
-                                                                <li>Verify if machine can keep up with current demand</li>
-                                                            </ul>
-                                                        </div>
+                                                        <p class="text-sm">Has ice been used at a higher rate than usual?</p>
+                                                        <ul class="mt-1 ml-4 list-disc text-sm space-y-2">
+                                                            <li>If yes, the machine may not have had enough time to produce and replenish ice at the sensor level</li>
+                                                            <li>Allow the ice machine to continue running and monitor if the ice level recovers</li>
+                                                            <li>Check usage patterns to determine if demand has recently increased beyond the machine's capacity</li>
+                                                        </ul>
                                                     </div>
                                                 </div>
                                             </details>
@@ -1586,7 +1576,26 @@
                                                 <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
-                                                        <span>Inspect Ice Levels</span>
+                                                        <span>Inspect Ice Levels Manually</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-yellow-700">
+                                                    <ul class="mt-1 ml-4 list-disc text-sm space-y-2">
+                                                        <li>Open the ice machine bin and check if there is ice at the sensor level</li>
+                                                        <li>If there is no ice at the sensor level, proceed to Step 3</li>
+                                                        <li>If there is ice at the sensor level, but the system still detects high temperature, proceed to Step 4</li>
+                                                    </ul>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-yellow-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
+                                                        <span>If No Ice is Present</span>
                                                     </div>
                                                     <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -1595,44 +1604,32 @@
                                                 <div class="p-3 pt-0 text-yellow-700">
                                                     <div class="space-y-3">
                                                         <div>
-                                                            <p class="font-medium">🔹 Check Ice Distribution:</p>
+                                                            <p class="font-medium">🔹 Machine Operation:</p>
                                                             <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
-                                                                <li>Open the bin and visually inspect ice levels</li>
-                                                                <li>Look for uneven ice distribution or bridging</li>
-                                                                <li>Check if ice is reaching the sensor location</li>
+                                                                <li>Verify the ice machine is powered on and operating</li>
+                                                                <li>If the machine is off, turn it on and allow it to cycle</li>
+                                                                <li>Check if the ice machine is producing ice</li>
+                                                                <li>Listen for the sound of water filling and freezing</li>
                                                             </ul>
                                                         </div>
                                                         <div>
-                                                            <p class="font-medium">🔹 Verify Sensor Contact:</p>
+                                                            <p class="font-medium">🔹 Environmental Checks:</p>
                                                             <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
-                                                                <li>Ensure sensor is properly positioned</li>
-                                                                <li>Check for any obstacles preventing ice contact</li>
-                                                                <li>Verify sensor is securely mounted</li>
+                                                                <li>Ensure proper airflow and ventilation</li>
+                                                                <li>Check for blocked vents that could cause overheating</li>
+                                                                <li>Inspect the water supply and pressure</li>
+                                                                <li>Look for clogged filters that might restrict water flow</li>
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-medium">🔹 Monitor Progress:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Watch the next production cycle</li>
+                                                                <li>If ice production resumes, the issue may have been temporary</li>
+                                                                <li>If ice is still not being produced, maintenance may be required</li>
                                                             </ul>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
-                                                        <span>Check Machine Operation</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Check these components:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Water filter for clogging</li>
-                                                            <li>Inlet valve for debris</li>
-                                                            <li>Float switch for obstruction</li>
-                                                        </ul>
-                                                    </ul>
                                                 </div>
                                             </details>
 
@@ -1640,21 +1637,25 @@
                                                 <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
-                                                        <span>Check Water Pressure</span>
+                                                        <span>If Ice is Present but Temperature High</span>
                                                     </div>
                                                     <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                     </svg>
                                                 </summary>
                                                 <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Verify water pressure:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Measure pressure at water inlet</li>
-                                                            <li>Confirm it meets manufacturer specifications</li>
-                                                            <li>Check for pressure drops during operation</li>
-                                                        </ul>
-                                                    </ul>
+                                                    <div class="space-y-3">
+                                                        <p class="text-sm">This suggests a false high-temperature reading due to an incorrect threshold setting.</p>
+                                                        <div>
+                                                            <p class="font-medium">🔹 Adjust Temperature Threshold:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Navigate to the Ice-Alert Properties Section in the system settings</li>
+                                                                <li>Locate the Temperature Threshold setting</li>
+                                                                <li>Increase the threshold slightly to reduce false alerts</li>
+                                                                <li>Save the settings and monitor to ensure proper functionality</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </details>
 
@@ -1662,42 +1663,47 @@
                                                 <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
-                                                        <span>Reset and Monitor</span>
+                                                        <span>If Issue Persists</span>
                                                     </div>
                                                     <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                     </svg>
                                                 </summary>
                                                 <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Perform system reset:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Power cycle the ice machine</li>
-                                                            <li>Wait 5 minutes before restarting</li>
-                                                            <li>Monitor water flow after restart</li>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">6</span>
-                                                        <span>Contact Support</span>
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Full Machine Inspection:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Clean the machine thoroughly, including:</li>
+                                                                <ul class="ml-4 list-circle">
+                                                                    <li>Sensors and vents</li>
+                                                                    <li>Ice bin and production area</li>
+                                                                    <li>Ultrasonic sensor position and clearance</li>
+                                                                </ul>
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-medium">🔹 Check for Mechanical Issues:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Inspect for problems with:</li>
+                                                                <ul class="ml-4 list-circle">
+                                                                    <li>Compressor operation</li>
+                                                                    <li>Thermostat function</li>
+                                                                    <li>Internal components</li>
+                                                                </ul>
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-medium">🔹 Next Steps:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>If troubleshooting doesn't resolve the issue:</li>
+                                                                <ul class="ml-4 list-circle">
+                                                                    <li>Schedule a maintenance inspection</li>
+                                                                    <li>Contact your maintenance team</li>
+                                                                </ul>
+                                                            </ul>
+                                                        </div>
                                                     </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>If issue persists:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>May indicate internal component failure</li>
-                                                            <li>Contact your maintenance team</li>
-                                                        </ul>
-                                                    </ul>
                                                 </div>
                                             </details>
                                         </div>`
