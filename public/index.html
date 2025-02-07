@@ -2878,13 +2878,9 @@
             const device = window.lastDevicesData[deviceIndex];
             updateTimeRangeButtons('status-time-range', selectedDay);
             
-            // Fetch both warning and critical property data
-            Promise.all([
-                fetchPropertyTimeSeries(device.id, 'warning', 72),
-                fetchPropertyTimeSeries(device.id, 'critical', 72)
-            ]).then(([warningData, criticalData]) => {
-                if (!warningData || !criticalData) {
-                    logToConsole('No data returned from fetchPropertyTimeSeries', 'error');
+            fetchTimeSeriesData(device.id, 72).then(data => {
+                if (!data) {
+                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
                     return;
                 }
 
@@ -2897,22 +2893,22 @@
                 const dayEnd = new Date(dayStart);
                 dayEnd.setHours(23, 59, 59, 999);
 
-                // Combine and process the data
+                // Process the data
                 const processedData = [];
-                const warningValues = warningData.values || [];
-                const criticalValues = criticalData.values || [];
-                const timestamps = warningData.timestamps || [];
+                const timestamps = data.timestamps || [];
+                const warningStatus = data.warningStatus || [];
+                const criticalStatus = data.criticalStatus || [];
 
                 timestamps.forEach((timestamp, index) => {
                     const date = new Date(timestamp);
                     if (date >= dayStart && date <= dayEnd) {
-                        const warning = warningValues[index] === true || warningValues[index] === 'true' ? 1 : 0;
-                        const critical = criticalValues[index] === true || criticalValues[index] === 'true' ? 1 : 0;
+                        const warning = warningStatus[index] === 1;
+                        const critical = criticalStatus[index] === 1;
                         
                         processedData.push({
                             timestamp: date,
-                            warning: warning,
-                            critical: critical,
+                            warning: warning ? 1 : 0,
+                            critical: critical ? 1 : 0,
                             // Device is in great state if neither warning nor critical is true
                             great: (!warning && !critical) ? 1 : 0
                         });
