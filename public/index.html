@@ -3285,7 +3285,7 @@
             logToConsole(`Temperature values received: ${temperatures.length}`, 'info');
             logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
-            const hourlyTemps = {};
+            const hourlyData = {};
             const now = new Date();
             const currentHour = now.getHours();
             
@@ -3308,46 +3308,48 @@
                 const hour = timestamp.getHours();
                 if (selectedDay === 0 && hour > currentHour) continue;
                 
-                if (!hourlyTemps[hour]) {
-                    hourlyTemps[hour] = {
-                        values: [],
+                if (!hourlyData[hour]) {
+                    hourlyData[hour] = {
+                        temps: [],
+                        iceLevels: [],
                         hour,
                         date: new Date(timestamp)
                     };
                 }
                 
-                // Store all values for statistical calculations
-                hourlyTemps[hour].values.push(temp);
+                // Convert Celsius to Fahrenheit and calculate ice level
+                const tempF = (temp * 9/5) + 32;
+                const iceLevel = tempF <= 34 ? 100 : 0; // Ice is present when temp is at or below 34°F
+                
+                hourlyData[hour].temps.push(tempF);
+                hourlyData[hour].iceLevels.push(iceLevel);
             }
 
             // Get the device's temperature threshold
             const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
             const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34; // Default to 34°F if not set
+            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
 
-            // Helper function to calculate statistics and check thresholds
+            // Helper function to calculate statistics
             function calculateStats(values) {
                 if (!values || values.length === 0) return null;
                 
-                const fahrenheitValues = values.map(c => (c * 9) / 5 + 32);
-                const sum = fahrenheitValues.reduce((a, b) => a + b, 0);
-                const avg = sum / fahrenheitValues.length;
-                const min = Math.min(...fahrenheitValues);
-                const max = Math.max(...fahrenheitValues);
+                const sum = values.reduce((a, b) => a + b, 0);
+                const avg = sum / values.length;
                 
                 // Calculate standard deviation
-                const squareDiffs = fahrenheitValues.map(value => {
+                const squareDiffs = values.map(value => {
                     const diff = value - avg;
                     return diff * diff;
                 });
-                const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / fahrenheitValues.length;
+                const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
                 const stdDev = Math.sqrt(avgSquareDiff);
                 
                 // Calculate mode
                 const frequency = {};
                 let maxFreq = 0;
                 let mode = null;
-                fahrenheitValues.forEach(value => {
+                values.forEach(value => {
                     const rounded = Math.round(value * 10) / 10;
                     frequency[rounded] = (frequency[rounded] || 0) + 1;
                     if (frequency[rounded] > maxFreq) {
@@ -3356,177 +3358,80 @@
                     }
                 });
 
-                // Find anomalies (values outside 2 standard deviations)
-                const anomalies = fahrenheitValues.filter(value => 
-                    Math.abs(value - avg) > 2 * stdDev
-                );
-
-                // Check for threshold violations using device's threshold
-                const thresholdViolations = fahrenheitValues.filter(value => value > thresholdF);
-
-                return { 
-                    min, max, avg, stdDev, mode, 
-                    anomalies,
-                    hasThresholdViolation: thresholdViolations.length > 0,
-                    thresholdViolations
-                };
+                return { avg, stdDev, mode };
             }
 
-            // Create datasets for average, min, max, anomalies, and threshold violations
-            const avgData = {
-                label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Avg)`,
+            // Create datasets for temperature and ice level
+            const tempData = {
+                label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Temperature)`,
                 data: Array(24).fill(null),
-                dates: Array(24).fill(null),
+                yAxisID: 'y-temp',
                 borderColor: getDatasetColor(selectedDay),
                 backgroundColor: getDatasetColor(selectedDay, 0.1),
                 tension: 0.1,
                 fill: true,
-                segment: {
-                    borderColor: ctx => {
-                        // Change line color to red if value is above threshold
-                        const value = ctx.p1.parsed.y;
-                        return value > thresholdF ? 'rgba(239, 68, 68, 1)' : getDatasetColor(selectedDay);
-                    }
-                },
-                pointBackgroundColor: (ctx) => {
-                    // Change point color to red if value is above threshold
-                    const value = ctx.raw;
-                    return value > thresholdF ? 'rgba(239, 68, 68, 1)' : getDatasetColor(selectedDay);
-                },
-                pointRadius: (ctx) => {
-                    // Make points larger if they exceed threshold
-                    const value = ctx.raw;
-                    return value > thresholdF ? 6 : 3;
-                },
-                pointHoverRadius: (ctx) => {
-                    const value = ctx.raw;
-                    return value > thresholdF ? 8 : 5;
-                }
+                order: 1
             };
 
-            const minData = {
-                label: 'Min',
+            const iceLevelData = {
+                label: 'Ice Level',
                 data: Array(24).fill(null),
-                borderColor: getDatasetColor(selectedDay, 0.5),
+                yAxisID: 'y-ice',
+                borderColor: 'rgba(147, 197, 253, 0.8)',
+                backgroundColor: 'rgba(147, 197, 253, 0.2)',
                 borderDash: [5, 5],
                 tension: 0.1,
-                fill: false
+                fill: true,
+                order: 2
             };
 
-            const maxData = {
-                label: 'Max',
-                data: Array(24).fill(null),
-                borderColor: getDatasetColor(selectedDay, 0.5),
+            const thresholdData = {
+                label: 'Temperature Threshold',
+                data: Array(24).fill(thresholdF),
+                yAxisID: 'y-temp',
+                borderColor: 'rgba(239, 68, 68, 0.5)',
                 borderDash: [5, 5],
-                tension: 0.1,
-                fill: false
+                tension: 0,
+                fill: false,
+                order: 0
             };
-
-            const anomalyData = {
-                label: 'Anomalies',
-                data: Array(24).fill(null),
-                backgroundColor: 'rgba(239, 68, 68, 0.8)',
-                borderColor: 'rgba(239, 68, 68, 1)',
-                pointStyle: 'circle',
-                pointRadius: 6,
-                pointHoverRadius: 8,
-                showLine: false
-            };
-
-            // Calculate overall statistics for the day
-            let allValues = [];
-            let anomalyLog = [];
-            let thresholdViolationLog = [];
 
             // Fill in the data for each hour
+            let allTemps = [];
+            let allIceLevels = [];
+
             for (let hour = 0; hour < 24; hour++) {
                 if (selectedDay === 0 && hour > currentHour) continue;
 
-                const hourData = hourlyTemps[hour];
+                const hourData = hourlyData[hour];
                 
-                if (hourData && hourData.values.length > 0) {
-                    const stats = calculateStats(hourData.values);
-                    if (stats) {
-                        avgData.data[hour] = stats.avg;
-                        minData.data[hour] = stats.min;
-                        maxData.data[hour] = stats.max;
-                        avgData.dates[hour] = hourData.date;
-                        allValues = allValues.concat(hourData.values);
-
-                        // Log anomalies and threshold violations
-                        if (stats.anomalies.length > 0) {
-                            anomalyData.data[hour] = stats.avg;
-                            const date = new Date(hourData.date);
-                            date.setHours(hour);
-                            anomalyLog.push({
-                                hour: `${hour.toString().padStart(2, '0')}:00`,
-                                date: date.toLocaleDateString(),
-                                values: stats.anomalies.map(v => v.toFixed(1) + '°F'),
-                                avg: stats.avg.toFixed(1) + '°F',
-                                stdDev: stats.stdDev.toFixed(1) + '°F'
-                            });
-                        }
-
-                        if (stats.hasThresholdViolation) {
-                            const date = new Date(hourData.date);
-                            date.setHours(hour);
-                            thresholdViolationLog.push({
-                                hour: `${hour.toString().padStart(2, '0')}:00`,
-                                date: date.toLocaleDateString(),
-                                values: stats.thresholdViolations.map(v => v.toFixed(1) + '°F'),
-                                avg: stats.avg.toFixed(1) + '°F'
-                            });
-                        }
+                if (hourData && hourData.temps.length > 0) {
+                    const tempStats = calculateStats(hourData.temps);
+                    const iceLevelStats = calculateStats(hourData.iceLevels);
+                    
+                    if (tempStats) {
+                        tempData.data[hour] = tempStats.avg;
+                        allTemps = allTemps.concat(hourData.temps);
+                    }
+                    
+                    if (iceLevelStats) {
+                        iceLevelData.data[hour] = iceLevelStats.avg;
+                        allIceLevels = allIceLevels.concat(hourData.iceLevels);
                     }
                 }
             }
 
-            // Update statistics display and log violations
-            const overallStats = calculateStats(allValues);
-            if (overallStats) {
-                // Update stats with conditional formatting
-                document.getElementById('tempRange').innerHTML = 
-                    `${formatTempValue(overallStats.min.toFixed(1))} - ${formatTempValue(overallStats.max.toFixed(1))}`;
-                document.getElementById('tempAvg').innerHTML = 
-                    formatTempValue(overallStats.avg.toFixed(1));
+            // Update statistics display
+            const overallTempStats = calculateStats(allTemps);
+            if (overallTempStats) {
                 document.getElementById('tempStdDev').innerHTML = 
-                    `±${overallStats.stdDev.toFixed(1)}°F`;
+                    `±${overallTempStats.stdDev.toFixed(1)}°F`;
                 document.getElementById('tempMode').innerHTML = 
-                    formatTempValue(overallStats.mode);
-
-                // Add threshold indicator to stats box
-                const statsBox = document.getElementById('tempStats');
-                if (!document.getElementById('tempThreshold')) {
-                    const thresholdDiv = document.createElement('div');
-                    thresholdDiv.className = 'stat-box col-span-2 md:col-span-4 mt-2';
-                    thresholdDiv.innerHTML = `
-                        <h5 class="text-xs font-medium text-gray-500">Temperature Threshold</h5>
-                        <p class="text-sm font-bold text-gray-900" id="tempThreshold">${thresholdF.toFixed(1)}°F</p>
-                    `;
-                    statsBox.appendChild(thresholdDiv);
-                } else {
-                    document.getElementById('tempThreshold').textContent = `${thresholdF.toFixed(1)}°F`;
-                }
-
-                // Log anomalies if found
-                if (anomalyLog.length > 0) {
-                    logToConsole('Statistical anomalies detected:', 'warning');
-                    anomalyLog.forEach(anomaly => {
-                        logToConsole(`${anomaly.date} ${anomaly.hour}: Values ${anomaly.values.join(', ')} (Avg: ${anomaly.avg}, StdDev: ${anomaly.stdDev})`, 'warning');
-                    });
-                }
-
-                // Log threshold violations
-                if (thresholdViolationLog.length > 0) {
-                    logToConsole('Temperature threshold violations detected:', 'error');
-                    thresholdViolationLog.forEach(violation => {
-                        logToConsole(`${violation.date} ${violation.hour}: Temperature(s) above ${thresholdF.toFixed(1)}°F: ${violation.values.join(', ')} (Avg: ${violation.avg})`, 'error');
-                    });
-                }
+                    formatTempValue(overallTempStats.mode);
             }
 
-            return { 
-                datasets: [minData, avgData, maxData, anomalyData],
+            return {
+                datasets: [thresholdData, tempData, iceLevelData],
                 thresholdF
             };
         }
