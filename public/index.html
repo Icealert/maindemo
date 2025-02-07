@@ -2878,20 +2878,15 @@
             const device = window.lastDevicesData[deviceIndex];
             updateTimeRangeButtons('status-time-range', selectedDay);
             
-            fetchTimeSeriesData(device.id, 72).then(data => {
-                if (!data) {
-                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+            // Fetch both warning and critical property data
+            Promise.all([
+                fetchPropertyTimeSeries(device.id, 'warning', 72),
+                fetchPropertyTimeSeries(device.id, 'critical', 72)
+            ]).then(([warningData, criticalData]) => {
+                if (!warningData || !criticalData) {
+                    logToConsole('No data returned from fetchPropertyTimeSeries', 'error');
                     return;
                 }
-
-                // Debug logging for raw data
-                logToConsole('Status Data Debug:', 'info');
-                logToConsole('Raw timestamps:', 'info');
-                logToConsole(data.timestamps, 'info');
-                logToConsole('Raw warning status:', 'info');
-                logToConsole(data.warningStatus, 'info');
-                logToConsole('Raw critical status:', 'info');
-                logToConsole(data.criticalStatus, 'info');
 
                 // Get the start and end of the selected day
                 const now = new Date();
@@ -2902,115 +2897,106 @@
                 const dayEnd = new Date(dayStart);
                 dayEnd.setHours(23, 59, 59, 999);
 
-                logToConsole(`Filtering data for day: ${selectedDay}`, 'info');
-                logToConsole(`Day start: ${dayStart.toLocaleString()}`, 'info');
-                logToConsole(`Day end: ${dayEnd.toLocaleString()}`, 'info');
+                // Combine and process the data
+                const processedData = [];
+                const warningValues = warningData.values || [];
+                const criticalValues = criticalData.values || [];
+                const timestamps = warningData.timestamps || [];
 
-                // Filter data for the selected day and add great status
-                const filteredData = data.timestamps.map((timestamp, index) => {
+                timestamps.forEach((timestamp, index) => {
                     const date = new Date(timestamp);
                     if (date >= dayStart && date <= dayEnd) {
-                        const warning = data.warningStatus[index];
-                        const critical = data.criticalStatus[index];
-                        const entry = {
+                        const warning = warningValues[index] === true || warningValues[index] === 'true' ? 1 : 0;
+                        const critical = criticalValues[index] === true || criticalValues[index] === 'true' ? 1 : 0;
+                        
+                        processedData.push({
                             timestamp: date,
                             warning: warning,
                             critical: critical,
-                            great: warning === 0 && critical === 0 ? 1 : 0
-                        };
-                        
-                        // Log each data point that passes the filter
-                        logToConsole(`Data point at ${date.toLocaleTimeString()}:`, 'info');
-                        logToConsole({
-                            warning: warning,
-                            critical: critical,
-                            great: entry.great
-                        }, 'info');
-                        
-                        return entry;
+                            // Device is in great state if neither warning nor critical is true
+                            great: (!warning && !critical) ? 1 : 0
+                        });
                     }
-                    return null;
-                }).filter(Boolean);
+                });
 
-                // Log summary of filtered data
-                logToConsole(`Filtered data points: ${filteredData.length}`, 'info');
-                if (filteredData.length > 0) {
-                    const warningCount = filteredData.filter(d => d.warning === 1).length;
-                    const criticalCount = filteredData.filter(d => d.critical === 1).length;
-                    const greatCount = filteredData.filter(d => d.great === 1).length;
-                    
-                    logToConsole('Status Summary:', 'info');
-                    logToConsole(`Points in Warning state: ${warningCount}`, warningCount > 0 ? 'warning' : 'info');
-                    logToConsole(`Points in Critical state: ${criticalCount}`, criticalCount > 0 ? 'error' : 'info');
-                    logToConsole(`Points in Great state: ${greatCount}`, 'info');
-                }
+                // Sort data by timestamp
+                processedData.sort((a, b) => a.timestamp - b.timestamp);
 
-                // Create datasets with better styling
-                const greatDataset = {
-                    label: 'Great Status',
-                    data: filteredData.map(d => d.great),
-                    borderColor: 'rgb(16, 185, 129)',
-                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
-                    borderWidth: 2,
-                    tension: 0.1,
-                    fill: true,
-                    stepped: true,
-                    pointStyle: 'circle',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    order: 3  // Draw great status behind warning and critical
-                };
-
-                const warningDataset = {
-                    label: 'Warning Status',
-                    data: filteredData.map(d => d.warning),
-                    borderColor: 'rgb(234, 179, 8)',
-                    backgroundColor: 'rgba(234, 179, 8, 0.2)',
-                    borderWidth: 2,
-                    tension: 0.1,
-                    fill: true,
-                    stepped: true,
-                    pointStyle: 'circle',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    order: 2
-                };
-
-                const criticalDataset = {
-                    label: 'Critical Status',
-                    data: filteredData.map(d => d.critical),
-                    borderColor: 'rgb(239, 68, 68)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                    borderWidth: 2,
-                    tension: 0.1,
-                    fill: true,
-                    stepped: true,
-                    pointStyle: 'circle',
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    order: 1  // Draw critical status on top
-                };
+                // Create datasets with improved styling
+                const datasets = [
+                    {
+                        label: 'Great',
+                        data: processedData.map(d => d.great),
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        stepped: 'before',
+                        pointStyle: 'circle',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        order: 3
+                    },
+                    {
+                        label: 'Warning',
+                        data: processedData.map(d => d.warning),
+                        borderColor: 'rgb(234, 179, 8)',
+                        backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        stepped: 'before',
+                        pointStyle: 'circle',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        order: 2
+                    },
+                    {
+                        label: 'Critical',
+                        data: processedData.map(d => d.critical),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        stepped: 'before',
+                        pointStyle: 'circle',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        order: 1
+                    }
+                ];
 
                 // Format timestamps for display
-                const labels = filteredData.map(d => {
+                const labels = processedData.map(d => {
                     return d.timestamp.toLocaleTimeString([], { 
                         hour: '2-digit', 
                         minute: '2-digit'
                     });
                 });
 
-                const ctx = document.getElementById('statusChart').getContext('2d');
+                // Destroy existing chart if it exists
+                const chartElement = document.getElementById('statusChart');
+                const existingChart = Chart.getChart(chartElement);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                // Create new chart
+                const ctx = chartElement.getContext('2d');
                 new Chart(ctx, {
                     type: 'line',
                     data: {
                         labels: labels,
-                        datasets: [greatDataset, warningDataset, criticalDataset]
+                        datasets: datasets
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: {
-                            mode: 'index',
+                            mode: 'nearest',
+                            axis: 'x',
                             intersect: false
                         },
                         plugins: {
@@ -3021,8 +3007,8 @@
                                     },
                                     label: (context) => {
                                         const value = context.raw;
-                                        const status = context.dataset.label.replace(' Status', '');
-                                        return `${status}: ${value === 1 ? 'Active' : 'Inactive'}`;
+                                        const status = context.dataset.label;
+                                        return `${status}: ${value === 1 ? 'Yes' : 'No'}`;
                                     }
                                 },
                                 titleAlign: 'center',
@@ -3050,11 +3036,13 @@
                                 },
                                 grid: {
                                     display: true,
-                                    drawOnChartArea: true
+                                    drawOnChartArea: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
                                 },
                                 ticks: {
                                     maxRotation: 45,
-                                    minRotation: 45
+                                    minRotation: 45,
+                                    font: { size: 11 }
                                 }
                             },
                             y: {
@@ -3062,94 +3050,104 @@
                                 max: 1.1,
                                 title: {
                                     display: true,
-                                    text: 'Status',
+                                    text: 'State',
                                     font: { size: 12 }
                                 },
                                 grid: {
                                     display: true,
-                                    drawOnChartArea: true
+                                    drawOnChartArea: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
                                 },
                                 ticks: {
                                     callback: value => {
-                                        if (value <= 0) return 'Inactive';
-                                        if (value >= 1) return 'Active';
+                                        if (value <= 0) return 'No';
+                                        if (value >= 1) return 'Yes';
                                         return '';
                                     },
-                                    stepSize: 1
+                                    stepSize: 1,
+                                    font: { size: 11 }
                                 }
                             }
                         }
                     }
                 });
 
+                // Calculate and display time in each state
+                const totalTime = processedData.length > 0 ? 
+                    processedData[processedData.length - 1].timestamp - processedData[0].timestamp : 0;
+
+                const timeInStates = {
+                    great: 0,
+                    warning: 0,
+                    critical: 0
+                };
+
+                for (let i = 0; i < processedData.length - 1; i++) {
+                    const duration = processedData[i + 1].timestamp - processedData[i].timestamp;
+                    if (processedData[i].critical) {
+                        timeInStates.critical += duration;
+                    } else if (processedData[i].warning) {
+                        timeInStates.warning += duration;
+                    } else {
+                        timeInStates.great += duration;
+                    }
+                }
+
                 // Add status summary below the graph
                 const summaryDiv = document.createElement('div');
                 summaryDiv.className = 'mt-4 grid grid-cols-3 gap-4';
-                
-                // Calculate time in each state
-                const warningTime = calculateTimeInState(filteredData, 'warning');
-                const criticalTime = calculateTimeInState(filteredData, 'critical');
-                const greatTime = calculateTimeInState(filteredData, 'great');
-
                 summaryDiv.innerHTML = `
                     <div class="p-3 bg-emerald-50 rounded-lg">
                         <h5 class="text-sm font-medium text-emerald-800">Great State</h5>
-                        <p class="text-xs text-emerald-600 mt-1">Total Time: ${formatDuration(greatTime)}</p>
+                        <p class="text-xs text-emerald-600 mt-1">Duration: ${formatDuration(timeInStates.great)}</p>
+                        <p class="text-xs text-emerald-600">${totalTime ? Math.round((timeInStates.great / totalTime) * 100) : 0}% of time</p>
                     </div>
                     <div class="p-3 bg-yellow-50 rounded-lg">
                         <h5 class="text-sm font-medium text-yellow-800">Warning State</h5>
-                        <p class="text-xs text-yellow-600 mt-1">Total Time: ${formatDuration(warningTime)}</p>
+                        <p class="text-xs text-yellow-600 mt-1">Duration: ${formatDuration(timeInStates.warning)}</p>
+                        <p class="text-xs text-yellow-600">${totalTime ? Math.round((timeInStates.warning / totalTime) * 100) : 0}% of time</p>
                     </div>
                     <div class="p-3 bg-red-50 rounded-lg">
                         <h5 class="text-sm font-medium text-red-800">Critical State</h5>
-                        <p class="text-xs text-red-600 mt-1">Total Time: ${formatDuration(criticalTime)}</p>
+                        <p class="text-xs text-red-600 mt-1">Duration: ${formatDuration(timeInStates.critical)}</p>
+                        <p class="text-xs text-red-600">${totalTime ? Math.round((timeInStates.critical / totalTime) * 100) : 0}% of time</p>
                     </div>
                 `;
 
-                // Add the summary to the page
-                const chartContainer = document.getElementById('statusChart').parentElement;
+                // Update the summary on the page
+                const chartContainer = chartElement.parentElement;
                 const existingSummary = chartContainer.nextElementSibling;
                 if (existingSummary && existingSummary.classList.contains('mt-4')) {
                     existingSummary.remove();
                 }
                 chartContainer.after(summaryDiv);
+            }).catch(error => {
+                logToConsole(`Error updating status graph: ${error.message}`, 'error');
             });
         }
 
-        // Helper function to calculate time spent in each state
-        function calculateTimeInState(data, state) {
-            let totalTime = 0;
-            let lastActiveTime = null;
+        // Helper function to fetch property time series data
+        async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
+            try {
+                const endTime = new Date();
+                const startTime = new Date(endTime);
+                startTime.setHours(startTime.getHours() - hours);
 
-            data.forEach((point, index) => {
-                if (point[state] === 1) {
-                    if (lastActiveTime === null) {
-                        lastActiveTime = point.timestamp;
-                    }
-                    if (index === data.length - 1) {
-                        totalTime += point.timestamp - lastActiveTime;
-                    }
-                } else if (lastActiveTime !== null) {
-                    totalTime += point.timestamp - lastActiveTime;
-                    lastActiveTime = null;
+                const response = await fetch(`${API_URL}/api/iot/v2/devices/${deviceId}/properties/${propertyName}/timeseries?from=${startTime.toISOString()}&to=${endTime.toISOString()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
                 }
-            });
-
-            return totalTime;
-        }
-
-        // Helper function to format duration
-        function formatDuration(ms) {
-            if (ms === 0) return '0 minutes';
-            
-            const hours = Math.floor(ms / (1000 * 60 * 60));
-            const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-            
-            const parts = [];
-            if (hours > 0) parts.push(`${hours}h`);
-            if (minutes > 0) parts.push(`${minutes}m`);
-            
-            return parts.join(' ') || '< 1m';
+                
+                const data = await response.json();
+                return {
+                    timestamps: data.timestamps || [],
+                    values: data.values || []
+                };
+            } catch (error) {
+                logToConsole(`Error fetching property timeseries: ${error.message}`, 'error');
+                return null;
+            }
         }
 
         function updateFlowGraph(deviceIndex, hours) {
