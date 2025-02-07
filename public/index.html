@@ -2922,7 +2922,7 @@
                 const datasets = [
                     {
                         label: 'Great',
-                        data: processedData.map(d => d.great),
+                        data: processedData.map(d => d.great === 1 ? 1 : null),
                         borderColor: 'rgb(16, 185, 129)',
                         backgroundColor: 'rgba(16, 185, 129, 0.2)',
                         borderWidth: 2,
@@ -2932,11 +2932,12 @@
                         pointStyle: 'circle',
                         pointRadius: 3,
                         pointHoverRadius: 5,
+                        spanGaps: true,
                         order: 3
                     },
                     {
                         label: 'Warning',
-                        data: processedData.map(d => d.warning),
+                        data: processedData.map(d => d.warning === 1 ? 1 : null),
                         borderColor: 'rgb(234, 179, 8)',
                         backgroundColor: 'rgba(234, 179, 8, 0.2)',
                         borderWidth: 2,
@@ -2946,11 +2947,12 @@
                         pointStyle: 'circle',
                         pointRadius: 3,
                         pointHoverRadius: 5,
+                        spanGaps: true,
                         order: 2
                     },
                     {
                         label: 'Critical',
-                        data: processedData.map(d => d.critical),
+                        data: processedData.map(d => d.critical === 1 ? 1 : null),
                         borderColor: 'rgb(239, 68, 68)',
                         backgroundColor: 'rgba(239, 68, 68, 0.2)',
                         borderWidth: 2,
@@ -2960,6 +2962,7 @@
                         pointStyle: 'circle',
                         pointRadius: 3,
                         pointHoverRadius: 5,
+                        spanGaps: true,
                         order: 1
                     }
                 ];
