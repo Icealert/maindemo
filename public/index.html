@@ -2831,9 +2831,9 @@
             });
         }
 
-        // Fetch devices immediately and then every 30 seconds
+        // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
         fetchDevices();
-        const interval = setInterval(fetchDevices, 30000);
+        const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
 
         // Cleanup interval when page is unloaded
         window.addEventListener('unload', () => {
