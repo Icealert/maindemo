@@ -2634,15 +2634,7 @@
                                         }
                                         
                                         const temp = value.toFixed(1);
-                                        let text = `Temperature: ${temp}°F`;
-                                        
-                                        if (value > deviceThreshold) {
-                                            text += ' 🔴 Ice below sensor';
-                                        } else {
-                                            text += ' ✅ Ice above sensor';
-                                        }
-                                        
-                                        return text;
+                                        return `Temperature: ${temp}°F`;
                                     }
                                 },
                                 titleAlign: 'center',
