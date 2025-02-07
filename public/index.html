@@ -1422,131 +1422,124 @@
                                     recommendations.push({
                                         type: 'error',
                                         title: 'Connection Lost',
-                                        message: 'Device is currently offline.',
-                                        action: `
-                                        <div class="mt-2">
-                                            <button 
-                                                onclick="toggleRecommendations(this)" 
-                                                class="w-full flex items-center justify-between px-4 py-2 bg-red-100 hover:bg-red-200 rounded-lg transition-colors duration-200"
-                                                aria-expanded="false"
-                                            >
-                                                <span class="font-medium text-red-800">View Troubleshooting Steps</span>
-                                                <svg class="w-5 h-5 text-red-800 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                                                </svg>
-                                            </button>
-                                            
-                                            <div class="hidden mt-3 recommendations-content rounded-lg border border-red-200 bg-red-50">
-                                                <div class="p-4 space-y-4">
-                                                    <p class="text-red-800 font-medium mb-2">Please follow these troubleshooting steps in order:</p>
-                                                    <div class="space-y-4">
-                                                        <div class="flex items-start space-x-3">
-                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">1</span>
-                                                            <div class="flex-grow">
-                                                                <p class="font-medium text-red-800">Verify Ice Machine Operation</p>
-                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
-                                                                    <li>Check if the ice machine is powered on and running</li>
-                                                                    <li>If the machine is off, turn it on and wait for it to start</li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="flex items-start space-x-3">
-                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">2</span>
-                                                            <div class="flex-grow">
-                                                                <p class="font-medium text-red-800">Check the Ice-Alert Device's Power Supply</p>
-                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
-                                                                    <li>Ensure the Ice-Alert device is receiving power:
-                                                                        <ul class="ml-4 mt-1 list-circle">
-                                                                            <li>Inspect the power cable to confirm it is securely connected</li>
-                                                                            <li>Check the wall socket where the power adapter is plugged in</li>
-                                                                            <li>Look for the LED indicator on the power supply—it should be lit</li>
-                                                                            <li>Try plugging the power supply into a different socket</li>
-                                                                        </ul>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="flex items-start space-x-3">
-                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">3</span>
-                                                            <div class="flex-grow">
-                                                                <p class="font-medium text-red-800">Verify WiFi Connection</p>
-                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
-                                                                    <li>Confirm network connectivity:
-                                                                        <ul class="ml-4 mt-1 list-circle">
-                                                                            <li>Check if other devices on the same WiFi network are working</li>
-                                                                            <li>If WiFi is down, restart the router and wait for network recovery</li>
-                                                                            <li>Ensure the device is within range of the router</li>
-                                                                        </ul>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="flex items-start space-x-3">
-                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">4</span>
-                                                            <div class="flex-grow">
-                                                                <p class="font-medium text-red-800">Restart the Device</p>
-                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
-                                                                    <li>Perform a manual reboot:
-                                                                        <ul class="ml-4 mt-1 list-circle">
-                                                                            <li>Unplug the power supply from the wall socket</li>
-                                                                            <li>Wait for 10 seconds</li>
-                                                                            <li>Plug the power supply back in</li>
-                                                                            <li>Allow a few minutes for reconnection</li>
-                                                                        </ul>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        <div class="flex items-start space-x-3">
-                                                            <span class="flex-shrink-0 inline-flex items-center justify-center w-6 h-6 rounded-full bg-red-200 text-red-800 text-sm font-bold">5</span>
-                                                            <div class="flex-grow">
-                                                                <p class="font-medium text-red-800">Contact Support</p>
-                                                                <ul class="mt-1 ml-4 list-disc text-sm text-red-700">
-                                                                    <li>If the issue persists after trying all steps:
-                                                                        <ul class="ml-4 mt-1 list-circle">
-                                                                            <li>Support is for Ice-Alert device issues only</li>
-                                                                            <li>For ice machine issues, refer to machine's guide</li>
-                                                                        </ul>
-                                                                    </li>
-                                                                    <li class="mt-2">
-                                                                        <a href="mailto:icealertdevice@gmail.com" class="inline-flex items-center space-x-1 text-red-800 hover:text-red-900">
-                                                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                                                            </svg>
-                                                                            <span class="underline">icealertdevice@gmail.com</span>
-                                                                        </a>
-                                                                    </li>
-                                                                </ul>
-                                                            </div>
-                                                        </div>
+                                        message: 'Device is currently offline. Click below to view troubleshooting steps:',
+                                        action: `<div class="space-y-3 mt-2">
+                                            <details class="group bg-red-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">1</span>
+                                                        <span>Verify Ice Machine Operation</span>
                                                     </div>
+                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-red-700">
+                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
+                                                        <li>Check if the ice machine is powered on and running</li>
+                                                        <li>If the machine is off, turn it on and wait for it to start</li>
+                                                    </ul>
                                                 </div>
-                                            </div>
-                                        </div>
-                                        <script>
-                                            function toggleRecommendations(button) {
-                                                const content = button.nextElementSibling;
-                                                const arrow = button.querySelector('svg');
-                                                const isExpanded = button.getAttribute('aria-expanded') === 'true';
-                                                
-                                                // Toggle visibility
-                                                content.classList.toggle('hidden');
-                                                
-                                                // Update aria-expanded
-                                                button.setAttribute('aria-expanded', !isExpanded);
-                                                
-                                                // Rotate arrow
-                                                if (isExpanded) {
-                                                    arrow.style.transform = '';
-                                                } else {
-                                                    arrow.style.transform = 'rotate(180deg)';
-                                                }
-                                            }
-                                        </script>`
+                                            </details>
+
+                                            <details class="group bg-red-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">2</span>
+                                                        <span>Check Power Supply</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-red-700">
+                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
+                                                        <li>Ensure the Ice-Alert device is receiving power:
+                                                            <ul class="ml-4 mt-1 list-circle space-y-1">
+                                                                <li>Inspect the power cable to confirm it is securely connected</li>
+                                                                <li>Check the wall socket where the power adapter is plugged in</li>
+                                                                <li>Look for the LED indicator on the power supply—it should be lit</li>
+                                                                <li>Try plugging the power supply into a different socket if needed</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-red-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">3</span>
+                                                        <span>Verify WiFi Connection</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-red-700">
+                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
+                                                        <li>Confirm network connectivity:
+                                                            <ul class="ml-4 mt-1 list-circle space-y-1">
+                                                                <li>Check if other devices on the same WiFi network are working</li>
+                                                                <li>If WiFi is down, restart the router and wait for network recovery</li>
+                                                                <li>Ensure the device is within range of the WiFi router</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-red-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">4</span>
+                                                        <span>Restart Device</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-red-700">
+                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
+                                                        <li>Perform a manual reboot:
+                                                            <ul class="ml-4 mt-1 list-circle space-y-1">
+                                                                <li>Unplug the power supply from the wall socket</li>
+                                                                <li>Wait for 10 seconds</li>
+                                                                <li>Plug the power supply back in</li>
+                                                                <li>Allow the device to restart and monitor reconnection</li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </details>
+
+                                            <details class="group bg-red-50 rounded-lg">
+                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                                    <div class="flex items-center space-x-2">
+                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">5</span>
+                                                        <span>Contact Support</span>
+                                                    </div>
+                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                                    </svg>
+                                                </summary>
+                                                <div class="p-3 pt-0 text-red-700">
+                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
+                                                        <li>If all previous steps fail:
+                                                            <ul class="ml-4 mt-1 list-circle space-y-1">
+                                                                <li>Support is for Ice-Alert device issues only</li>
+                                                                <li>For ice machine issues, refer to machine troubleshooting guide</li>
+                                                            </ul>
+                                                        </li>
+                                                        <li class="mt-2">Technical Support:
+                                                            <ul class="ml-4 mt-1 list-circle">
+                                                                <li>Email: <a href="mailto:icealertdevice@gmail.com" class="underline font-medium hover:text-red-800 transition-colors">icealertdevice@gmail.com</a></li>
+                                                            </ul>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </details>
+                                        </div>`
                                     });
                                 }
 
