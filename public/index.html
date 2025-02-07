@@ -2574,7 +2574,6 @@
 
             const device = window.lastDevicesData[deviceIndex];
 
-            // Always fetch 72 hours of data to ensure we have enough data for any selected day
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
                     logToConsole('No data returned from fetchTimeSeriesData', 'error');
@@ -2593,42 +2592,13 @@
                 for (const day of selectedDays) {
                     const { datasets, thresholdF } = processTemperatureByHour(data.timestamps, data.temperature, day);
                     allDatasets.push(...datasets);
-                    deviceThreshold = thresholdF; // Use the threshold from the device
+                    deviceThreshold = thresholdF;
                 }
 
                 // Create hour labels (00:00 to 23:00)
                 const hourLabels = Array.from({ length: 24 }, (_, i) => 
                     `${i.toString().padStart(2, '0')}:00`
                 );
-
-                // Check if we have any data to display
-                if (allDatasets.every(dataset => dataset.data.every(v => v === null))) {
-                    logToConsole('No temperature data available to display', 'warning');
-                    const ctx = document.getElementById('tempChart').getContext('2d');
-                    new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: hourLabels,
-                            datasets: [{
-                                label: 'No data available',
-                                data: Array(24).fill(null),
-                                borderColor: 'rgb(156, 163, 175)',
-                                tension: 0.1
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                title: {
-                                    display: true,
-                                    text: 'No temperature data available'
-                                }
-                            }
-                        }
-                    });
-                    return;
-                }
 
                 // Get the canvas context
                 const ctx = document.getElementById('tempChart').getContext('2d');
@@ -2658,41 +2628,25 @@
                                     label: (context) => {
                                         const value = context.raw;
                                         if (value === null) return `${context.dataset.label}: No data`;
-                                        const label = context.dataset.label;
-                                        const temp = value.toFixed(1);
-                                        let text = '';
                                         
-                                        if (label === 'Anomalies') {
-                                          text = `⚠️ Unusual temperature pattern detected!\nAverage: ${temp}°F\n(Outside 2 standard deviations)`;
-                                        } else if (label.includes('Min')) {
-                                          text = `Minimum: ${temp}°F`;
-                                        } else if (label.includes('Max')) {
-                                          text = `Maximum: ${temp}°F`;
-                                        } else {
-                                          text = `${label}: ${temp}°F (hourly average)`;
-                                        }
-
-                                        // Add threshold warning if temperature is too high
+                                        const temp = value.toFixed(1);
+                                        let text = `Temperature: ${temp}°F`;
+                                        
                                         if (value > deviceThreshold) {
-                                          text += `\n🔴 Temperature above ${deviceThreshold.toFixed(1)}°F threshold!`;
+                                            text += ' 🔴 Above threshold!';
+                                        } else {
+                                            text += ' ✅ Below threshold';
                                         }
-
+                                        
                                         return text;
                                     }
                                 },
                                 titleAlign: 'center',
                                 bodyAlign: 'left',
-                                padding: 12,
                                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleFont: {
-                                    size: 13,
-                                    weight: 'bold'
-                                },
-                                bodyFont: {
-                                    size: 12
-                                },
-                                displayColors: true,
-                                boxPadding: 5
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12
                             },
                             legend: {
                                 position: 'top',
@@ -2700,24 +2654,7 @@
                                     usePointStyle: true,
                                     padding: 15
                                 }
-                            },
-                            annotation: {
-                                annotations: {
-                                  thresholdLine: {
-                                    type: 'line',
-                                    yMin: deviceThreshold,
-                                    yMax: deviceThreshold,
-                                    borderColor: 'rgba(239, 68, 68, 0.5)',
-                                    borderWidth: 2,
-                                    borderDash: [6, 6],
-                                    label: {
-                                      content: `Threshold (${deviceThreshold.toFixed(1)}°F)`,
-                                      enabled: true,
-                                      position: 'left'
-                                    }
-                                  }
-                                }
-                              }
+                            }
                         },
                         scales: {
                             x: {
@@ -2731,7 +2668,8 @@
                                 }
                             },
                             y: {
-                                beginAtZero: false,
+                                type: 'linear',
+                                display: true,
                                 title: {
                                     display: true,
                                     text: 'Temperature (°F)'
@@ -2739,6 +2677,9 @@
                                 grid: {
                                     display: true,
                                     drawOnChartArea: true
+                                },
+                                ticks: {
+                                    callback: value => `${value}°F`
                                 }
                             }
                         }
@@ -3311,18 +3252,14 @@
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = {
                         temps: [],
-                        iceLevels: [],
                         hour,
                         date: new Date(timestamp)
                     };
                 }
                 
-                // Convert Celsius to Fahrenheit and calculate ice level
+                // Convert Celsius to Fahrenheit
                 const tempF = (temp * 9/5) + 32;
-                const iceLevel = tempF <= 34 ? 100 : 0; // Ice is present when temp is at or below 34°F
-                
                 hourlyData[hour].temps.push(tempF);
-                hourlyData[hour].iceLevels.push(iceLevel);
             }
 
             // Get the device's temperature threshold
@@ -3361,35 +3298,33 @@
                 return { avg, stdDev, mode };
             }
 
-            // Create datasets for temperature and ice level
+            // Create dataset for temperature with dynamic coloring
             const tempData = {
                 label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Temperature)`,
                 data: Array(24).fill(null),
-                yAxisID: 'y-temp',
-                borderColor: getDatasetColor(selectedDay),
-                backgroundColor: getDatasetColor(selectedDay, 0.1),
+                borderColor: function(context) {
+                    const value = context.raw;
+                    return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
+                },
+                backgroundColor: function(context) {
+                    const value = context.raw;
+                    return value > thresholdF ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)';
+                },
                 tension: 0.1,
                 fill: true,
+                segment: {
+                    borderColor: ctx => {
+                        const value = ctx.p1.parsed.y;
+                        return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
+                    }
+                },
                 order: 1
-            };
-
-            const iceLevelData = {
-                label: 'Ice Level',
-                data: Array(24).fill(null),
-                yAxisID: 'y-ice',
-                borderColor: 'rgba(147, 197, 253, 0.8)',
-                backgroundColor: 'rgba(147, 197, 253, 0.2)',
-                borderDash: [5, 5],
-                tension: 0.1,
-                fill: true,
-                order: 2
             };
 
             const thresholdData = {
                 label: 'Temperature Threshold',
                 data: Array(24).fill(thresholdF),
-                yAxisID: 'y-temp',
-                borderColor: 'rgba(239, 68, 68, 0.5)',
+                borderColor: 'rgba(0, 0, 0, 0.5)',
                 borderDash: [5, 5],
                 tension: 0,
                 fill: false,
@@ -3398,7 +3333,6 @@
 
             // Fill in the data for each hour
             let allTemps = [];
-            let allIceLevels = [];
 
             for (let hour = 0; hour < 24; hour++) {
                 if (selectedDay === 0 && hour > currentHour) continue;
@@ -3407,16 +3341,10 @@
                 
                 if (hourData && hourData.temps.length > 0) {
                     const tempStats = calculateStats(hourData.temps);
-                    const iceLevelStats = calculateStats(hourData.iceLevels);
                     
                     if (tempStats) {
                         tempData.data[hour] = tempStats.avg;
                         allTemps = allTemps.concat(hourData.temps);
-                    }
-                    
-                    if (iceLevelStats) {
-                        iceLevelData.data[hour] = iceLevelStats.avg;
-                        allIceLevels = allIceLevels.concat(hourData.iceLevels);
                     }
                 }
             }
@@ -3431,7 +3359,7 @@
             }
 
             return {
-                datasets: [thresholdData, tempData, iceLevelData],
+                datasets: [thresholdData, tempData],
                 thresholdF
             };
         }
