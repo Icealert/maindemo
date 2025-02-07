@@ -3133,7 +3133,16 @@
                 const startTime = new Date(endTime);
                 startTime.setHours(startTime.getHours() - hours);
 
-                const response = await fetch(`${API_URL}/api/iot/v2/devices/${deviceId}/properties/${propertyName}/timeseries?from=${startTime.toISOString()}&to=${endTime.toISOString()}`);
+                // Find the property ID from the device's properties
+                const device = window.lastDevicesData.find(d => d.id === deviceId);
+                const property = device.thing?.properties?.find(p => p.name === propertyName);
+                
+                if (!property) {
+                    throw new Error(`Property ${propertyName} not found`);
+                }
+
+                // Use the property ID in the API call
+                const response = await fetch(`${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?from=${startTime.toISOString()}&to=${endTime.toISOString()}`);
                 
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
