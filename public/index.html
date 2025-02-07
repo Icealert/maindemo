@@ -1008,7 +1008,7 @@
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
                             <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
                             </svg>
                             <p class="mt-4 text-gray-500 text-lg">No devices found</p>
                             <p class="mt-2 text-gray-400 text-sm">Connect a device to get started</p>
@@ -1548,24 +1548,37 @@
                                     recommendations.push({
                                         type: 'warning',
                                         title: 'High Temperature Detected',
-                                        message: 'High temperature likely means there is no ice at the sensor level. Click below to troubleshoot:',
+                                        message: 'High temperature likely means there is no ice at the sensor level. Follow these steps to troubleshoot:',
                                         action: `<div class="space-y-3 mt-2">
                                             <details class="group bg-yellow-50 rounded-lg">
                                                 <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
-                                                        <span>Check Ice Usage</span>
+                                                        <span>Check Ice Usage Patterns</span>
                                                     </div>
                                                     <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                                     </svg>
                                                 </summary>
                                                 <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Verify recent ice usage patterns</li>
-                                                        <li>If usage was high, allow time for ice to rebuild</li>
-                                                        <li>Check if ice production matches demand</li>
-                                                    </ul>
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Review Recent Usage:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Check if there has been unusually high ice demand</li>
+                                                                <li>Note any patterns of increased usage during specific times</li>
+                                                                <li>Compare current usage to typical consumption patterns</li>
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-medium">🔹 Assess Recovery Time:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Allow 2-4 hours for ice to rebuild after heavy usage</li>
+                                                                <li>Monitor ice production rate during recovery</li>
+                                                                <li>Verify if machine can keep up with current demand</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </details>
 
@@ -1580,11 +1593,24 @@
                                                     </svg>
                                                 </summary>
                                                 <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Visually confirm ice presence at sensor level</li>
-                                                        <li>Check ice distribution in the bin</li>
-                                                        <li>Ensure sensor is in contact with ice when bin is full</li>
-                                                    </ul>
+                                                    <div class="space-y-3">
+                                                        <div>
+                                                            <p class="font-medium">🔹 Check Ice Distribution:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Open the bin and visually inspect ice levels</li>
+                                                                <li>Look for uneven ice distribution or bridging</li>
+                                                                <li>Check if ice is reaching the sensor location</li>
+                                                            </ul>
+                                                        </div>
+                                                        <div>
+                                                            <p class="font-medium">🔹 Verify Sensor Contact:</p>
+                                                            <ul class="mt-1 ml-4 list-disc text-sm space-y-1">
+                                                                <li>Ensure sensor is properly positioned</li>
+                                                                <li>Check for any obstacles preventing ice contact</li>
+                                                                <li>Verify sensor is securely mounted</li>
+                                                            </ul>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </details>
 
@@ -1592,125 +1618,7 @@
                                                 <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
                                                     <div class="flex items-center space-x-2">
                                                         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
-                                                        <span>Adjust Temperature Settings</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>If ice is present but alerts persist:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Consider increasing temperature threshold</li>
-                                                            <li>Monitor for false alerts after adjustment</li>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
                                                         <span>Check Machine Operation</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>If no ice is present:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Verify ice maker is operating normally</li>
-                                                            <li>Check water supply and filters</li>
-                                                            <li>Listen for unusual sounds</li>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
-                                                        <span>Maintenance Check</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>If issues persist:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Schedule maintenance inspection</li>
-                                                            <li>Contact your maintenance team</li>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </details>
-                                        </div>`
-                                    });
-                                }
-
-                                // Flow Recommendations
-                                if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
-                                    recommendations.push({
-                                        type: 'warning',
-                                        title: 'No Flow Detected',
-                                        message: 'No water flow could result in ice production failure. Click below to troubleshoot:',
-                                        action: `<div class="space-y-3 mt-2">
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
-                                                        <span>Verify Machine Status</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Check if ice machine is:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Powered on and running</li>
-                                                            <li>Not in standby mode</li>
-                                                            <li>In ice-making cycle</li>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
-                                                        <span>Check Water Supply</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-3 pt-0 text-yellow-700">
-                                                    <ul class="mt-2 ml-7 list-disc text-sm space-y-1">
-                                                        <li>Verify water supply:</li>
-                                                        <ul class="ml-4 mt-1 list-circle space-y-1">
-                                                            <li>Confirm water supply valve is fully open</li>
-                                                            <li>Check for kinked or damaged water lines</li>
-                                                            <li>Verify building water supply is active</li>
-                                                        </ul>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-3 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
-                                                        <span>Inspect for Blockages</span>
                                                     </div>
                                                     <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
