@@ -2770,7 +2770,7 @@
       return numericTypes.includes(prop.type?.toUpperCase());
     }
 
-    // Find relevant properties, ensuring they are numeric
+    // Find relevant properties
     const tempProperty = properties.find(p => p.name === 'cloudtemp');
     const flowProperty = properties.find(p => p.name === 'cloudflowrate');
     const warningProperty = properties.find(p => p.name === 'warning');
@@ -2905,7 +2905,7 @@
 
     // 6) Use the first available time series for timestamps
     const primaryTimes = tempResult.times.length ? tempResult.times :
-                        flowResult.times.length ? flowResult.times : 
+                        flowResult.times.length ? flowResult.times :
                         warningResult.times.length ? warningResult.times :
                         criticalResult.times.length ? criticalResult.times :
                         [new Date().toISOString()];
