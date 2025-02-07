@@ -1962,9 +1962,9 @@
                                 <h4 class="text-sm font-medium text-gray-700">Temperature & Ice Level</h4>
                                 <div class="flex items-center space-x-4 mb-4">
                                     <div class="time-range-selector" id="temp-time-range">
-                                        <button class="time-range-button active" data-days="0" onclick="toggleTempGraph(deviceIndex, 0)">Today</button>
-                                        <button class="time-range-button" data-days="1" onclick="toggleTempGraph(deviceIndex, 1)">Yesterday</button>
-                                        <button class="time-range-button" data-days="2" onclick="toggleTempGraph(deviceIndex, 2)">2 Days Ago</button>
+                                        <button class="time-range-button active" data-days="0" onclick="toggleTempGraph(window.currentDeviceIndex || 0, 0)">Today</button>
+                                        <button class="time-range-button" data-days="1" onclick="toggleTempGraph(window.currentDeviceIndex || 0, 1)">Yesterday</button>
+                                        <button class="time-range-button" data-days="2" onclick="toggleTempGraph(window.currentDeviceIndex || 0, 2)">2 Days Ago</button>
                                     </div>
                                     <div class="flex items-center space-x-4">
                                         <label class="flex items-center space-x-2 cursor-pointer">
@@ -2571,11 +2571,20 @@
 
         function toggleTempGraph(deviceIndex, day) {
             const button = document.querySelector(`#temp-time-range button[data-days="${day}"]`);
+            const wasActive = button.classList.contains('active');
+            
+            // If this was the only active button and it's being deactivated, don't allow it
+            const activeButtons = document.querySelectorAll('#temp-time-range button.active');
+            if (activeButtons.length === 1 && wasActive && activeButtons[0] === button) {
+                return; // Keep at least one day selected
+            }
+            
             button.classList.toggle('active');
             
             // Get all active days
             const activeDays = Array.from(document.querySelectorAll('#temp-time-range button.active'))
-                .map(btn => parseInt(btn.dataset.days));
+                .map(btn => parseInt(btn.dataset.days))
+                .sort((a, b) => a - b); // Sort days in order
             
             // Update graph with active days
             updateTempGraph(deviceIndex, activeDays);
