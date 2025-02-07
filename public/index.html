@@ -2650,18 +2650,27 @@
                 // Process temperature data for each selected day
                 const allDatasets = [];
                 let deviceThreshold = 34; // Default value
+                let hasAnyData = false;
+
                 for (const day of selectedDays) {
-                    const { datasets, thresholdF } = processTemperatureByHour(data.timestamps, data.temperature, day);
+                    const { datasets, thresholdF, noData } = processTemperatureByHour(data.timestamps, data.temperature, day);
                     
-                    // Filter out datasets based on visibility toggles
-                    const filteredDatasets = datasets.filter(d => {
-                        if (d.label === 'Ice Level' && window.iceLevelVisible === false) return false;
-                        if (d.label.includes('Temperature') && d.label !== 'Temperature Threshold' && window.tempLineVisible === false) return false;
-                        return true;
-                    });
-                    
-                    allDatasets.push(...filteredDatasets);
-                    deviceThreshold = thresholdF;
+                    if (noData) {
+                        // Add a text annotation for this day
+                        const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+                        logToConsole(`No data available for ${dayLabel}`, 'warning');
+                    } else {
+                        hasAnyData = true;
+                        // Filter out datasets based on visibility toggles
+                        const filteredDatasets = datasets.filter(d => {
+                            if (d.label === 'Ice Level' && window.iceLevelVisible === false) return false;
+                            if (d.label.includes('Temperature') && d.label !== 'Temperature Threshold' && window.tempLineVisible === false) return false;
+                            return true;
+                        });
+                        
+                        allDatasets.push(...filteredDatasets);
+                        deviceThreshold = thresholdF;
+                    }
                 }
 
                 // Create hour labels (00:00 to 23:00)
@@ -2781,6 +2790,20 @@
                         }
                     }
                 });
+
+                // If there's no data for any selected day, show a message
+                if (!hasAnyData) {
+                    const chartContainer = document.getElementById('tempChart').parentElement;
+                    const noDataMessage = document.createElement('div');
+                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center';
+                    noDataMessage.innerHTML = `
+                        <div class="text-gray-500 text-center">
+                            <p class="text-lg font-medium">No data available</p>
+                            <p class="text-sm">for the selected time period(s)</p>
+                        </div>
+                    `;
+                    chartContainer.appendChild(noDataMessage);
+                }
             });
         }
 
@@ -3338,6 +3361,9 @@
             const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
             const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
 
+            // Track if we have any data for this day
+            let hasDataForDay = false;
+
             // Process each temperature reading
             for (let i = 0; i < timestamps.length; i++) {
                 const timestamp = new Date(timestamps[i]);
@@ -3349,6 +3375,8 @@
                 
                 const hour = timestamp.getHours();
                 if (selectedDay === 0 && hour > currentHour) continue;
+                
+                hasDataForDay = true;
                 
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = {
@@ -3366,6 +3394,15 @@
                 
                 hourlyData[hour].temps.push(tempF);
                 hourlyData[hour].iceAboveSensor.push(isIceAboveSensor);
+            }
+
+            // If no data for this day, return null
+            if (!hasDataForDay) {
+                return {
+                    datasets: [],
+                    thresholdF,
+                    noData: true
+                };
             }
 
             // Helper function to calculate statistics
