@@ -1459,8 +1459,67 @@
                                     recommendations.push({
                                         type: 'warning',
                                         title: 'High Temperature Detected',
-                                        message: `Temperature (${formatTemperature(status.cloudTemp)}) exceeds threshold (${formatTemperature(status.tempThresholdMax)}).`,
-                                        action: 'Check ice machine operation and ensure proper ventilation. Consider maintenance if issue persists.'
+                                        message: `Temperature (${formatTemperature(status.cloudTemp)}) exceeds threshold (${formatTemperature(status.tempThresholdMax)}). This likely means there is no ice at the sensor level.`,
+                                        action: `<div class="space-y-2 mt-2">
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Check Ice Usage</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Verify if there has been a recent increase in ice usage</li>
+                                                        <li>If ice is being used faster than the machine can produce, allow time for recovery</li>
+                                                        <li>Check usage patterns to determine if demand has recently increased beyond machine's capacity</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Inspect Ice Levels</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Open the ice machine and visually confirm if there is ice at the sensor level</li>
+                                                        <li>If ice is present but sensor still detects high temperature, proceed to step 3</li>
+                                                        <li>If no ice is present, proceed to step 4</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Adjust Temperature Threshold (If Ice is Present)</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Navigate to the Properties Section below</li>
+                                                        <li>Locate the tempThresholdMax property</li>
+                                                        <li>Increase the threshold slightly to prevent false alerts</li>
+                                                        <li>Save the settings and monitor for further notifications</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Check for Machine Issues (If No Ice is Present)</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>Verify the ice maker is running properly and producing ice</li>
+                                                        <li>Check water supply and ensure adequate pressure</li>
+                                                        <li>Inspect water filters for clogs or need for replacement</li>
+                                                        <li>Ensure proper ventilation around the machine</li>
+                                                        <li>Listen for unusual sounds that might indicate mechanical issues</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-start space-x-2">
+                                                <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
+                                                <div class="text-yellow-700">
+                                                    <p class="font-medium">Consider Maintenance</p>
+                                                    <ul class="mt-1 ml-4 list-disc text-sm">
+                                                        <li>If ice is consistently not reaching the sensor level, inspect for deeper issues</li>
+                                                        <li>Clean the machine thoroughly, including all sensors and components</li>
+                                                        <li>If problems persist, contact technical support at <a href="mailto:icealertdevice@gmail.com" class="underline font-medium">icealertdevice@gmail.com</a></li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>`
                                     });
                                 }
 
