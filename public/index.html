@@ -2630,16 +2630,16 @@
                                         if (value === null) return `${context.dataset.label}: No data`;
                                         
                                         if (context.dataset.yAxisID === 'y-ice') {
-                                            return `Ice Level: ${value === 1 ? 'Above' : 'Below'} ${sensorPlacementPercent}% sensor`;
+                                            return `Ice Level: ${value === 1 ? 'Above' : 'Below'} ${sensorPlacementPercent}% sensor placement`;
                                         }
                                         
                                         const temp = value.toFixed(1);
                                         let text = `Temperature: ${temp}°F`;
                                         
                                         if (value > deviceThreshold) {
-                                            text += ` 🔴 Ice below ${sensorPlacementPercent}% sensor`;
+                                            text += ` 🔴 Ice below ${sensorPlacementPercent}% sensor placement`;
                                         } else {
-                                            text += ` ✅ Ice above ${sensorPlacementPercent}% sensor`;
+                                            text += ` ✅ Ice above ${sensorPlacementPercent}% sensor placement`;
                                         }
                                         
                                         return text;
@@ -3290,7 +3290,7 @@
                 
                 // Convert Celsius to Fahrenheit
                 const tempF = (temp * 9/5) + 32;
-                // Ice is above sensor when temperature is BELOW threshold
+                // Ice is above sensor when temperature is below threshold
                 const isIceAboveSensor = tempF <= thresholdF;
                 
                 hourlyData[hour].temps.push(tempF);
@@ -3392,7 +3392,6 @@
                         allTemps = allTemps.concat(hourData.temps);
                         
                         // Calculate ice level based on average temperature
-                        // Ice is above sensor when temperature is BELOW threshold
                         iceLevelData.data[hour] = tempStats.avg <= thresholdF ? 1 : 0;
                     }
                 }
