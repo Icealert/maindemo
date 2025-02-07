@@ -2630,16 +2630,16 @@
                                         if (value === null) return `${context.dataset.label}: No data`;
                                         
                                         if (context.dataset.yAxisID === 'y-ice') {
-                                            return `Ice Level: ${value === 1 ? 'Above' : 'Below'} Sensor`;
+                                            return `Ice Level: ${value === 1 ? 'Above' : 'Below'} ${sensorPlacementPercent}% sensor`;
                                         }
                                         
                                         const temp = value.toFixed(1);
                                         let text = `Temperature: ${temp}°F`;
                                         
                                         if (value > deviceThreshold) {
-                                            text += ' 🔴 Ice below sensor';
+                                            text += ` 🔴 Ice below ${sensorPlacementPercent}% sensor`;
                                         } else {
-                                            text += ' ✅ Ice above sensor';
+                                            text += ` ✅ Ice above ${sensorPlacementPercent}% sensor`;
                                         }
                                         
                                         return text;
@@ -2693,7 +2693,7 @@
                                 position: 'right',
                                 title: {
                                     display: true,
-                                    text: 'Ice Level'
+                                    text: `Ice Level (${sensorPlacementPercent}% sensor)`
                                 },
                                 min: -0.1,
                                 max: 1.1,
@@ -2701,7 +2701,7 @@
                                     display: false
                                 },
                                 ticks: {
-                                    callback: value => value === 1 ? 'Above' : value === 0 ? 'Below' : '',
+                                    callback: value => value === 1 ? `Above ${sensorPlacementPercent}%` : value === 0 ? `Below ${sensorPlacementPercent}%` : '',
                                     stepSize: 1
                                 }
                             }
@@ -3290,8 +3290,8 @@
                 
                 // Convert Celsius to Fahrenheit
                 const tempF = (temp * 9/5) + 32;
-                // Ice is above sensor only when temperature is higher than threshold
-                const isIceAboveSensor = tempF > thresholdF;
+                // Ice is above sensor when temperature is BELOW threshold
+                const isIceAboveSensor = tempF <= thresholdF;
                 
                 hourlyData[hour].temps.push(tempF);
                 hourlyData[hour].iceAboveSensor.push(isIceAboveSensor);
@@ -3392,7 +3392,8 @@
                         allTemps = allTemps.concat(hourData.temps);
                         
                         // Calculate ice level based on average temperature
-                        iceLevelData.data[hour] = tempStats.avg > thresholdF ? 1 : 0;
+                        // Ice is above sensor when temperature is BELOW threshold
+                        iceLevelData.data[hour] = tempStats.avg <= thresholdF ? 1 : 0;
                     }
                 }
             }
