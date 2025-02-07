@@ -3260,10 +3260,12 @@
             const dayEnd = new Date(dayStart);
             dayEnd.setHours(23, 59, 59, 999);
 
-            // Get the device's temperature threshold
+            // Get the device's temperature threshold and sensor placement
             const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
             const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+            const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
             const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
+            const sensorPlacementPercent = Math.round(sensorPlacement * 100);
 
             // Process each temperature reading
             for (let i = 0; i < timestamps.length; i++) {
@@ -3288,8 +3290,8 @@
                 
                 // Convert Celsius to Fahrenheit
                 const tempF = (temp * 9/5) + 32;
-                // If temperature is below threshold, ice is above sensor
-                const isIceAboveSensor = tempF <= thresholdF;
+                // Ice is above sensor only when temperature is higher than threshold
+                const isIceAboveSensor = tempF > thresholdF;
                 
                 hourlyData[hour].temps.push(tempF);
                 hourlyData[hour].iceAboveSensor.push(isIceAboveSensor);
@@ -3390,7 +3392,7 @@
                         allTemps = allTemps.concat(hourData.temps);
                         
                         // Calculate ice level based on average temperature
-                        iceLevelData.data[hour] = tempStats.avg <= thresholdF ? 1 : 0;
+                        iceLevelData.data[hour] = tempStats.avg > thresholdF ? 1 : 0;
                     }
                 }
             }
