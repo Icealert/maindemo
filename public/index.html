@@ -1991,22 +1991,42 @@
                                 </div>
                             </div>
                             <!-- Add Statistics Summary Box -->
-                            <div id="tempStats" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">24h Range</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
+                            <div id="tempStats" class="grid grid-cols-1 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                                <!-- Info Message -->
+                                <div class="col-span-full mb-2">
+                                    <p class="text-xs text-gray-600 italic">
+                                        Note: Statistics are only available when a single time period is selected.
+                                        Multi-day selections will disable these statistics.
+                                    </p>
                                 </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">24h Average</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Mode</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
+                                
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Daily Range
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Shows min-max temperature range from 12:01 AM to 11:59 PM. Calculated using available data for the selected day.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">Daily Average</h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">Mode</h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
+                                    </div>
                                 </div>
                             </div>
                             <div class="chart-container">
@@ -2633,6 +2653,21 @@
             // Store current device index for toggle function
             window.currentDeviceIndex = deviceIndex;
 
+            // Get the stats container
+            const statsContainer = document.getElementById('tempStats');
+
+            // Hide or show stats based on number of selected days
+            if (selectedDays.length > 1) {
+                statsContainer.classList.add('opacity-50', 'pointer-events-none');
+                // Clear stats when multiple days are selected
+                document.getElementById('tempRange').textContent = '-';
+                document.getElementById('tempAvg').textContent = '-';
+                document.getElementById('tempStdDev').textContent = '-';
+                document.getElementById('tempMode').textContent = '-';
+            } else {
+                statsContainer.classList.remove('opacity-50', 'pointer-events-none');
+            }
+
             const device = window.lastDevicesData[deviceIndex];
 
             fetchTimeSeriesData(device.id, 72).then(data => {
@@ -2805,6 +2840,266 @@
                     chartContainer.appendChild(noDataMessage);
                 }
             });
+        }
+
+        function processTemperatureByHour(timestamps, temperatures, selectedDay) {
+            logToConsole('Processing temperature data:', 'info');
+            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+            logToConsole(`Temperature values received: ${temperatures.length}`, 'info');
+            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
+
+            const hourlyData = {};
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            const dayStart = new Date(now);
+            dayStart.setDate(dayStart.getDate() - selectedDay);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Get the device's temperature threshold
+            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
+            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
+
+            // Track if we have any data for this day
+            let hasDataForDay = false;
+            let allTempsForDay = [];
+
+            // Process each temperature reading
+            for (let i = 0; i < timestamps.length; i++) {
+                const timestamp = new Date(timestamps[i]);
+                const temp = temperatures[i];
+                
+                if (temp === null || temp === undefined) continue;
+                
+                if (timestamp < dayStart || timestamp > dayEnd) continue;
+                
+                const hour = timestamp.getHours();
+                if (selectedDay === 0 && hour > currentHour) continue;
+                
+                hasDataForDay = true;
+                
+                // Convert Celsius to Fahrenheit for stats
+                const tempF = (temp * 9/5) + 32;
+                allTempsForDay.push(tempF);
+                
+                if (!hourlyData[hour]) {
+                    hourlyData[hour] = {
+                        temps: [],
+                        iceAboveSensor: [],
+                        hour,
+                        date: new Date(timestamp)
+                    };
+                }
+                
+                // If temperature is below threshold, ice is above sensor
+                const isIceAboveSensor = tempF <= thresholdF;
+                
+                hourlyData[hour].temps.push(tempF);
+                hourlyData[hour].iceAboveSensor.push(isIceAboveSensor);
+            }
+
+            // Update statistics if this is a single day view and we have data
+            if (hasDataForDay) {
+                // Calculate daily range
+                const minTemp = Math.min(...allTempsForDay);
+                const maxTemp = Math.max(...allTempsForDay);
+                document.getElementById('tempRange').innerHTML = 
+                    `${minTemp.toFixed(1)}°F - ${maxTemp.toFixed(1)}°F`;
+
+                // Calculate daily average
+                const avgTemp = allTempsForDay.reduce((a, b) => a + b, 0) / allTempsForDay.length;
+                document.getElementById('tempAvg').innerHTML = 
+                    formatTempValue(avgTemp.toFixed(1));
+
+                // Calculate standard deviation
+                const stdDev = calculateStdDev(allTempsForDay);
+                document.getElementById('tempStdDev').innerHTML = 
+                    `±${stdDev.toFixed(1)}°F`;
+
+                // Calculate mode
+                const mode = calculateMode(allTempsForDay);
+                document.getElementById('tempMode').innerHTML = 
+                    formatTempValue(mode.toFixed(1));
+            }
+
+            // If no data for this day, return null
+            if (!hasDataForDay) {
+                return {
+                    datasets: [],
+                    thresholdF,
+                    noData: true
+                };
+            }
+
+            // Helper function to calculate statistics
+            function calculateStats(values) {
+                if (!values || values.length === 0) return null;
+                
+                const sum = values.reduce((a, b) => a + b, 0);
+                const avg = sum / values.length;
+                
+                // Calculate standard deviation
+                const squareDiffs = values.map(value => {
+                    const diff = value - avg;
+                    return diff * diff;
+                });
+                const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
+                const stdDev = Math.sqrt(avgSquareDiff);
+                
+                // Calculate mode
+                const frequency = {};
+                let maxFreq = 0;
+                let mode = null;
+                values.forEach(value => {
+                    const rounded = Math.round(value * 10) / 10;
+                    frequency[rounded] = (frequency[rounded] || 0) + 1;
+                    if (frequency[rounded] > maxFreq) {
+                        maxFreq = frequency[rounded];
+                        mode = rounded;
+                    }
+                });
+
+                return { avg, stdDev, mode };
+            }
+
+            // Create dataset for temperature with dynamic coloring
+            const tempData = {
+                label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Temperature)`,
+                data: Array(24).fill(null),
+                yAxisID: 'y-temp',
+                borderColor: function(context) {
+                    const value = context.raw;
+                    return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
+                },
+                backgroundColor: function(context) {
+                    const value = context.raw;
+                    return value > thresholdF ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)';
+                },
+                tension: 0.1,
+                fill: true,
+                segment: {
+                    borderColor: ctx => {
+                        const value = ctx.p1.parsed.y;
+                        return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
+                    }
+                },
+                order: 1
+            };
+
+            // Create dataset for ice level indicator
+            const iceLevelData = {
+                label: 'Ice Level',
+                data: Array(24).fill(null),
+                yAxisID: 'y-ice',
+                borderColor: function(context) {
+                    const value = context.raw;
+                    return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
+                },
+                backgroundColor: function(context) {
+                    const value = context.raw;
+                    return value === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(147, 197, 253, 0.2)';
+                },
+                tension: 0.1,
+                fill: true,
+                order: 2,
+                stepped: true,
+                segment: {
+                    borderColor: ctx => {
+                        const value = ctx.p1.parsed.y;
+                        return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
+                    }
+                }
+            };
+
+            const thresholdData = {
+                label: 'Temperature Threshold',
+                data: Array(24).fill(thresholdF),
+                yAxisID: 'y-temp',
+                borderColor: 'rgba(0, 0, 0, 0.5)',
+                borderDash: [5, 5],
+                tension: 0,
+                fill: false,
+                order: 0
+            };
+
+            // Fill in the data for each hour
+            let allTemps = [];
+
+            for (let hour = 0; hour < 24; hour++) {
+                if (selectedDay === 0 && hour > currentHour) continue;
+
+                const hourData = hourlyData[hour];
+                
+                if (hourData && hourData.temps.length > 0) {
+                    const tempStats = calculateStats(hourData.temps);
+                    
+                    if (tempStats) {
+                        tempData.data[hour] = tempStats.avg;
+                        allTemps = allTemps.concat(hourData.temps);
+                        
+                        // Calculate ice level based on average temperature
+                        iceLevelData.data[hour] = tempStats.avg <= thresholdF ? 1 : 0;
+                    }
+                }
+            }
+
+            // Update statistics display
+            const overallTempStats = calculateStats(allTemps);
+            if (overallTempStats) {
+                document.getElementById('tempStdDev').innerHTML = 
+                    `±${overallTempStats.stdDev.toFixed(1)}°F`;
+                document.getElementById('tempMode').innerHTML = 
+                    formatTempValue(overallTempStats.mode);
+            }
+
+            return {
+                datasets: [thresholdData, tempData, iceLevelData],
+                thresholdF
+            };
+        }
+
+        // Helper function to format temperature value with conditional red color
+        function formatTempValue(value) {
+            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
+            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
+            
+            return parseFloat(value) > thresholdF ? 
+                `<span class="text-red-600">${value}°F</span>` : 
+                `${value}°F`;
+        }
+
+        // Helper function to calculate standard deviation
+        function calculateStdDev(values) {
+            const mean = values.reduce((a, b) => a + b, 0) / values.length;
+            const squareDiffs = values.map(value => {
+                const diff = value - mean;
+                return diff * diff;
+            });
+            const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
+            return Math.sqrt(avgSquareDiff);
+        }
+
+        // Helper function to calculate mode
+        function calculateMode(values) {
+            const rounded = values.map(v => Math.round(v * 10) / 10);
+            const frequency = {};
+            let maxFreq = 0;
+            let mode = rounded[0];
+
+            rounded.forEach(value => {
+                frequency[value] = (frequency[value] || 0) + 1;
+                if (frequency[value] > maxFreq) {
+                    maxFreq = frequency[value];
+                    mode = value;
+                }
+            });
+
+            return mode;
         }
 
         async function fetchTimeSeriesData(deviceId, hours) {
@@ -3338,241 +3633,6 @@
         window.addEventListener('unload', () => {
             clearInterval(interval);
         });
-
-        function processTemperatureByHour(timestamps, temperatures, selectedDay) {
-            logToConsole('Processing temperature data:', 'info');
-            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Temperature values received: ${temperatures.length}`, 'info');
-            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
-
-            const hourlyData = {};
-            const now = new Date();
-            const currentHour = now.getHours();
-            
-            const dayStart = new Date(now);
-            dayStart.setDate(dayStart.getDate() - selectedDay);
-            dayStart.setHours(0, 0, 0, 0);
-            
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            // Get the device's temperature threshold
-            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
-            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
-
-            // Track if we have any data for this day
-            let hasDataForDay = false;
-
-            // Process each temperature reading
-            for (let i = 0; i < timestamps.length; i++) {
-                const timestamp = new Date(timestamps[i]);
-                const temp = temperatures[i];
-                
-                if (temp === null || temp === undefined) continue;
-                
-                if (timestamp < dayStart || timestamp > dayEnd) continue;
-                
-                const hour = timestamp.getHours();
-                if (selectedDay === 0 && hour > currentHour) continue;
-                
-                hasDataForDay = true;
-                
-                if (!hourlyData[hour]) {
-                    hourlyData[hour] = {
-                        temps: [],
-                        iceAboveSensor: [],
-                        hour,
-                        date: new Date(timestamp)
-                    };
-                }
-                
-                // Convert Celsius to Fahrenheit
-                const tempF = (temp * 9/5) + 32;
-                // If temperature is below threshold, ice is above sensor
-                const isIceAboveSensor = tempF <= thresholdF;
-                
-                hourlyData[hour].temps.push(tempF);
-                hourlyData[hour].iceAboveSensor.push(isIceAboveSensor);
-            }
-
-            // If no data for this day, return null
-            if (!hasDataForDay) {
-                return {
-                    datasets: [],
-                    thresholdF,
-                    noData: true
-                };
-            }
-
-            // Helper function to calculate statistics
-            function calculateStats(values) {
-                if (!values || values.length === 0) return null;
-                
-                const sum = values.reduce((a, b) => a + b, 0);
-                const avg = sum / values.length;
-                
-                // Calculate standard deviation
-                const squareDiffs = values.map(value => {
-                    const diff = value - avg;
-                    return diff * diff;
-                });
-                const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
-                const stdDev = Math.sqrt(avgSquareDiff);
-                
-                // Calculate mode
-                const frequency = {};
-                let maxFreq = 0;
-                let mode = null;
-                values.forEach(value => {
-                    const rounded = Math.round(value * 10) / 10;
-                    frequency[rounded] = (frequency[rounded] || 0) + 1;
-                    if (frequency[rounded] > maxFreq) {
-                        maxFreq = frequency[rounded];
-                        mode = rounded;
-                    }
-                });
-
-                return { avg, stdDev, mode };
-            }
-
-            // Create dataset for temperature with dynamic coloring
-            const tempData = {
-                label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Temperature)`,
-                data: Array(24).fill(null),
-                yAxisID: 'y-temp',
-                borderColor: function(context) {
-                    const value = context.raw;
-                    return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
-                },
-                backgroundColor: function(context) {
-                    const value = context.raw;
-                    return value > thresholdF ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)';
-                },
-                tension: 0.1,
-                fill: true,
-                segment: {
-                    borderColor: ctx => {
-                        const value = ctx.p1.parsed.y;
-                        return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
-                    }
-                },
-                order: 1
-            };
-
-            // Create dataset for ice level indicator
-            const iceLevelData = {
-                label: 'Ice Level',
-                data: Array(24).fill(null),
-                yAxisID: 'y-ice',
-                borderColor: function(context) {
-                    const value = context.raw;
-                    return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
-                },
-                backgroundColor: function(context) {
-                    const value = context.raw;
-                    return value === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(147, 197, 253, 0.2)';
-                },
-                tension: 0.1,
-                fill: true,
-                order: 2,
-                stepped: true,
-                segment: {
-                    borderColor: ctx => {
-                        const value = ctx.p1.parsed.y;
-                        return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
-                    }
-                }
-            };
-
-            const thresholdData = {
-                label: 'Temperature Threshold',
-                data: Array(24).fill(thresholdF),
-                yAxisID: 'y-temp',
-                borderColor: 'rgba(0, 0, 0, 0.5)',
-                borderDash: [5, 5],
-                tension: 0,
-                fill: false,
-                order: 0
-            };
-
-            // Fill in the data for each hour
-            let allTemps = [];
-
-            for (let hour = 0; hour < 24; hour++) {
-                if (selectedDay === 0 && hour > currentHour) continue;
-
-                const hourData = hourlyData[hour];
-                
-                if (hourData && hourData.temps.length > 0) {
-                    const tempStats = calculateStats(hourData.temps);
-                    
-                    if (tempStats) {
-                        tempData.data[hour] = tempStats.avg;
-                        allTemps = allTemps.concat(hourData.temps);
-                        
-                        // Calculate ice level based on average temperature
-                        iceLevelData.data[hour] = tempStats.avg <= thresholdF ? 1 : 0;
-                    }
-                }
-            }
-
-            // Update statistics display
-            const overallTempStats = calculateStats(allTemps);
-            if (overallTempStats) {
-                document.getElementById('tempStdDev').innerHTML = 
-                    `±${overallTempStats.stdDev.toFixed(1)}°F`;
-                document.getElementById('tempMode').innerHTML = 
-                    formatTempValue(overallTempStats.mode);
-            }
-
-            return {
-                datasets: [thresholdData, tempData, iceLevelData],
-                thresholdF
-            };
-        }
-
-        // Helper function to format temperature value with conditional red color
-        function formatTempValue(value) {
-            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
-            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
-            
-            return parseFloat(value) > thresholdF ? 
-                `<span class="text-red-600">${value}°F</span>` : 
-                `${value}°F`;
-        }
-
-        // Add these functions to your existing script section
-        function showDisclaimer() {
-            const modal = document.getElementById('disclaimer-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function hideDisclaimer() {
-            const modal = document.getElementById('disclaimer-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        // Show disclaimer on first visit
-        if (!localStorage.getItem('disclaimerShown')) {
-            setTimeout(showDisclaimer, 1000);
-            localStorage.setItem('disclaimerShown', 'true');
-        }
-
-        function showContact() {
-            const modal = document.getElementById('contact-modal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function hideContact() {
-            const modal = document.getElementById('contact-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
     </script>
 </body>
 </html> 
