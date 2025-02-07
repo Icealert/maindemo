@@ -2893,15 +2893,25 @@
                 const dayEnd = new Date(dayStart);
                 dayEnd.setHours(23, 59, 59, 999);
 
+                // Log the date ranges for debugging
+                logToConsole('Date range for filtering:', {
+                    selectedDay,
+                    dayStart: dayStart.toISOString(),
+                    dayEnd: dayEnd.toISOString()
+                });
+
                 // Process the data
                 const processedData = [];
                 const timestamps = data.timestamps || [];
                 const warningStatus = data.warningStatus || [];
                 const criticalStatus = data.criticalStatus || [];
 
+                // For today, only show data up to current time
+                const currentTime = selectedDay === 0 ? now : dayEnd;
+
                 timestamps.forEach((timestamp, index) => {
                     const date = new Date(timestamp);
-                    if (date >= dayStart && date <= dayEnd) {
+                    if (date >= dayStart && date <= currentTime) {
                         const warning = warningStatus[index] === 1;
                         const critical = criticalStatus[index] === 1;
                         
@@ -2917,6 +2927,9 @@
 
                 // Sort data by timestamp
                 processedData.sort((a, b) => a.timestamp - b.timestamp);
+
+                // Log processed data for debugging
+                logToConsole(`Processed ${processedData.length} data points for day ${selectedDay}`);
 
                 // Create datasets with improved styling
                 const datasets = [
