@@ -968,14 +968,14 @@
             }
             
             const placement = (status.sensorPlacement * 100).toFixed(0);
-            const tempF = status.cloudTemp !== undefined ? celsiusToFahrenheit(status.cloudTemp) : undefined;
-            const isIceAboveSensor = tempF !== undefined && tempF <= 34;
-
-            if (isIceAboveSensor) {
-                return `More than ${placement}% full`;
-            } else {
-                return `Less than ${placement}% full`;
+            if (status.cloudTemp === undefined || status.tempThresholdMax === undefined) {
+                return 'Temperature data unavailable';
             }
+
+            // Compare with threshold temperature
+            return status.cloudTemp <= status.tempThresholdMax ? 
+                `More than ${placement}% full` : 
+                `Less than ${placement}% full`;
         }
 
         // Add this sorting function before displayDevices
