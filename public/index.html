@@ -45,6 +45,13 @@
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
             overflow-x: hidden;  /* Prevent horizontal scroll */
+            padding-top: 120px; /* Adjust this value based on your navbar height */
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding-top: 160px; /* Increase padding for mobile as navbar is taller */
+            }
         }
 
         .device-card {
@@ -71,6 +78,11 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 50;
         }
 
         .property-card {
