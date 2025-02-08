@@ -1390,35 +1390,32 @@
                                     ${(() => {
                                         const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
                                         if (lastMaintenance) {
-                                            const maintenanceDate = new Date(lastMaintenance);
+                                            const [month, day, year] = lastMaintenance.split('/').map(num => parseInt(num));
+                                            const maintenanceDate = new Date(year, month - 1, day); // month is 0-based in JS
                                             const now = new Date();
-                                            const diffTime = Math.abs(now - maintenanceDate);
-                                            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                                            const diffMonths = Math.floor(diffDays / 30);
-                                            const remainingDays = diffDays % 30;
+                                            
+                                            // Calculate total months difference
+                                            const monthsDiff = (now.getFullYear() - maintenanceDate.getFullYear()) * 12 + 
+                                                                 (now.getMonth() - maintenanceDate.getMonth());
+                                            
+                                            // Calculate remaining days
+                                            const tempDate = new Date(now.getFullYear(), now.getMonth(), maintenanceDate.getDate());
+                                            const daysDiff = Math.floor((now - tempDate) / (1000 * 60 * 60 * 24));
                                             
                                             return `
-                                                <div class="flex items-center mt-2 ${diffDays > 180 ? 'bg-red-50 text-red-700 p-1.5 rounded' : ''}">
-                                                    ${diffDays > 180 ? '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' : ''}
-                                                    <span class="text-xs ${diffDays > 180 ? 'font-medium' : 'text-gray-600'}">
-                                                        ${diffMonths > 0 ? `${diffMonths} month${diffMonths > 1 ? 's' : ''}` : ''}
-                                                        ${remainingDays > 0 ? `${diffMonths > 0 ? ' and ' : ''}${remainingDays} day${remainingDays > 1 ? 's' : ''}` : ''}
+                                                <div class="flex items-center mt-2 ${monthsDiff >= 6 ? 'bg-red-50 text-red-700 p-1.5 rounded' : ''}">
+                                                    ${monthsDiff >= 6 ? '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' : ''}
+                                                    <span class="text-xs ${monthsDiff >= 6 ? 'font-medium' : 'text-gray-600'}">
+                                                        ${monthsDiff > 0 ? `${monthsDiff} month${monthsDiff > 1 ? 's' : ''}` : ''}
+                                                        ${daysDiff > 0 ? `${monthsDiff > 0 ? ' and ' : ''}${daysDiff} day${daysDiff > 1 ? 's' : ''}` : ''}
                                                         since last maintenance
-                                                        ${diffDays > 180 ? ' (Due)' : ''}
+                                                        ${monthsDiff >= 6 ? ' (Due)' : ''}
                                                     </span>
                                                 </div>
                                             `;
                                         }
                                         return '';
                                     })()}
-                                    <p class="text-xs text-gray-500 mt-2">
-                                        ${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.value_updated_at ? 
-                                            `Updated: ${new Date(device.thing.properties.find(p => p.name === 'Last_Maintenance').value_updated_at).toLocaleDateString('en-US', {
-                                                year: 'numeric',
-                                                month: 'short',
-                                                day: 'numeric'
-                                            })}` : ''}
-                                    </p>
                                 </div>
                             </div>
                         </div>
