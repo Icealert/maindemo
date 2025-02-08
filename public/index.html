@@ -3373,73 +3373,48 @@
                 // For today, only show data up to current time
                 const currentTime = selectedDay === 0 ? now : dayEnd;
 
-                // Add detailed logging for status data
-                logToConsole('Raw status data:', 'info');
-                logToConsole({
-                    warningStatus: {
-                        total: data.warningStatus?.length || 0,
-                        sample: data.warningStatus?.slice(0, 5),
-                        description: 'First 5 warning status values'
-                    },
-                    criticalStatus: {
-                        total: data.criticalStatus?.length || 0,
-                        sample: data.criticalStatus?.slice(0, 5),
-                        description: 'First 5 critical status values'
-                    },
-                    timestamps: {
-                        total: data.timestamps?.length || 0,
-                        sample: data.timestamps?.slice(0, 5).map(t => new Date(t).toLocaleString()),
-                        description: 'First 5 timestamps'
-                    }
-                }, 'info');
-
-                // Add API response logging
-                logToConsole('Status data from API:', 'info');
-                logToConsole({
-                    endpoint: `${API_URL}/api/devices/${device.id}/status`,
-                    deviceId: device.id,
-                    dataPoints: data.timestamps?.length || 0,
-                    timeRange: {
-                        start: dayStart.toLocaleString(),
-                        end: currentTime.toLocaleString()
-                    }
-                }, 'info');
-
-                // Log time ranges
-                logToConsole('Time ranges:', {
-                    dayStart: dayStart.toISOString(),
-                    dayEnd: dayEnd.toISOString(),
-                    currentTime: currentTime.toISOString()
-                });
-
                 // Process the data
                 const processedData = [];
                 const timestamps = data.timestamps || [];
                 const warningStatus = data.warningStatus || [];
                 const criticalStatus = data.criticalStatus || [];
 
-                timestamps.forEach((timestamp, index) => {
-                    const date = new Date(timestamp);
-                    if (date >= dayStart && date <= currentTime) {
-                        const warning = warningStatus[index] === 1;
-                        const critical = criticalStatus[index] === 1;
-                        
-                        processedData.push({
-                            timestamp: date,
-                            warning: warning ? 1 : 0,
-                            critical: critical ? 1 : 0,
-                            great: (!warning && !critical) ? 1 : 0
-                        });
+                // Log raw data for debugging
+                logToConsole('Raw status data:', {
+                    timestamps: timestamps.length,
+                    warningStatus: warningStatus.length,
+                    criticalStatus: criticalStatus.length,
+                    sampleData: {
+                        timestamps: timestamps.slice(0, 5),
+                        warning: warningStatus.slice(0, 5),
+                        critical: criticalStatus.slice(0, 5)
                     }
                 });
 
+                // Process each data point
+                for (let i = 0; i < timestamps.length; i++) {
+                    const timestamp = new Date(timestamps[i]);
+                    if (timestamp >= dayStart && timestamp <= currentTime) {
+                        const warning = warningStatus[i];
+                        const critical = criticalStatus[i];
+                        
+                        processedData.push({
+                            timestamp: timestamp,
+                            warning: warning,
+                            critical: critical,
+                            great: (!warning && !critical) ? 1 : 0
+                        });
+                    }
+                }
+
                 // Log processed data
-                logToConsole('Processed data:', {
+                logToConsole('Processed status data:', {
                     totalPoints: processedData.length,
                     samplePoints: processedData.slice(0, 3),
-                    warningCount: processedData.filter(d => d.warning === 1).length,
-                    criticalCount: processedData.filter(d => d.critical === 1).length,
-                    greatCount: processedData.filter(d => d.great === 1).length
+                    timeRange: {
+                        start: dayStart.toLocaleString(),
+                        end: currentTime.toLocaleString()
+                    }
                 });
 
                 // Sort data by timestamp
@@ -3449,7 +3424,7 @@
                 const datasets = [
                     {
                         label: 'Great',
-                        data: processedData.map(d => d.great === 1 ? 1 : null),
+                        data: processedData.map(d => d.great),
                         borderColor: 'rgb(16, 185, 129)',
                         backgroundColor: 'rgba(16, 185, 129, 0.2)',
                         borderWidth: 2,
@@ -3464,7 +3439,7 @@
                     },
                     {
                         label: 'Warning',
-                        data: processedData.map(d => d.warning === 1 ? 1 : null),
+                        data: processedData.map(d => d.warning),
                         borderColor: 'rgb(234, 179, 8)',
                         backgroundColor: 'rgba(234, 179, 8, 0.2)',
                         borderWidth: 2,
@@ -3479,7 +3454,7 @@
                     },
                     {
                         label: 'Critical',
-                        data: processedData.map(d => d.critical === 1 ? 1 : null),
+                        data: processedData.map(d => d.critical),
                         borderColor: 'rgb(239, 68, 68)',
                         backgroundColor: 'rgba(239, 68, 68, 0.2)',
                         borderWidth: 2,
@@ -3493,13 +3468,6 @@
                         order: 1
                     }
                 ];
-
-                // Log dataset information
-                logToConsole('Dataset info:', datasets.map(d => ({
-                    label: d.label,
-                    dataPoints: d.data.filter(v => v !== null).length,
-                    sampleData: d.data.slice(0, 3)
-                })));
 
                 // Format timestamps for display
                 const labels = processedData.map(d => {
@@ -3605,10 +3573,7 @@
                     }
                 });
 
-                // Calculate and display time in each state
-                const totalTime = processedData.length > 0 ? 
-                    processedData[processedData.length - 1].timestamp - processedData[0].timestamp : 0;
-
+                // Calculate time in each state
                 const timeInStates = {
                     great: 0,
                     warning: 0,
@@ -3625,6 +3590,9 @@
                         timeInStates.great += duration;
                     }
                 }
+
+                const totalTime = processedData.length > 0 ? 
+                    processedData[processedData.length - 1].timestamp - processedData[0].timestamp : 0;
 
                 // Add status summary below the graph
                 const summaryDiv = document.createElement('div');
@@ -3656,8 +3624,7 @@
                 chartContainer.after(summaryDiv);
 
                 // Log time in states calculation
-                logToConsole('Time in states calculation:', 'info');
-                logToConsole({
+                logToConsole('Time in states calculation:', {
                     totalDuration: formatDuration(totalTime),
                     breakdown: {
                         great: {
@@ -3673,7 +3640,7 @@
                             percentage: totalTime ? Math.round((timeInStates.critical / totalTime) * 100) : 0
                         }
                     }
-                }, 'info');
+                });
             }).catch(error => {
                 logToConsole(`Error updating status graph: ${error.message}`, 'error');
             });
@@ -3798,8 +3765,8 @@
                     const totalFlow = allFlowValues.reduce((a, b) => a + b, 0);
                     document.getElementById('flowTotal').textContent = 
                         totalFlow.toFixed(3);
-
-                    // Calculate standard deviation
+                
+                // Calculate standard deviation
                     const stdDev = calculateStdDev(allFlowValues);
                     document.getElementById('flowStdDev').textContent = 
                         `±${stdDev.toFixed(3)}`;
