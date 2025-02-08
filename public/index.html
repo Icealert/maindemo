@@ -3623,36 +3623,127 @@
             fetchTimeSeriesData(device.id, hours).then(data => {
                 if (!data) return;
 
+                // Destroy existing chart if it exists
+                const existingChart = Chart.getChart('flowChart');
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                // Process flow rate data
+                const flowData = data.timeSinceFlow.map((value, index) => ({
+                    x: new Date(data.timestamps[index]),
+                    y: value * 100  // Convert to percentage for better visualization
+                })).filter(point => point.y !== null);
+
+                // Sort data by timestamp
+                flowData.sort((a, b) => a.x - b.x);
+
                 const ctx = document.getElementById('flowChart').getContext('2d');
                 new Chart(ctx, {
                     type: 'line',
                     data: {
-                        labels: data.timestamps,
                         datasets: [{
-                            label: 'Time Since Flow (hours)',
-                            data: data.timeSinceFlow,
+                            label: 'Flow Rate (%)',
+                            data: flowData,
                             borderColor: 'rgb(34, 197, 94)',
-                            tension: 0.1
+                            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                            tension: 0.1,
+                            fill: true,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
                         interaction: {
-                            mode: 'index',
-                            intersect: false,
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        return new Date(context[0].raw.x).toLocaleString();
+                                    },
+                                    label: (context) => {
+                                        return `Flow Rate: ${context.raw.y.toFixed(2)}%`;
+                                    }
+                                }
+                            }
                         },
                         scales: {
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'hour',
+                                    displayFormats: {
+                                        hour: 'MMM d, HH:mm'
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Time'
+                                }
+                            },
                             y: {
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Hours'
+                                    text: 'Flow Rate (%)'
+                                },
+                                ticks: {
+                                    callback: value => `${value}%`
                                 }
                             }
                         }
                     }
                 });
+
+                // Add flow rate statistics below the graph
+                const chartContainer = document.getElementById('flowChart').parentElement;
+                const existingStats = chartContainer.nextElementSibling;
+                if (existingStats && existingStats.classList.contains('mt-4')) {
+                    existingStats.remove();
+                }
+
+                if (flowData.length > 0) {
+                    const values = flowData.map(d => d.y);
+                    const avgFlow = values.reduce((a, b) => a + b, 0) / values.length;
+                    const maxFlow = Math.max(...values);
+                    const minFlow = Math.min(...values);
+                    const lastFlow = values[values.length - 1];
+
+                    const statsDiv = document.createElement('div');
+                    statsDiv.className = 'mt-4 grid grid-cols-4 gap-4';
+                    statsDiv.innerHTML = `
+                        <div class="p-3 bg-green-50 rounded-lg">
+                            <h5 class="text-sm font-medium text-green-800">Average Flow</h5>
+                            <p class="text-lg font-bold text-green-600">${avgFlow.toFixed(2)}%</p>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg">
+                            <h5 class="text-sm font-medium text-blue-800">Maximum Flow</h5>
+                            <p class="text-lg font-bold text-blue-600">${maxFlow.toFixed(2)}%</p>
+                        </div>
+                        <div class="p-3 bg-indigo-50 rounded-lg">
+                            <h5 class="text-sm font-medium text-indigo-800">Minimum Flow</h5>
+                            <p class="text-lg font-bold text-indigo-600">${minFlow.toFixed(2)}%</p>
+                        </div>
+                        <div class="p-3 bg-purple-50 rounded-lg">
+                            <h5 class="text-sm font-medium text-purple-800">Current Flow</h5>
+                            <p class="text-lg font-bold text-purple-600">${lastFlow.toFixed(2)}%</p>
+                        </div>
+                    `;
+                    chartContainer.after(statsDiv);
+                } else {
+                    const noDataDiv = document.createElement('div');
+                    noDataDiv.className = 'mt-4 p-4 bg-gray-50 rounded-lg text-center';
+                    noDataDiv.innerHTML = `
+                        <p class="text-gray-600">No flow rate data available for the selected time period</p>
+                    `;
+                    chartContainer.after(noDataDiv);
+                }
             });
         }
 
