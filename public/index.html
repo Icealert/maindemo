@@ -2096,6 +2096,10 @@
                                         <h5 class="text-xs font-medium text-gray-500">Frequency</h5>
                                         <p class="text-sm font-bold text-gray-900" id="flowFrequency">-</p>
                                     </div>
+                                    <div class="stat-box col-span-2 md:col-span-1">
+                                        <h5 class="text-xs font-medium text-gray-500">Time Since Last Flow</h5>
+                                        <p class="text-sm font-bold text-gray-900" id="timeSinceLastFlow">-</p>
+                                    </div>
                                 </div>
                             </div>
                             <div class="chart-container">
@@ -3871,6 +3875,18 @@
                         }
                     }
                 });
+
+                // Update time since last flow stat
+                const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+                if (selectedDay === 0 && dayData.length > 0) {
+                    // Get the most recent flow data point
+                    const lastFlowTime = dayData[dayData.length - 1].timestamp;
+                    const timeSinceFlow = now - lastFlowTime;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
+                } else {
+                    // For past days or no data, show disabled state
+                    timeSinceLastFlowEl.textContent = selectedDay === 0 ? '-' : 'N/A for past days';
+                }
             }).catch(error => {
                 logToConsole(`Error updating flow graph: ${error.message}`, 'error');
             });
