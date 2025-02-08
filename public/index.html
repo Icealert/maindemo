@@ -3361,6 +3361,18 @@
                     return;
                 }
 
+                // Get the start and end of the selected day
+                const now = new Date();
+                const dayStart = new Date(now);
+                dayStart.setDate(dayStart.getDate() - selectedDay);
+                dayStart.setHours(0, 0, 0, 0);
+                
+                const dayEnd = new Date(dayStart);
+                dayEnd.setHours(23, 59, 59, 999);
+
+                // For today, only show data up to current time
+                const currentTime = selectedDay === 0 ? now : dayEnd;
+
                 // Add detailed logging for status data
                 logToConsole('Raw status data:', 'info');
                 logToConsole({
@@ -3392,18 +3404,6 @@
                         end: currentTime.toLocaleString()
                     }
                 }, 'info');
-
-                // Get the start and end of the selected day
-                const now = new Date();
-                const dayStart = new Date(now);
-                dayStart.setDate(dayStart.getDate() - selectedDay);
-                dayStart.setHours(0, 0, 0, 0);
-                
-                const dayEnd = new Date(dayStart);
-                dayEnd.setHours(23, 59, 59, 999);
-
-                // For today, only show data up to current time
-                const currentTime = selectedDay === 0 ? now : dayEnd;
 
                 // Log time ranges
                 logToConsole('Time ranges:', {
