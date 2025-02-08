@@ -1081,7 +1081,13 @@
                         <div class="property-card bg-gradient-to-br from-indigo-50 to-indigo-100 p-2 rounded-lg">
                             <p class="text-indigo-800 font-medium text-xs">Ice Level</p>
                             <p class="text-lg font-bold text-indigo-900 leading-tight">
-                                ${getIceLevelText(status)}
+                                ${(() => {
+                                    const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
+                                    const placement = (sensorPlacement * 100).toFixed(0);
+                                    const tempF = status.cloudTemp !== undefined ? celsiusToFahrenheit(status.cloudTemp) : undefined;
+                                    if (tempF === undefined) return 'Temperature data unavailable';
+                                    return tempF <= 34 ? `More than ${placement}% full` : `Less than ${placement}% full`;
+                                })()}
                             </p>
                         </div>
                         
