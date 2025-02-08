@@ -47,11 +47,20 @@
             overflow-x: hidden;  /* Prevent horizontal scroll */
             padding-top: 160px; /* Increased padding for mobile */
             -webkit-overflow-scrolling: touch;
+            position: relative;
+            margin: 0;
+            padding-bottom: 2rem;
         }
 
         @media (min-width: 768px) {
             body {
                 padding-top: 100px; /* Less padding needed for desktop */
+            }
+            .glass-nav .container {
+                height: 64px;
+            }
+            .glass-nav {
+                min-height: auto;
             }
         }
 
@@ -90,21 +99,9 @@
             height: auto;
             min-height: 64px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        @media (min-width: 768px) {
-            .glass-nav .container {
-                height: 64px;
-            }
-            .glass-nav {
-                min-height: auto;
-            }
-        }
-
-        /* Update container padding for better mobile spacing */
-        .glass-nav .container {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
+            will-change: transform;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
         }
 
         @media (max-width: 767px) {
