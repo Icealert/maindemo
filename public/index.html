@@ -3280,26 +3280,6 @@
         rawResponse: flowData
     }, 'info');
 
-    // Add logging for warning status
-    logToConsole('Raw warning status:', 'info');
-    logToConsole({
-        propertyName: 'warning',
-        propertyId: warningProperty?.id,
-        currentValue: warningProperty?.last_value,
-        type: warningProperty?.type,
-        lastUpdated: warningProperty?.value_updated_at
-    }, 'info');
-
-    // Add logging for critical status
-    logToConsole('Raw critical status:', 'info');
-    logToConsole({
-        propertyName: 'critical',
-        propertyId: criticalProperty?.id,
-        currentValue: criticalProperty?.last_value,
-        type: criticalProperty?.type,
-        lastUpdated: criticalProperty?.value_updated_at
-    }, 'info');
-
     // 5) Process the data using parseTsArray
     const tempResult = parseTsArray(tempData.data || []);
     const flowResult = parseTsArray(flowData.data || []);
