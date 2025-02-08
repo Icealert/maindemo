@@ -3208,10 +3208,27 @@
     // Add logging for flow rate data
     logToConsole('Raw flow rate response:', 'info');
     logToConsole(flowData, 'info');
+    logToConsole('Flow data details:', 'info');
+    logToConsole({
+        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${buildQuery()}`,
+        flowPropertyId: flowProperty?.id,
+        responseStatus: flowData ? 'Success' : 'No data',
+        dataPoints: flowData?.data?.length || 0,
+        flowProperty: flowProperty
+    }, 'info');
 
     // 5) Process the data using parseTsArray
     const tempResult = parseTsArray(tempData.data || []);
     const flowResult = parseTsArray(flowData.data || []);
+
+    // Log processed results
+    logToConsole('Processed flow data:', 'info');
+    logToConsole({
+        flowTimes: flowResult.times.length,
+        flowValues: flowResult.values.length,
+        sampleTimes: flowResult.times.slice(0, 3),
+        sampleValues: flowResult.values.slice(0, 3)
+    }, 'info');
 
     // For warning and critical status, we'll use the current values since they're boolean
     const warningProperty = properties.find(p => p.name === 'warning');
