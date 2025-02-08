@@ -3141,6 +3141,12 @@
       logToConsole(`Temperature property type ${tempProperty.type} is not numeric`, 'warning');
     }
 
+    if (!flowProperty) {
+      logToConsole('Flow rate property not found', 'warning');
+    } else if (!isNumericProperty(flowProperty)) {
+      logToConsole(`Flow rate property type ${flowProperty.type} is not numeric`, 'warning');
+    }
+
     // 2) Compute interval to stay under 1000 points
     const timeRangeSeconds = hours * 3600;
     const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
@@ -3168,7 +3174,7 @@
     // Log the request details for debugging
     logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
     if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
-    if (flowProperty) logToConsole(`Flow property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+    if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
 
     // 4) Make parallel fetch calls for each numeric property
     const [tempData, flowData] = await Promise.all([
@@ -3186,7 +3192,7 @@
           })
         : Promise.resolve({ data: [] }),
 
-      // Flow
+      // Flow Rate
       flowProperty
         ? fetch(
             `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${buildQuery()}`,
@@ -3194,7 +3200,7 @@
           ).then(async res => {
             if (!res.ok) {
               const errorText = await res.text();
-              throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
+              throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
             }
             return res.json();
           })
@@ -3214,7 +3220,8 @@
         flowPropertyId: flowProperty?.id,
         responseStatus: flowData ? 'Success' : 'No data',
         dataPoints: flowData?.data?.length || 0,
-        flowProperty: flowProperty
+        flowProperty: flowProperty,
+        rawResponse: flowData
     }, 'info');
 
     // 5) Process the data using parseTsArray
@@ -3227,7 +3234,8 @@
         flowTimes: flowResult.times.length,
         flowValues: flowResult.values.length,
         sampleTimes: flowResult.times.slice(0, 3),
-        sampleValues: flowResult.values.slice(0, 3)
+        sampleValues: flowResult.values.slice(0, 3),
+        rawFlowData: flowData.data
     }, 'info');
 
     // For warning and critical status, we'll use the current values since they're boolean
