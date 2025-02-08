@@ -3750,20 +3750,19 @@
                     document.getElementById('flowRange').textContent = 
                         `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)}`;
 
-                    // Calculate daily average
-                    const avgFlow = allFlowValues.reduce((a, b) => a + b, 0) / allFlowValues.length;
-                    document.getElementById('flowAvg').textContent = 
-                        avgFlow.toFixed(3);
+                    // Calculate total flow for the day
+                    const totalFlow = allFlowValues.reduce((a, b) => a + b, 0);
+                    document.getElementById('flowTotal').textContent = 
+                        totalFlow.toFixed(3);
 
                     // Calculate standard deviation
                     const stdDev = calculateStdDev(allFlowValues);
                     document.getElementById('flowStdDev').textContent = 
                         `±${stdDev.toFixed(3)}`;
 
-                    // Calculate mode
-                    const mode = calculateMode(allFlowValues);
-                    document.getElementById('flowMode').textContent = 
-                        mode.toFixed(3);
+                    // Show frequency (number of data points)
+                    document.getElementById('flowFrequency').textContent = 
+                        `${allFlowValues.length} points`;
                 }
 
                 // Check if we have any data for the selected day
