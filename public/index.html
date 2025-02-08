@@ -2844,6 +2844,13 @@
                         </div>
                     `;
                     chartContainer.appendChild(noDataMessage);
+                } else {
+                    // If we have data, make sure to remove any existing no-data message
+                    const chartContainer = document.getElementById('tempChart').parentElement;
+                    const existingMessage = chartContainer.querySelector('.no-data-message');
+                    if (existingMessage) {
+                        existingMessage.remove();
+                    }
                 }
             });
         }
