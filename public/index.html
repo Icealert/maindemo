@@ -3184,8 +3184,6 @@
     // Find relevant properties, ensuring they are numeric
     const tempProperty = properties.find(p => p.name === 'cloudtemp');
     const flowProperty = properties.find(p => p.name === 'cloudflowrate');
-    const warningProperty = properties.find(p => p.name === 'warning');
-    const criticalProperty = properties.find(p => p.name === 'critical');
 
     // Log property types for debugging
     logToConsole('Property types:', 'info');
@@ -3203,14 +3201,6 @@
       logToConsole('Flow rate property not found', 'warning');
     } else if (!isNumericProperty(flowProperty)) {
       logToConsole(`Flow rate property type ${flowProperty.type} is not numeric`, 'warning');
-    }
-
-    if (!warningProperty) {
-      logToConsole('Warning property not found', 'warning');
-    }
-
-    if (!criticalProperty) {
-      logToConsole('Critical property not found', 'warning');
     }
 
     // 2) Compute interval to stay under 1000 points
@@ -3241,11 +3231,9 @@
     logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
     if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
     if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
-    if (warningProperty) logToConsole(`Warning property ID: ${warningProperty.id} (${warningProperty.type})`, 'info');
-    if (criticalProperty) logToConsole(`Critical property ID: ${criticalProperty.id} (${criticalProperty.type})`, 'info');
 
-    // 4) Make parallel fetch calls for each property
-    const [tempData, flowData, warningData, criticalData] = await Promise.all([
+    // 4) Make parallel fetch calls for each numeric property
+    const [tempData, flowData] = await Promise.all([
       // Temperature
       tempProperty
         ? fetch(
@@ -3272,128 +3260,110 @@
             }
             return res.json();
           })
-        : Promise.resolve({ data: [] }),
-
-      // Warning Status
-      warningProperty
-        ? fetch(
-            `${API_URL}/api/proxy/timeseries/${thingId}/${warningProperty.id}?${buildQuery()}`,
-            fetchOptions
-          ).then(async res => {
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(`Warning status fetch failed: ${res.status} - ${errorText}`);
-            }
-            return res.json();
-          })
-        : Promise.resolve({ data: [] }),
-
-      // Critical Status
-      criticalProperty
-        ? fetch(
-            `${API_URL}/api/proxy/timeseries/${thingId}/${criticalProperty.id}?${buildQuery()}`,
-            fetchOptions
-          ).then(async res => {
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(`Critical status fetch failed: ${res.status} - ${errorText}`);
-            }
-            return res.json();
-          })
         : Promise.resolve({ data: [] })
     ]);
 
-    // Log raw response data for all properties
+    // Log raw response data
     logToConsole('Raw temperature response:', 'info');
     logToConsole(tempData, 'info');
 
+    // Add logging for flow rate data
     logToConsole('Raw flow rate response:', 'info');
     logToConsole(flowData, 'info');
-
-    logToConsole('Raw warning status response:', 'info');
-    logToConsole(warningData, 'info');
-
-    logToConsole('Raw critical status response:', 'info');
-    logToConsole(criticalData, 'info');
-
-    // Log detailed data for each property
-    logToConsole('Detailed property responses:', 'info');
+    logToConsole('Flow data details:', 'info');
     logToConsole({
-        temperature: {
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${buildQuery()}`,
-            propertyId: tempProperty?.id,
-            responseStatus: tempData ? 'Success' : 'No data',
-            dataPoints: tempData?.data?.length || 0
-        },
-        flowRate: {
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${buildQuery()}`,
-            propertyId: flowProperty?.id,
-            responseStatus: flowData ? 'Success' : 'No data',
-            dataPoints: flowData?.data?.length || 0
-        },
-        warning: {
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${warningProperty?.id}?${buildQuery()}`,
-            propertyId: warningProperty?.id,
-            responseStatus: warningData ? 'Success' : 'No data',
-            dataPoints: warningData?.data?.length || 0
-        },
-        critical: {
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${criticalProperty?.id}?${buildQuery()}`,
-            propertyId: criticalProperty?.id,
-            responseStatus: criticalData ? 'Success' : 'No data',
-            dataPoints: criticalData?.data?.length || 0
-        }
+        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${buildQuery()}`,
+        flowPropertyId: flowProperty?.id,
+        responseStatus: flowData ? 'Success' : 'No data',
+        dataPoints: flowData?.data?.length || 0,
+        flowProperty: flowProperty,
+        rawResponse: flowData
+    }, 'info');
+
+    // Add logging for warning status
+    logToConsole('Raw warning status:', 'info');
+    logToConsole({
+        propertyName: 'warning',
+        propertyId: warningProperty?.id,
+        currentValue: warningProperty?.last_value,
+        type: warningProperty?.type,
+        lastUpdated: warningProperty?.value_updated_at
+    }, 'info');
+
+    // Add logging for critical status
+    logToConsole('Raw critical status:', 'info');
+    logToConsole({
+        propertyName: 'critical',
+        propertyId: criticalProperty?.id,
+        currentValue: criticalProperty?.last_value,
+        type: criticalProperty?.type,
+        lastUpdated: criticalProperty?.value_updated_at
     }, 'info');
 
     // 5) Process the data using parseTsArray
     const tempResult = parseTsArray(tempData.data || []);
     const flowResult = parseTsArray(flowData.data || []);
-    const warningResult = parseTsArray(warningData.data || []);
-    const criticalResult = parseTsArray(criticalData.data || []);
 
-    // Log processed results for all properties
-    logToConsole('Processed data results:', 'info');
+    // Log processed results
+    logToConsole('Processed flow data:', 'info');
     logToConsole({
-        temperature: {
-            times: tempResult.times.length,
-            values: tempResult.values.length,
-            sampleTimes: tempResult.times.slice(0, 3),
-            sampleValues: tempResult.values.slice(0, 3)
-        },
-        flowRate: {
-            times: flowResult.times.length,
-            values: flowResult.values.length,
-            sampleTimes: flowResult.times.slice(0, 3),
-            sampleValues: flowResult.values.slice(0, 3)
-        },
-        warning: {
-            times: warningResult.times.length,
-            values: warningResult.values.length,
-            sampleTimes: warningResult.times.slice(0, 3),
-            sampleValues: warningResult.values.slice(0, 3)
-        },
-        critical: {
-            times: criticalResult.times.length,
-            values: criticalResult.values.length,
-            sampleTimes: criticalResult.times.slice(0, 3),
-            sampleValues: criticalResult.values.slice(0, 3)
-        }
+        flowTimes: flowResult.times.length,
+        flowValues: flowResult.values.length,
+        sampleTimes: flowResult.times.slice(0, 3),
+        sampleValues: flowResult.values.slice(0, 3),
+        rawFlowData: flowData.data
+    }, 'info');
+
+    // For warning and critical status, we'll use the current values since they're boolean
+    const warningProperty = properties.find(p => p.name === 'warning');
+    const criticalProperty = properties.find(p => p.name === 'critical');
+    
+    // Convert boolean values to 1 or 0 for the graph
+    const currentWarningValue = warningProperty?.last_value === true || warningProperty?.last_value === "true" ? 1 : 0;
+    const currentCriticalValue = criticalProperty?.last_value === true || criticalProperty?.last_value === "true" ? 1 : 0;
+
+    // Log the boolean values for debugging
+    logToConsole('Status values:', {
+        warningRaw: warningProperty?.last_value,
+        warningConverted: currentWarningValue,
+        criticalRaw: criticalProperty?.last_value,
+        criticalConverted: currentCriticalValue
     }, 'info');
 
     // 6) Use the first available time series for timestamps
     const primaryTimes = tempResult.times.length ? tempResult.times :
                         flowResult.times.length ? flowResult.times : 
-                        warningResult.times.length ? warningResult.times :
-                        criticalResult.times.length ? criticalResult.times :
                         [new Date().toISOString()];
+
+    // Log processed data
+    logToConsole('Processed data:', 'info');
+    logToConsole(`Temperature times: ${tempResult.times.length}`, 'info');
+    logToConsole(`Temperature values: ${tempResult.values.length}`, 'info');
+    logToConsole(`Flow rate times: ${flowResult.times.length}`, 'info');
+    logToConsole(`Flow rate values: ${flowResult.values.length}`, 'info');
+    logToConsole('Warning status:', warningProperty?.last_value, 'info');
+    logToConsole('Critical status:', criticalProperty?.last_value, 'info');
+
+    // Add detailed flow rate data logging
+    logToConsole('Flow rate data details:', 'info');
+    if (flowResult.times.length > 0) {
+        const flowDataDetails = flowResult.times.map((time, index) => ({
+            timestamp: new Date(time).toLocaleString(),
+            value: flowResult.values[index]
+        }));
+        logToConsole(flowDataDetails, 'info');
+    } else {
+        logToConsole('No flow rate data available', 'warning');
+    }
 
     // 7) Return formatted data for the charts
     return {
       timestamps: primaryTimes.map(t => new Date(t).toLocaleString()),
       temperature: tempResult.values,
       timeSinceFlow: flowResult.values,
-      warningStatus: warningResult.values,
-      criticalStatus: criticalResult.values,
+      // For boolean properties, return arrays with the current value repeated
+      warningStatus: new Array(primaryTimes.length).fill(currentWarningValue),
+      criticalStatus: new Array(primaryTimes.length).fill(currentCriticalValue),
       iceLevel: tempResult.values?.map(celsius => {
         if (celsius === null || celsius === undefined) return null;
         const f = (celsius * 9) / 5 + 32;
