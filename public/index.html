@@ -3205,6 +3205,10 @@
     logToConsole('Raw temperature response:', 'info');
     logToConsole(tempData, 'info');
 
+    // Add logging for flow rate data
+    logToConsole('Raw flow rate response:', 'info');
+    logToConsole(flowData, 'info');
+
     // 5) Process the data using parseTsArray
     const tempResult = parseTsArray(tempData.data || []);
     const flowResult = parseTsArray(flowData.data || []);
@@ -3225,6 +3229,20 @@
     logToConsole('Processed data:', 'info');
     logToConsole(`Temperature times: ${tempResult.times.length}`, 'info');
     logToConsole(`Temperature values: ${tempResult.values.length}`, 'info');
+    logToConsole(`Flow rate times: ${flowResult.times.length}`, 'info');
+    logToConsole(`Flow rate values: ${flowResult.values.length}`, 'info');
+
+    // Add detailed flow rate data logging
+    logToConsole('Flow rate data details:', 'info');
+    if (flowResult.times.length > 0) {
+        const flowDataDetails = flowResult.times.map((time, index) => ({
+            timestamp: new Date(time).toLocaleString(),
+            value: flowResult.values[index]
+        }));
+        logToConsole(flowDataDetails, 'info');
+    } else {
+        logToConsole('No flow rate data available', 'warning');
+    }
 
     // 7) Return formatted data for the charts
     return {
