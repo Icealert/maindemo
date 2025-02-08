@@ -2829,12 +2829,18 @@
                 // If there's no data for any selected day, show a message
                 if (!hasAnyData) {
                     const chartContainer = document.getElementById('tempChart').parentElement;
+                    // Remove any existing no-data message
+                    const existingMessage = chartContainer.querySelector('.no-data-message');
+                    if (existingMessage) {
+                        existingMessage.remove();
+                    }
+                    
                     const noDataMessage = document.createElement('div');
-                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center';
+                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
                     noDataMessage.innerHTML = `
                         <div class="text-gray-500 text-center">
-                            <p class="text-lg font-medium">No data available</p>
-                            <p class="text-sm">for the selected time period(s)</p>
+                            <p class="text-lg font-medium">No temperature data available</p>
+                            <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
                         </div>
                     `;
                     chartContainer.appendChild(noDataMessage);
@@ -3633,6 +3639,13 @@
                     existingChart.destroy();
                 }
 
+                // Remove any existing no-data message
+                const chartContainer = chartElement.parentElement;
+                const existingMessage = chartContainer.querySelector('.no-data-message');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+
                 // Get the start and end of the selected day
                 const now = new Date();
                 const dayStart = new Date(now);
@@ -3664,14 +3677,14 @@
                 if (dayData.length === 0) {
                     // Show no data message
                     const noDataMessage = document.createElement('div');
-                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center';
+                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
                     noDataMessage.innerHTML = `
                         <div class="text-gray-500 text-center">
                             <p class="text-lg font-medium">No flow rate data available</p>
                             <p class="text-sm">for ${selectedDay === 0 ? 'today' : selectedDay === 1 ? 'yesterday' : '2 days ago'}</p>
                         </div>
                     `;
-                    chartElement.parentElement.appendChild(noDataMessage);
+                    chartContainer.appendChild(noDataMessage);
                     return;
                 }
 
@@ -3739,11 +3752,7 @@
                                 },
                                 grid: {
                                     display: true,
-                                    drawOnChartArea: true,
-                                    ticks: {
-                                        maxRotation: 45,
-                                        minRotation: 45
-                                    }
+                                    drawOnChartArea: true
                                 },
                                 ticks: {
                                     maxRotation: 45,
