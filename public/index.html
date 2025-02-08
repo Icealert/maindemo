@@ -3361,17 +3361,37 @@
                     return;
                 }
 
-                // Log raw data received
-                logToConsole('Raw data received:', {
-                    timestamps: data.timestamps?.length || 0,
-                    warningStatus: data.warningStatus?.length || 0,
-                    criticalStatus: data.criticalStatus?.length || 0,
-                    sampleData: {
-                        timestamps: data.timestamps?.slice(0, 3),
-                        warningStatus: data.warningStatus?.slice(0, 3),
-                        criticalStatus: data.criticalStatus?.slice(0, 3)
+                // Add detailed logging for status data
+                logToConsole('Raw status data:', 'info');
+                logToConsole({
+                    warningStatus: {
+                        total: data.warningStatus?.length || 0,
+                        sample: data.warningStatus?.slice(0, 5),
+                        description: 'First 5 warning status values'
+                    },
+                    criticalStatus: {
+                        total: data.criticalStatus?.length || 0,
+                        sample: data.criticalStatus?.slice(0, 5),
+                        description: 'First 5 critical status values'
+                    },
+                    timestamps: {
+                        total: data.timestamps?.length || 0,
+                        sample: data.timestamps?.slice(0, 5).map(t => new Date(t).toLocaleString()),
+                        description: 'First 5 timestamps'
                     }
-                });
+                }, 'info');
+
+                // Add API response logging
+                logToConsole('Status data from API:', 'info');
+                logToConsole({
+                    endpoint: `${API_URL}/api/devices/${device.id}/status`,
+                    deviceId: device.id,
+                    dataPoints: data.timestamps?.length || 0,
+                    timeRange: {
+                        start: dayStart.toLocaleString(),
+                        end: currentTime.toLocaleString()
+                    }
+                }, 'info');
 
                 // Get the start and end of the selected day
                 const now = new Date();
@@ -3634,6 +3654,26 @@
                     existingSummary.remove();
                 }
                 chartContainer.after(summaryDiv);
+
+                // Log time in states calculation
+                logToConsole('Time in states calculation:', 'info');
+                logToConsole({
+                    totalDuration: formatDuration(totalTime),
+                    breakdown: {
+                        great: {
+                            duration: formatDuration(timeInStates.great),
+                            percentage: totalTime ? Math.round((timeInStates.great / totalTime) * 100) : 0
+                        },
+                        warning: {
+                            duration: formatDuration(timeInStates.warning),
+                            percentage: totalTime ? Math.round((timeInStates.warning / totalTime) * 100) : 0
+                        },
+                        critical: {
+                            duration: formatDuration(timeInStates.critical),
+                            percentage: totalTime ? Math.round((timeInStates.critical / totalTime) * 100) : 0
+                        }
+                    }
+                }, 'info');
             }).catch(error => {
                 logToConsole(`Error updating status graph: ${error.message}`, 'error');
             });
