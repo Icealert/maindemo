@@ -9,59 +9,10 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
         
-        /* Add mobile-specific styles */
-        @media (max-width: 768px) {
-            .stat-cards-container {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.5rem;
-                margin-top: 1rem;
-            }
-
-            .time-range-selector {
-                flex-wrap: wrap;
-                justify-content: center;
-            }
-
-            .time-range-button {
-                min-width: 100px;
-                text-align: center;
-            }
-
-            .chart-container {
-                height: 250px;  /* Slightly smaller on mobile */
-            }
-
-            .modal-content {
-                width: 95%;
-                margin: 1rem;
-                max-height: 90vh;
-            }
-        }
-
-        /* Existing styles remain the same */
         body {
             font-family: 'Inter', sans-serif;
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
-            overflow-x: hidden;  /* Prevent horizontal scroll */
-            padding-top: 160px; /* Increased padding for mobile */
-            -webkit-overflow-scrolling: touch;
-            position: relative;
-            margin: 0;
-            padding-bottom: 2rem;
-        }
-
-        @media (min-width: 768px) {
-            body {
-                padding-top: 100px; /* Less padding needed for desktop */
-            }
-            .glass-nav .container {
-                height: 64px;
-            }
-            .glass-nav {
-                min-height: auto;
-            }
         }
 
         .device-card {
@@ -88,27 +39,6 @@
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            z-index: 9999;
-            -webkit-transform: translateZ(0);
-            transform: translateZ(0);
-            height: auto;
-            min-height: 64px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            will-change: transform;
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-        }
-
-        @media (max-width: 767px) {
-            .glass-nav .container {
-                padding-top: 1rem;
-                padding-bottom: 1rem;
-            }
         }
 
         .property-card {
@@ -205,257 +135,75 @@
         .time-range-button:hover:not(.active) {
             background-color: #d1d5db;
         }
-
-        /* Time Range Selector Styles */
-        .time-range-selector {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
-        }
-
-        @media (max-width: 640px) {
-            .time-range-selector {
-                justify-content: center;
-            }
-
-            .time-range-button {
-                flex: 1;
-                min-width: 80px;
-                max-width: 120px;
-                padding: 0.5rem;
-                font-size: 0.75rem;
-            }
-        }
-
-        /* Chart Responsiveness */
-        @media (max-width: 480px) {
-            .chart-container {
-                height: 200px;
-            }
-        }
-
-        /* Device Card Improvements */
-        .device-card {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .device-stats {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        @media (max-width: 640px) {
-            .device-stats {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Modal Improvements */
-        .modal-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1rem;
-        }
-
-        @media (max-width: 640px) {
-            .modal-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        /* Additional Mobile Optimizations */
-        @media (max-width: 640px) {
-            /* Improve touch targets */
-            button, 
-            [role="button"],
-            input,
-            select {
-                min-height: 44px;
-                padding: 0.5rem;
-            }
-
-            /* Optimize modals for mobile */
-            .modal-content {
-                padding: 1rem;
-            }
-
-            /* Improve chart interactions */
-            .chart-controls {
-                display: flex;
-                flex-direction: column;
-                gap: 0.5rem;
-            }
-
-            .chart-toggle-group {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr);
-                gap: 0.5rem;
-            }
-
-            /* Enhance form elements */
-            .form-group {
-                margin-bottom: 1rem;
-            }
-
-            .form-label {
-                display: block;
-                margin-bottom: 0.5rem;
-                font-size: 0.875rem;
-                font-weight: 500;
-            }
-
-            .form-input {
-                width: 100%;
-                padding: 0.75rem;
-                border-radius: 0.375rem;
-                border: 1px solid #e5e7eb;
-            }
-
-            /* Improve scrolling experience */
-            .modal-body {
-                -webkit-overflow-scrolling: touch;
-                scroll-behavior: smooth;
-                padding-bottom: env(safe-area-inset-bottom);
-            }
-
-            /* Better spacing for mobile */
-            .section-spacing {
-                margin-bottom: 1.5rem;
-            }
-
-            .card-spacing {
-                margin-bottom: 1rem;
-            }
-
-            /* Enhance status indicators */
-            .status-indicator {
-                width: 0.75rem;
-                height: 0.75rem;
-                border-radius: 50%;
-                margin-right: 0.5rem;
-            }
-
-            /* Improve chart tooltips */
-            .chart-tooltip {
-                padding: 0.75rem;
-                background: rgba(0, 0, 0, 0.8);
-                border-radius: 0.5rem;
-                color: white;
-                font-size: 0.875rem;
-                max-width: 200px;
-            }
-        }
-
-        /* Improve modal scrolling */
-        .modal-scroll-container {
-            max-height: calc(100vh - 2rem);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Enhanced loading states */
-        .loading-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(255, 255, 255, 0.9);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 50;
-        }
-
-        .loading-spinner {
-            width: 2.5rem;
-            height: 2.5rem;
-            border: 3px solid #e5e7eb;
-            border-top-color: #3b82f6;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* Improved touch feedback */
-        @media (hover: none) {
-            .touch-feedback:active {
-                transform: scale(0.98);
-                transition: transform 0.1s;
-            }
-        }
     </style>
 </head>
 <body>
     <!-- Navigation Bar -->
-    <nav class="glass-nav">
-        <div class="container mx-auto px-4 py-2">
-            <!-- Single row for desktop, flex-col for mobile -->
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-4">
-                <!-- Left side: Logo and Title -->
-                <div class="flex items-center space-x-3">
-                    <svg class="w-8 h-8 text-blue-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 3v18M12 3l4 4M12 3L8 7M12 21l4-4M12 21l-4-4M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" 
-                              stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                    <div class="min-w-0">
-                        <div class="flex items-center space-x-2">
-                            <h1 class="text-xl md:text-2xl font-bold text-gray-800 truncate">IceAlert</h1>
-                            <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
+    <nav class="glass-nav sticky top-0 z-40">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col space-y-3">
+                <!-- Top Row -->
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 3v18M12 3l4 4M12 3L8 7M12 21l4-4M12 21l-4-4M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" 
+                                  stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800">IceAlert</h1>
+                            <p class="text-sm text-gray-600">Commercial & Residential Ice Machine Monitoring</p>
+                            <div class="flex items-center mt-1">
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
+                                <button 
+                                    onclick="showDisclaimer()" 
+                                    class="ml-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    View Disclaimer
+                                </button>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <button 
+                                    onclick="showContact()" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    Contact Us
+                                </button>
+                            </div>
                         </div>
-                        <div class="flex items-center space-x-2 text-xs">
-                            <span class="text-gray-600">Real-time Ice Machine Monitoring</span>
-                            <button onclick="showDisclaimer()" class="text-blue-600 hover:text-blue-800 underline">
-                                Disclaimer
-                            </button>
-                            <span class="text-gray-300">|</span>
-                            <button onclick="showContact()" class="text-blue-600 hover:text-blue-800 underline">
-                                Contact
-                            </button>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-3">
+                            <div class="stat-card text-center px-3 py-1 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-all shadow-sm" onclick="showActiveDevices()">
+                                <p class="text-xs font-medium text-blue-600">Active Devices</p>
+                                <p class="text-lg font-bold text-blue-700" id="activeDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-green-50 rounded-md cursor-pointer hover:bg-green-100 transition-colors" onclick="showConnectedDevices()">
+                                <p class="text-xs font-medium text-green-600">Connected</p>
+                                <p class="text-lg font-bold text-green-700" id="connectedDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-emerald-50 rounded-md cursor-pointer hover:bg-emerald-100 transition-colors" onclick="showGreatDevices()">
+                                <p class="text-xs font-medium text-emerald-600">Great</p>
+                                <p class="text-lg font-bold text-emerald-700" id="greatDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-yellow-50 rounded-md cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showWarningDevices()">
+                                <p class="text-xs font-medium text-yellow-600">Warning</p>
+                                <p class="text-lg font-bold text-yellow-700" id="warningDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-red-50 rounded-md cursor-pointer hover:bg-red-100 transition-colors" onclick="showCriticalDevices()">
+                                <p class="text-xs font-medium text-red-600">Critical</p>
+                                <p class="text-lg font-bold text-red-700" id="criticalDevicesCount">-</p>
+                            </div>
                         </div>
+                        <button onclick="toggleConsole()" class="bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 text-sm font-medium transition-colors">
+                            Debug Console
+                        </button>
                     </div>
                 </div>
-
-                <!-- Right side: Stats and Debug -->
-                <div class="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-5 md:flex gap-2 w-full md:w-auto">
-                        <div class="stat-card text-center px-2 py-1 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-all" onclick="showActiveDevices()">
-                            <p class="text-xs font-medium text-blue-600">Active</p>
-                            <p class="text-base font-bold text-blue-700" id="activeDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-green-50 rounded-md cursor-pointer hover:bg-green-100 transition-all" onclick="showConnectedDevices()">
-                            <p class="text-xs font-medium text-green-600">Connected</p>
-                            <p class="text-base font-bold text-green-700" id="connectedDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-emerald-50 rounded-md cursor-pointer hover:bg-emerald-100 transition-all" onclick="showGreatDevices()">
-                            <p class="text-xs font-medium text-emerald-600">Great</p>
-                            <p class="text-base font-bold text-emerald-700" id="greatDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-yellow-50 rounded-md cursor-pointer hover:bg-yellow-100 transition-all" onclick="showWarningDevices()">
-                            <p class="text-xs font-medium text-yellow-600">Warning</p>
-                            <p class="text-base font-bold text-yellow-700" id="warningDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-red-50 rounded-md cursor-pointer hover:bg-red-100 transition-all" onclick="showCriticalDevices()">
-                            <p class="text-xs font-medium text-red-600">Critical</p>
-                            <p class="text-base font-bold text-red-700" id="criticalDevicesCount">-</p>
-                        </div>
-                    </div>
-
-                    <!-- Debug Button and Last Update -->
-                    <div class="flex items-center justify-between space-x-4 w-full md:w-auto">
-                        <button onclick="toggleConsole()" class="bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 text-xs font-medium transition-colors">
-                            Debug
-                        </button>
-                        <div class="flex items-center text-xs text-gray-500">
-                            <span>Last Update:</span>
-                            <span id="lastUpdateTime" class="ml-1 text-gray-700">-</span>
-                        </div>
+                <!-- Bottom Row -->
+                <div class="flex items-center justify-between border-t pt-2">
+                    <p class="text-sm text-gray-600">Real-time monitoring and alerts for ice machines and water systems</p>
+                    <div class="flex items-center text-sm text-gray-500">
+                        <span>Last Update: </span>
+                        <span id="lastUpdateTime" class="ml-1 text-gray-700">-</span>
                     </div>
                 </div>
             </div>
@@ -496,7 +244,7 @@
             </div>
         </div>
         
-        <div id="devices" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <!-- Devices will be populated here -->
         </div>
     </div>
@@ -576,23 +324,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- Modals -->
-    <div id="device-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 p-4 overflow-y-auto">
-        <div class="bg-white rounded-lg shadow-xl w-full max-w-4xl my-4">
-            <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 rounded-t-lg z-10">
-                <div class="flex justify-between items-start">
-                    <h2 id="modal-title" class="text-xl md:text-2xl font-bold text-gray-800"></h2>
-                    <button onclick="hideDeviceDetails()" class="text-gray-500 hover:text-gray-700 p-1">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                        </svg>
-                    </button>
-                </div>
-            </div>
-            <div id="modal-content" class="p-6 overflow-y-auto" style="max-height: calc(90vh - 5rem);"></div>
         </div>
     </div>
 
@@ -4198,50 +3929,6 @@
         // Cleanup interval when page is unloaded
         window.addEventListener('unload', () => {
             clearInterval(interval);
-        });
-
-        // Add touch feedback to interactive elements
-        document.addEventListener('DOMContentLoaded', function() {
-            const touchElements = document.querySelectorAll('button, [role="button"], .stat-card');
-            touchElements.forEach(el => el.classList.add('touch-feedback'));
-        });
-
-        // Improve chart responsiveness
-        function updateChartResponsiveness(chart) {
-            const isMobile = window.innerWidth < 640;
-            if (chart && chart.options) {
-                chart.options.responsive = true;
-                chart.options.maintainAspectRatio = false;
-                
-                if (isMobile) {
-                    chart.options.plugins.legend.position = 'bottom';
-                    chart.options.plugins.legend.labels.boxWidth = 8;
-                    chart.options.plugins.legend.labels.padding = 10;
-                    chart.options.plugins.tooltip.enabled = true;
-                    chart.options.plugins.tooltip.intersect = false;
-                    chart.options.plugins.tooltip.mode = 'nearest';
-                    
-                    // Adjust axis label sizes
-                    chart.options.scales.x.ticks.font.size = 10;
-                    chart.options.scales.y.ticks.font.size = 10;
-                    
-                    // Reduce padding
-                    chart.options.layout.padding = {
-                        top: 5,
-                        right: 10,
-                        bottom: 5,
-                        left: 10
-                    };
-                }
-                
-                chart.update();
-            }
-        }
-
-        // Handle orientation changes
-        window.addEventListener('orientationchange', function() {
-            const charts = Object.values(Chart.instances);
-            charts.forEach(updateChartResponsiveness);
         });
     </script>
 </body>
