@@ -356,73 +356,68 @@
 <body>
     <!-- Navigation Bar -->
     <nav class="glass-nav sticky top-0 z-40">
-        <div class="container mx-auto px-4 py-3">
-            <div class="flex flex-col space-y-3">
-                <!-- Top Row -->
-                <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-3 md:space-y-0">
-                    <div class="flex items-center space-x-3">
-                        <svg class="w-8 h-8 text-blue-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 3v18M12 3l4 4M12 3L8 7M12 21l4-4M12 21l-4-4M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" 
-                                  stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                        <div class="min-w-0">
+        <div class="container mx-auto px-4 py-2">
+            <!-- Single row for desktop, flex-col for mobile -->
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between space-y-3 md:space-y-0">
+                <!-- Left side: Logo and Title -->
+                <div class="flex items-center space-x-3">
+                    <svg class="w-8 h-8 text-blue-600 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 3v18M12 3l4 4M12 3L8 7M12 21l4-4M12 21l-4-4M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4" 
+                              stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <div class="min-w-0">
+                        <div class="flex items-center space-x-2">
                             <h1 class="text-xl md:text-2xl font-bold text-gray-800 truncate">IceAlert</h1>
-                            <p class="text-xs md:text-sm text-gray-600">Commercial & Residential Ice Machine Monitoring</p>
-                            <div class="flex flex-wrap items-center gap-2 mt-1">
-                                <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
-                                <button 
-                                    onclick="showDisclaimer()" 
-                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
-                                >
-                                    View Disclaimer
-                                </button>
-                                <span class="hidden md:inline mx-2 text-gray-300">|</span>
-                                <button 
-                                    onclick="showContact()" 
-                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
-                                >
-                                    Contact Us
-                                </button>
-                            </div>
+                            <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
                         </div>
-                    </div>
-                    
-                    <!-- Status Cards - Mobile Responsive Grid -->
-                    <div class="stat-cards-container">
-                        <div class="stat-card text-center px-2 py-1 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-all shadow-sm" onclick="showActiveDevices()">
-                            <p class="text-xs font-medium text-blue-600">Active</p>
-                            <p class="text-base md:text-lg font-bold text-blue-700" id="activeDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-green-50 rounded-md cursor-pointer hover:bg-green-100 transition-all" onclick="showConnectedDevices()">
-                            <p class="text-xs font-medium text-green-600">Connected</p>
-                            <p class="text-base md:text-lg font-bold text-green-700" id="connectedDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-emerald-50 rounded-md cursor-pointer hover:bg-emerald-100 transition-all" onclick="showGreatDevices()">
-                            <p class="text-xs font-medium text-emerald-600">Great</p>
-                            <p class="text-base md:text-lg font-bold text-emerald-700" id="greatDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-yellow-50 rounded-md cursor-pointer hover:bg-yellow-100 transition-all" onclick="showWarningDevices()">
-                            <p class="text-xs font-medium text-yellow-600">Warning</p>
-                            <p class="text-base md:text-lg font-bold text-yellow-700" id="warningDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card text-center px-2 py-1 bg-red-50 rounded-md cursor-pointer hover:bg-red-100 transition-all" onclick="showCriticalDevices()">
-                            <p class="text-xs font-medium text-red-600">Critical</p>
-                            <p class="text-base md:text-lg font-bold text-red-700" id="criticalDevicesCount">-</p>
-                        </div>
-                        <div class="stat-card">
-                            <button onclick="toggleConsole()" class="w-full bg-gray-800 text-white px-2 py-1.5 rounded-md hover:bg-gray-700 text-xs md:text-sm font-medium transition-colors">
-                                Debug
+                        <div class="flex items-center space-x-2 text-xs">
+                            <span class="text-gray-600">Real-time Ice Machine Monitoring</span>
+                            <button onclick="showDisclaimer()" class="text-blue-600 hover:text-blue-800 underline">
+                                Disclaimer
+                            </button>
+                            <span class="text-gray-300">|</span>
+                            <button onclick="showContact()" class="text-blue-600 hover:text-blue-800 underline">
+                                Contact
                             </button>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Bottom Row -->
-                <div class="flex flex-col md:flex-row md:items-center md:justify-between border-t pt-2 space-y-2 md:space-y-0">
-                    <p class="text-xs md:text-sm text-gray-600">Real-time monitoring and alerts for ice machines</p>
-                    <div class="flex items-center text-xs md:text-sm text-gray-500">
-                        <span>Last Update: </span>
-                        <span id="lastUpdateTime" class="ml-1 text-gray-700">-</span>
+
+                <!-- Right side: Stats and Debug -->
+                <div class="flex flex-col md:flex-row space-y-3 md:space-y-0 md:items-center">
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-3 md:flex md:space-x-2 gap-2 md:gap-0">
+                        <div class="stat-card text-center px-2 py-1 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-all shadow-sm" onclick="showActiveDevices()">
+                            <p class="text-xs font-medium text-blue-600">Active</p>
+                            <p class="text-base font-bold text-blue-700" id="activeDevicesCount">-</p>
+                        </div>
+                        <div class="stat-card text-center px-2 py-1 bg-green-50 rounded-md cursor-pointer hover:bg-green-100 transition-all" onclick="showConnectedDevices()">
+                            <p class="text-xs font-medium text-green-600">Connected</p>
+                            <p class="text-base font-bold text-green-700" id="connectedDevicesCount">-</p>
+                        </div>
+                        <div class="stat-card text-center px-2 py-1 bg-emerald-50 rounded-md cursor-pointer hover:bg-emerald-100 transition-all" onclick="showGreatDevices()">
+                            <p class="text-xs font-medium text-emerald-600">Great</p>
+                            <p class="text-base font-bold text-emerald-700" id="greatDevicesCount">-</p>
+                        </div>
+                        <div class="stat-card text-center px-2 py-1 bg-yellow-50 rounded-md cursor-pointer hover:bg-yellow-100 transition-all" onclick="showWarningDevices()">
+                            <p class="text-xs font-medium text-yellow-600">Warning</p>
+                            <p class="text-base font-bold text-yellow-700" id="warningDevicesCount">-</p>
+                        </div>
+                        <div class="stat-card text-center px-2 py-1 bg-red-50 rounded-md cursor-pointer hover:bg-red-100 transition-all" onclick="showCriticalDevices()">
+                            <p class="text-xs font-medium text-red-600">Critical</p>
+                            <p class="text-base font-bold text-red-700" id="criticalDevicesCount">-</p>
+                        </div>
+                    </div>
+
+                    <!-- Debug Button and Last Update -->
+                    <div class="flex items-center justify-between md:ml-4 space-x-4">
+                        <button onclick="toggleConsole()" class="bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 text-xs font-medium transition-colors">
+                            Debug
+                        </button>
+                        <div class="flex items-center text-xs text-gray-500">
+                            <span>Last Update:</span>
+                            <span id="lastUpdateTime" class="ml-1 text-gray-700">-</span>
+                        </div>
                     </div>
                 </div>
             </div>
