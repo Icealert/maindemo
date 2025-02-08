@@ -45,13 +45,13 @@
             background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             min-height: 100vh;
             overflow-x: hidden;  /* Prevent horizontal scroll */
-            padding-top: 100px; /* Reduced from 120px */
+            padding-top: 160px; /* Increased padding for mobile */
             -webkit-overflow-scrolling: touch;
         }
 
-        @media (max-width: 768px) {
+        @media (min-width: 768px) {
             body {
-                padding-top: 140px; /* Reduced from 160px */
+                padding-top: 100px; /* Less padding needed for desktop */
             }
         }
 
@@ -89,11 +89,28 @@
             transform: translateZ(0);
             height: auto;
             min-height: 64px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         @media (min-width: 768px) {
             .glass-nav .container {
                 height: 64px;
+            }
+            .glass-nav {
+                min-height: auto;
+            }
+        }
+
+        /* Update container padding for better mobile spacing */
+        .glass-nav .container {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        @media (max-width: 767px) {
+            .glass-nav .container {
+                padding-top: 1rem;
+                padding-bottom: 1rem;
             }
         }
 
