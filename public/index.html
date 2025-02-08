@@ -1084,10 +1084,11 @@
                                 ${(() => {
                                     const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
                                     const placement = (sensorPlacement * 100).toFixed(0);
-                                    const tempF = status.cloudTemp !== undefined ? celsiusToFahrenheit(status.cloudTemp) : undefined;
-                                    if (tempF === undefined) return 'Temperature data unavailable';
-                                    return tempF <= 34 ? `More than ${placement}% full` : `Less than ${placement}% full`;
-                                })()}
+                                    const cloudTemp = device.thing?.properties?.find(p => p.name === 'cloudtemp')?.last_value;
+                                            const tempF = cloudTemp !== undefined ? celsiusToFahrenheit(cloudTemp) : undefined;
+                                            if (tempF === undefined) return 'Temperature data unavailable';
+                                            return tempF <= 34 ? `More than ${placement}% full` : `Less than ${placement}% full`;
+                                        })()}
                             </p>
                         </div>
                         
