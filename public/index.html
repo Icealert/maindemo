@@ -2085,16 +2085,16 @@
                                         <p class="text-sm font-bold text-gray-900" id="flowRange">-</p>
                                     </div>
                                     <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Daily Average</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="flowAvg">-</p>
+                                        <h5 class="text-xs font-medium text-gray-500">Total Flow</h5>
+                                        <p class="text-sm font-bold text-gray-900" id="flowTotal">-</p>
                                     </div>
                                     <div class="stat-box">
                                         <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
                                         <p class="text-sm font-bold text-gray-900" id="flowStdDev">-</p>
                                     </div>
                                     <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Mode</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="flowMode">-</p>
+                                        <h5 class="text-xs font-medium text-gray-500">Frequency</h5>
+                                        <p class="text-sm font-bold text-gray-900" id="flowFrequency">-</p>
                                     </div>
                                 </div>
                             </div>
@@ -3683,10 +3683,10 @@
                 statsContainer.classList.add('opacity-50', 'pointer-events-none');
                 // Clear stats when multiple days are selected
                 document.getElementById('flowRange').textContent = '-';
-                document.getElementById('flowAvg').textContent = '-';
+                document.getElementById('flowTotal').textContent = '-';
                 document.getElementById('flowStdDev').textContent = '-';
-                document.getElementById('flowMode').textContent = '-';
-            } else {
+                document.getElementById('flowFrequency').textContent = '-';
+                } else {
                 statsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
             
@@ -3711,13 +3711,13 @@
                 }
 
                 // Get the start and end of the selected day
-                const now = new Date();
-                const dayStart = new Date(now);
-                dayStart.setDate(dayStart.getDate() - selectedDay);
-                dayStart.setHours(0, 0, 0, 0);
-                
-                const dayEnd = new Date(dayStart);
-                dayEnd.setHours(23, 59, 59, 999);
+            const now = new Date();
+            const dayStart = new Date(now);
+            dayStart.setDate(dayStart.getDate() - selectedDay);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
 
                 // For today, only show data up to current time
                 const currentTime = selectedDay === 0 ? now : dayEnd;
@@ -3760,9 +3760,15 @@
                     document.getElementById('flowStdDev').textContent = 
                         `±${stdDev.toFixed(3)}`;
 
-                    // Show frequency (number of data points)
+                    // Calculate frequency (number of data points)
                     document.getElementById('flowFrequency').textContent = 
                         `${allFlowValues.length} points`;
+                } else {
+                    // Clear stats when no data or multiple days selected
+                    document.getElementById('flowRange').textContent = '-';
+                    document.getElementById('flowTotal').textContent = '-';
+                    document.getElementById('flowStdDev').textContent = '-';
+                    document.getElementById('flowFrequency').textContent = '-';
                 }
 
                 // Check if we have any data for the selected day
@@ -3797,8 +3803,8 @@
                             data: dayData.map(d => d.value),
                             borderColor: 'rgb(34, 197, 94)',
                             backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                            tension: 0.1,
-                            fill: true,
+                tension: 0.1,
+                fill: true,
                             pointRadius: 3,
                             pointHoverRadius: 5
                         }]
