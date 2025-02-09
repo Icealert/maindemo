@@ -703,11 +703,12 @@
                 'flow': 'bg-purple-50',
                 'pressure': 'bg-yellow-50',
                 'level': 'bg-indigo-50',
-                'status': 'bg-gray-50'
+                'status': 'bg-gray-50',
+                'Last_Maintenance': 'bg-amber-50'
             };
 
             for (const [key, color] of Object.entries(colorMap)) {
-                if (propertyName.toLowerCase().includes(key)) {
+                if (propertyName.toLowerCase().includes(key) || propertyName === key) {
                     return color;
                 }
             }
@@ -722,11 +723,12 @@
                 'flow': 'text-purple-800',
                 'pressure': 'text-yellow-800',
                 'level': 'text-indigo-800',
-                'status': 'text-gray-800'
+                'status': 'text-gray-800',
+                'Last_Maintenance': 'text-amber-800'
             };
 
             for (const [key, color] of Object.entries(colorMap)) {
-                if (propertyName.toLowerCase().includes(key)) {
+                if (propertyName.toLowerCase().includes(key) || propertyName === key) {
                     return color;
                 }
             }
@@ -2217,7 +2219,7 @@
                                                 <div class="flex justify-between items-start mb-3">
                                                     <div class="space-y-1">
                                                         <div class="flex items-center space-x-2">
-                                                            <h4 class="${getPropertyTextColor(property.name)} font-semibold">${property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' : property.name === 'cloudtemp' ? 'Cloud Temperature' : property.name === 'cloudflowrate' ? 'Cloud Flow Rate' : property.name}</h4>
+                                                            <h4 class="${getPropertyTextColor(property.name)} font-semibold">${property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' : property.name === 'cloudtemp' ? 'Cloud Temperature' : property.name === 'cloudflowrate' ? 'Cloud Flow Rate' : property.name === 'Last_Maintenance' ? 'Last Maintenance' : property.name}</h4>
                                                             <span class="px-2 py-0.5 text-xs font-medium rounded-full ${property.permission === 'READ_WRITE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
                                                                 ${property.permission === 'READ_WRITE' ? 'Editable' : 'Read Only'}
                                                             </span>
@@ -2231,11 +2233,11 @@
                                                             <svg class="w-4 h-4 text-gray-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
                                                             </svg>
-                                                            <div>
+                                                <div>
                                                                 <p class="text-sm font-medium text-gray-800 mb-1">What is Ice Machine PN/SN?</p>
                                                                 <p class="text-xs text-gray-600 leading-relaxed">This field helps track which ice machine this IceAlert device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
-                                                            </div>
-                                                        </div>
+                                                </div>
+                                            </div>
                                                     </div>
                                                 ` : property.name === 'cloudtemp' ? `
                                                     <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
@@ -2261,51 +2263,63 @@
                                                             </div>
                                                         </div>
                                                     </div>
+                                                ` : property.name === 'Last_Maintenance' ? `
+                                                    <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                                        <div class="flex items-start space-x-2">
+                                                            <svg class="w-4 h-4 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                            </svg>
+                                                            <div>
+                                                                <p class="text-sm font-medium text-amber-800 mb-1">What is Last Maintenance?</p>
+                                                                <p class="text-xs text-amber-600 leading-relaxed">This tracks when your ice machine was last serviced. Regular maintenance every 6 months is recommended to ensure optimal performance, prevent issues, and extend the life of your machine.</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ` : ''}
 
-                                                ${property.permission === 'READ_WRITE' ? `
+                                            ${property.permission === 'READ_WRITE' ? `
                                                     <div class="mt-4">
-                                                        ${property.name === 'sensorplacement' ? 
-                                                            getSensorPlacementSelector(device.id, property)
-                                                        : property.type === 'BOOL' || property.type === 'STATUS' ? `
+                                                    ${property.name === 'sensorplacement' ? 
+                                                        getSensorPlacementSelector(device.id, property)
+                                                    : property.type === 'BOOL' || property.type === 'STATUS' ? `
                                                             <label class="inline-flex items-center space-x-3">
-                                                                <input 
-                                                                    type="checkbox"
+                                                            <input 
+                                                                type="checkbox"
                                                                     class="form-checkbox h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                                                                    ${property.last_value === true || property.last_value === 'true' ? 'checked' : ''}
-                                                                    data-device-id="${device.id}"
-                                                                    data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                    onchange="handlePropertyInputChange(event)"
-                                                                />
+                                                                ${property.last_value === true || property.last_value === 'true' ? 'checked' : ''}
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                                                onchange="handlePropertyInputChange(event)"
+                                                            />
                                                                 <span class="text-sm font-medium text-gray-700">
                                                                     ${property.last_value === true || property.last_value === 'true' ? 'Enabled' : 'Disabled'}
-                                                                </span>
-                                                            </label>
-                                                        ` : `
+                                                            </span>
+                                                        </label>
+                                                    ` : `
                                                             <div class="flex space-x-3">
-                                                                <input 
-                                                                    type="${getPropertyInputType(property)}"
+                                                            <input 
+                                                                type="${getPropertyInputType(property)}"
                                                                     class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                                                     value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
-                                                                    placeholder="Enter new value"
-                                                                    data-device-id="${device.id}"
-                                                                    data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                    onkeydown="handlePropertyInputKeydown(event)"
-                                                                    step="${getPropertyStep(property)}"
-                                                                    ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
-                                                                />
-                                                                <button 
-                                                                    onclick="handleUpdateButtonClick(event)"
-                                                                    data-device-id="${device.id}"
-                                                                    data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                                                placeholder="Enter new value"
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                                                onkeydown="handlePropertyInputKeydown(event)"
+                                                                step="${getPropertyStep(property)}"
+                                                                ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
+                                                            />
+                                                            <button 
+                                                                onclick="handleUpdateButtonClick(event)"
+                                                                data-device-id="${device.id}"
+                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
                                                                     class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
-                                                                >
-                                                                    Update
-                                                                </button>
-                                                            </div>
-                                                        `}
-                                                    </div>
-                                                ` : `
+                                                            >
+                                                                Update
+                                                            </button>
+                                                        </div>
+                                                    `}
+                                                </div>
+                                            ` : `
                                                     <div class="mt-3">
                                                         <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
                                                             ${property.name.toLowerCase().includes('temp') ? 
@@ -2325,7 +2339,7 @@
                                                         </svg>
                                                         <span>Last Updated: ${new Date(device.last_activity_at).toLocaleString('en-US', {
                                                             dateStyle: 'medium',
-                                                            timeStyle: 'short'
+                                                timeStyle: 'short'
                                                         })}</span>
                                                     </div>
                                                 </div>
@@ -3872,7 +3886,7 @@
                     document.getElementById('flowTotal').textContent = 
                         `${totalFlow.toFixed(3)} L/min`;
                 
-                    // Calculate standard deviation
+                // Calculate standard deviation
                     const stdDev = calculateStdDev(allFlowValues);
                     document.getElementById('flowStdDev').textContent = 
                         `±${stdDev.toFixed(3)} L/min`;
