@@ -2253,7 +2253,7 @@
                                                 <div class="flex justify-between items-start mb-3">
                                                     <div class="space-y-1">
                                                         <div class="flex items-center space-x-2">
-                                                            <h4 class="${getPropertyTextColor(property.name)} font-semibold">${property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' : property.name === 'cloudtemp' ? 'Cloud Temperature' : property.name === 'cloudflowrate' ? 'Cloud Flow Rate' : property.name === 'Last_Maintenance' ? 'Last Maintenance' : property.name}</h4>
+                                                            <h4 class="${getPropertyTextColor(property.name)} font-semibold">${property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' : property.name === 'cloudtemp' ? 'Cloud Temperature' : property.name === 'cloudflowrate' ? 'Cloud Flow Rate' : property.name === 'Last_Maintenance' ? 'Last Maintenance' : property.name === 'location' ? 'Ice Machine Location' : property.name}</h4>
                                                             <span class="px-2 py-0.5 text-xs font-medium rounded-full ${property.permission === 'READ_WRITE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
                                                                 ${property.permission === 'READ_WRITE' ? 'Editable' : 'Read Only'}
                                                             </span>
@@ -2317,7 +2317,7 @@
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                                             </svg>
                                                             <div>
-                                                                <p class="text-sm font-medium text-teal-800 mb-1">What is Location?</p>
+                                                                <p class="text-sm font-medium text-teal-800 mb-1">What is Ice Machine Location?</p>
                                                                 <p class="text-xs text-teal-600 leading-relaxed">This field helps identify where the ice machine is physically located. Enter a descriptive location (e.g., "Kitchen - North Wall", "Bar Area", "Cafeteria Room 101") to easily locate and service the machine.</p>
                                                             </div>
                                                         </div>
