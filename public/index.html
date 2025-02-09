@@ -188,6 +188,13 @@
                                 >
                                     Contact Us
                                 </button>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <button 
+                                    onclick="showFAQ()" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    FAQ
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -344,6 +351,191 @@
                     <div class="mt-3">
                         <p class="font-medium">Kunj Tapiawala</p>
                         <a href="mailto:icealertdevice@gmail.com" class="text-blue-600 hover:text-blue-800">icealertdevice@gmail.com</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add FAQ Modal before the script tag -->
+    <!-- FAQ Modal -->
+    <div id="faq-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Frequently Asked Questions</h2>
+                <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <!-- FAQ 1 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">What is IceAlert and how does it work?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">IceAlert is an advanced monitoring system for ice machines that uses temperature and flow sensors to track ice levels and machine performance in real-time. It works by placing temperature sensors at specific heights in your ice machine and monitoring water flow to determine ice production status, sending alerts when issues are detected.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 2 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">How accurate is the ice level monitoring?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">IceAlert's monitoring system is highly accurate, using precise temperature sensors to determine ice levels. The system is calibrated based on your specific sensor placement (measured as a percentage from the bottom of the bin) and can detect when ice levels drop below the sensor position with approximately 95% accuracy.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 3 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">What types of alerts does IceAlert provide?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">IceAlert provides several types of alerts:</p>
+                        <ul class="list-disc ml-5 mt-2 space-y-1 text-gray-600">
+                            <li>Low ice level alerts when ice drops below sensor level</li>
+                            <li>No water flow alerts when water flow stops</li>
+                            <li>Temperature threshold alerts</li>
+                            <li>Connection status alerts</li>
+                            <li>Maintenance due reminders</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ 4 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">How often should maintenance be performed?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">We recommend performing regular maintenance every 6 months to ensure optimal performance and longevity of your ice machine. This includes cleaning, sanitizing, and checking all components. IceAlert tracks maintenance history and will send reminders when maintenance is due.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 5 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">What should I do if my device shows "Disconnected"?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">If your device shows as disconnected, follow these steps:</p>
+                        <ol class="list-decimal ml-5 mt-2 space-y-1 text-gray-600">
+                            <li>Check if the ice machine is powered on</li>
+                            <li>Verify the power connection to the IceAlert device</li>
+                            <li>Check your WiFi connection</li>
+                            <li>Try power cycling the device</li>
+                            <li>Contact support if the issue persists</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- FAQ 6 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">Can I adjust the temperature threshold settings?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">Yes, you can adjust the temperature threshold settings in the device properties section. This allows you to fine-tune when alerts are triggered based on your specific needs and ice machine characteristics. We recommend starting with the default settings and adjusting only if necessary.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 7 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">How does the flow monitoring work?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">IceAlert monitors water flow using advanced flow sensors that measure the rate of water entering the ice machine. The system tracks flow rates and patterns to detect potential issues like clogs or water supply problems. When no flow is detected for longer than the critical time setting, alerts are triggered to notify you of potential problems.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 8 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">What does the sensor placement percentage mean?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">The sensor placement percentage indicates where the temperature sensor is positioned in your ice bin, measured from the bottom. For example, a 75% placement means the sensor is located three-quarters of the way up from the bottom of the bin. This setting helps IceAlert accurately determine ice levels and when to trigger low-ice alerts.</p>
+                    </div>
+                </div>
+
+                <!-- FAQ 9 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">How do I interpret the status indicators?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">IceAlert uses three main status indicators:</p>
+                        <ul class="list-disc ml-5 mt-2 space-y-1 text-gray-600">
+                            <li><span class="text-emerald-600 font-medium">Great</span>: Everything is operating normally</li>
+                            <li><span class="text-yellow-600 font-medium">Warning</span>: Minor issues detected (e.g., ice level dropping)</li>
+                            <li><span class="text-red-600 font-medium">Critical</span>: Immediate attention required (e.g., no water flow, disconnected)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- FAQ 10 -->
+                <div class="border border-gray-200 rounded-lg">
+                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
+                        <div class="flex items-center justify-between">
+                            <span class="font-medium text-gray-800">Can I monitor multiple devices from one dashboard?</span>
+                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </div>
+                    </button>
+                    <div class="hidden px-4 pb-3">
+                        <p class="text-gray-600">Yes, IceAlert is designed to monitor multiple devices from a single dashboard. You can view all your ice machines at once, with clear status indicators for each. The dashboard provides quick access to detailed information for each device, making it easy to manage multiple locations or machines.</p>
                     </div>
                 </div>
             </div>
@@ -4177,6 +4369,34 @@
             const modal = document.getElementById('contact-modal');
             modal.classList.add('hidden');
             modal.classList.remove('flex');
+        }
+
+        // Add these functions before the existing script content
+        function showFAQ() {
+            const modal = document.getElementById('faq-modal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideFAQ() {
+            const modal = document.getElementById('faq-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function toggleFAQ(button) {
+            const content = button.nextElementSibling;
+            const icon = button.querySelector('svg');
+            
+            // Toggle the content visibility
+            content.classList.toggle('hidden');
+            
+            // Rotate the icon
+            if (content.classList.contains('hidden')) {
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                icon.style.transform = 'rotate(180deg)';
+            }
         }
     </script>
 </body>
