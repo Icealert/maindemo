@@ -2249,7 +2249,9 @@
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 ${device.thing?.properties ? 
-                                    sortProperties(device.thing.properties).map(property => `
+                                    sortProperties(device.thing.properties).filter(property => 
+                                        !['warning', 'critical'].includes(property.name)
+                                    ).map(property => `
                                         <div class="property-card ${getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                                             <div class="px-5 py-4">
                                                 <div class="flex justify-between items-start mb-3">
