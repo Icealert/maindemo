@@ -2204,6 +2204,12 @@
                                                 <div>
                                                     <p class="${getPropertyTextColor(property.name)} font-medium">${property.name}</p>
                                                     <p class="text-xs text-gray-500">Type: ${property.type}</p>
+                                                    ${property.name === 'cloudtemp' ? `
+                                                        <div class="mt-2 text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                                            <p class="font-medium mb-1">What is Cloud Temperature?</p>
+                                                            <p>This is the real-time temperature reading from the sensor placed in your ice machine. It indicates whether ice is present at the sensor level and helps determine the ice level in your machine.</p>
+                                                        </div>
+                                                    ` : ''}
                                                 </div>
                                                 ${property.permission === 'READ_WRITE' ? 
                                                     `<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">Editable</span>` : 
