@@ -258,7 +258,7 @@
             </div>
         </div>
         
-        <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <!-- Devices will be populated here -->
         </div>
     </div>
@@ -1067,15 +1067,15 @@
                 const status = calculateDeviceStatus(device);
 
                 return `
-                <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-5 relative overflow-hidden">
+                <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
                     <!-- Device Header -->
-                    <div class="flex justify-between items-start mb-5">
+                    <div class="flex justify-between items-start mb-3">
                         <div>
-                            <h3 class="text-xl font-bold text-gray-800 mb-1">
+                            <h3 class="text-base font-bold text-gray-800 mb-0.5">
                                 Device ${device.name.replace(/[^0-9]/g, '')}
                             </h3>
-                            <p class="text-sm text-gray-600 flex items-center">
-                                <svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <p class="text-xs text-gray-600 flex items-center">
+                                <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
@@ -1083,43 +1083,43 @@
                             </p>
                         </div>
                         <div class="flex flex-col items-end">
-                            <span class="connected-badge px-2.5 py-1 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'} shadow-sm">
+                            <span class="connected-badge px-2 py-0.5 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'} shadow-sm">
                                 <div class="flex items-center">
-                                    <div class="w-2 h-2 rounded-full ${status.isConnected ? 'bg-green-500' : 'bg-red-500'} mr-1.5"></div>
+                                    <div class="w-1.5 h-1.5 rounded-full ${status.isConnected ? 'bg-green-500' : 'bg-red-500'} mr-1"></div>
                                     ${status.isConnected ? 'Connected' : 'Disconnected'}
                                 </div>
                             </span>
                             ${!status.isConnected && status.lastConnectedTime ? `
-                                <p class="text-xs text-red-600 mt-1.5">Last Connected:<br>${new Date(status.lastConnectedTime).toLocaleString()}</p>
+                                <p class="text-[10px] text-red-600 mt-1">Last Connected:<br>${new Date(status.lastConnectedTime).toLocaleString()}</p>
                             ` : ''}
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-3 mb-4">
+                    <div class="grid grid-cols-2 gap-2 mb-3">
                         <!-- Ice Level -->
-                        <div class="property-card bg-gradient-to-br from-indigo-50 to-indigo-100 p-3.5 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <svg class="w-4 h-4 text-indigo-600 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="property-card bg-gradient-to-br from-indigo-50 to-indigo-100 p-2.5 rounded-lg">
+                            <div class="flex items-center mb-1">
+                                <svg class="w-3 h-3 text-indigo-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                                 </svg>
-                                <p class="text-indigo-800 font-medium text-sm">Ice Level</p>
+                                <p class="text-indigo-800 font-medium text-xs">Ice Level</p>
                             </div>
-                            <p class="text-lg font-bold text-indigo-900 leading-tight">
+                            <p class="text-sm font-bold text-indigo-900 leading-tight">
                                 ${getIceLevelText(status)}
                             </p>
                         </div>
                         
                         <!-- Temperature -->
-                        <div class="property-card ${getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax)} p-3.5 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <svg class="w-4 h-4 text-blue-600 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="property-card ${getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax)} p-2.5 rounded-lg">
+                            <div class="flex items-center mb-1">
+                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                                 </svg>
-                                <p class="text-blue-800 font-medium text-sm">Temperature</p>
+                                <p class="text-blue-800 font-medium text-xs">Temperature</p>
                             </div>
-                            <p class="text-lg font-bold text-blue-900 leading-tight">${formatTemperature(status.cloudTemp)}</p>
-                            <p class="text-xs text-blue-600 mt-1 flex items-center">
-                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <p class="text-sm font-bold text-blue-900 leading-tight">${formatTemperature(status.cloudTemp)}</p>
+                            <p class="text-[10px] text-blue-600 mt-0.5 flex items-center">
+                                <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                                 </svg>
                                 Max: ${formatTemperature(status.tempThresholdMax)}
@@ -1127,28 +1127,28 @@
                         </div>
                         
                         <!-- Time Since Flow -->
-                        <div class="property-card ${getFlowCardClass(status.timeSinceFlowHours, status.noFlowCriticalTime)} p-3.5 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <svg class="w-4 h-4 text-green-600 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="property-card ${getFlowCardClass(status.timeSinceFlowHours, status.noFlowCriticalTime)} p-2.5 rounded-lg">
+                            <div class="flex items-center mb-1">
+                                <svg class="w-3 h-3 text-green-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
-                                <p class="text-green-800 font-medium text-sm">Time Since Flow</p>
+                                <p class="text-green-800 font-medium text-xs">Time Since Flow</p>
                             </div>
-                            <p class="text-lg font-bold text-green-900 leading-tight time-since-flow" 
+                            <p class="text-sm font-bold text-green-900 leading-tight time-since-flow" 
                                data-start-time="${status.flowLastUpdate || ''}" 
                                data-critical-time="${status.noFlowCriticalTime || ''}"
                                data-device-id="${device.id}">
                                 ${formatTimeDuration(status.timeSinceFlowMs)}
                             </p>
-                            <div class="text-xs text-green-600 mt-1">
+                            <div class="text-[10px] text-green-600 mt-0.5">
                                 <div class="flex items-center">
-                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     Critical: ${status.noFlowCriticalTime !== undefined ? status.noFlowCriticalTime + 'h' : 'N/A'}
                                 </div>
                                 <div class="flex items-center mt-0.5">
-                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                     </svg>
                                     Last: ${status.flowLastUpdate ? new Date(status.flowLastUpdate).toLocaleString('en-US', {
@@ -1164,14 +1164,14 @@
                         </div>
                         
                         <!-- Status -->
-                        <div class="property-card bg-gradient-to-br from-gray-50 to-gray-100 p-3.5 rounded-lg">
-                            <div class="flex items-center mb-2">
-                                <svg class="w-4 h-4 text-gray-600 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="property-card bg-gradient-to-br from-gray-50 to-gray-100 p-2.5 rounded-lg">
+                            <div class="flex items-center mb-1">
+                                <svg class="w-3 h-3 text-gray-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                <p class="text-gray-800 font-medium text-sm">Status</p>
+                                <p class="text-gray-800 font-medium text-xs">Status</p>
                             </div>
-                            <p class="text-lg font-bold leading-tight ${
+                            <p class="text-sm font-bold leading-tight ${
                                 status.isGreat ? 'text-emerald-600' : 
                                 status.isWarning ? 'text-yellow-600' :
                                 status.isCritical ? 'text-red-600' :
@@ -1184,7 +1184,7 @@
                                     'Not Available'
                                 }
                             </p>
-                            <div class="text-xs mt-1">
+                            <div class="text-[10px] mt-0.5">
                                 ${(() => {
                                     const issues = [];
                                     if (!status.isConnected) {
@@ -1198,24 +1198,24 @@
                                     }
                                     return issues.length > 0 ? 
                                         `<div class="flex items-center text-red-600">
-                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                             </svg>
                                             ${issues.join(', ')}
                                         </div>` : 
-                                        status.isGreat ? '<div class="flex items-center text-emerald-600"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>All Systems Normal</div>' : '';
+                                        status.isGreat ? '<div class="flex items-center text-emerald-600"><svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>All Systems Normal</div>' : '';
                                 })()}
                             </div>
                         </div>
                     </div>
 
-                    <div class="flex justify-end border-t pt-3">
+                    <div class="flex justify-end border-t pt-2">
                         <button 
                             onclick="showDeviceDetails(${index})"
-                            class="inline-flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors shadow-sm"
+                            class="inline-flex items-center px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors shadow-sm"
                         >
                             <span>More Details</span>
-                            <svg class="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                             </svg>
                         </button>
