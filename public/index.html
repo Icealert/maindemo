@@ -2301,9 +2301,7 @@
                                                                 `${Number(property.last_value).toFixed(2)} L/min` :
                                                                 formatPropertyValue(property)}
                                                         </p>
-                                                        ${property.name === 'cloudflowrate' ? `
-                                                            <p class="text-xs text-purple-600 mt-1">Water flow rate measurement</p>
-                                                        ` : ''}
+                                                        ${property.name === 'cloudflowrate' ? '' : ''}
                                                     </div>
                                                 `}
                                                 
