@@ -2297,8 +2297,13 @@
                                                         <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
                                                             ${property.name.toLowerCase().includes('temp') ? 
                                                                 `${celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
+                                                                property.name === 'cloudflowrate' ?
+                                                                `${Number(property.last_value).toFixed(2)} L/min` :
                                                                 formatPropertyValue(property)}
                                                         </p>
+                                                        ${property.name === 'cloudflowrate' ? `
+                                                            <p class="text-xs text-purple-600 mt-1">Water flow rate measurement</p>
+                                                        ` : ''}
                                                     </div>
                                                 `}
                                                 
