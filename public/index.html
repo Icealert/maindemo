@@ -3794,17 +3794,17 @@
                     const minFlow = Math.min(...allFlowValues);
                     const maxFlow = Math.max(...allFlowValues);
                     document.getElementById('flowRange').textContent = 
-                        `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)}`;
+                        `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
 
                     // Calculate total flow for the day
                     const totalFlow = allFlowValues.reduce((a, b) => a + b, 0);
                     document.getElementById('flowTotal').textContent = 
-                        totalFlow.toFixed(3);
+                        `${totalFlow.toFixed(3)} L/min`;
                 
-                // Calculate standard deviation
+                    // Calculate standard deviation
                     const stdDev = calculateStdDev(allFlowValues);
                     document.getElementById('flowStdDev').textContent = 
-                        `±${stdDev.toFixed(3)}`;
+                        `±${stdDev.toFixed(3)} L/min`;
 
                     // Calculate frequency (number of data points)
                     document.getElementById('flowFrequency').textContent = 
@@ -3870,7 +3870,7 @@
                                     },
                                     label: (context) => {
                                         const value = context.raw;
-                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'}`;
+                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
                                     }
                                 },
                                 titleAlign: 'center',
@@ -3907,11 +3907,15 @@
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Flow Rate'
+                                    text: 'Flow Rate (L/min)',
+                                    font: { size: 12 }
                                 },
                                 grid: {
                                     display: true,
                                     drawOnChartArea: true
+                                },
+                                ticks: {
+                                    callback: value => `${value.toFixed(1)} L/min`
                                 }
                             }
                         }
