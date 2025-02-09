@@ -1475,12 +1475,21 @@
                                                         ${monthsDiff > 0 ? `${monthsDiff} month${monthsDiff > 1 ? 's' : ''}` : ''}
                                                         ${daysDiff > 0 ? `${monthsDiff > 0 ? ' and ' : ''}${daysDiff} day${daysDiff > 1 ? 's' : ''}` : ''}
                                                         since last maintenance
-                                                        ${monthsDiff >= 6 ? ' (Due)' : ''}
+                                                        ${monthsDiff >= 6 ? ' (Overdue - Recommended every 6 months)' : ''}
                                                     </span>
                                                 </div>
+                                                ${monthsDiff < 6 ? `
+                                                <div class="text-xs text-gray-600 mt-1">
+                                                    <span class="italic">Recommended maintenance period: 6 months</span>
+                                                </div>
+                                                ` : ''}
                                             `;
                                         }
-                                        return '';
+                                        return `
+                                            <div class="text-xs text-gray-600 mt-1">
+                                                <span class="italic">Recommended maintenance period: 6 months</span>
+                                            </div>
+                                        `;
                                     })()}
                                 </div>
                             </div>
@@ -1795,21 +1804,28 @@
                                     const now = new Date();
                                     const diffDays = Math.ceil(Math.abs(now - maintenanceDate) / (1000 * 60 * 60 * 24));
                                     
-                                    if (diffDays > 180) {
+                                    if (diffDays > 180) {  // 180 days = 6 months
                                         recommendations.push({
                                             type: 'warning',
                                             title: 'Maintenance Overdue',
-                                            message: 'Regular maintenance is overdue by ' + (diffDays - 180) + ' days.',
+                                            message: `Regular maintenance (recommended every 6 months) is overdue by ${(diffDays - 180)} days.`,
                                             action: 'Schedule maintenance service as soon as possible to ensure optimal performance.'
                                         });
-                                    } else if (diffDays > 150) {
+                                    } else if (diffDays > 150) {  // Start warning 30 days before 6-month mark
                                         recommendations.push({
                                             type: 'info',
                                             title: 'Maintenance Due Soon',
-                                            message: 'Regular maintenance will be due in ' + (180 - diffDays) + ' days.',
+                                            message: `Regular 6-month maintenance will be due in ${(180 - diffDays)} days.`,
                                             action: 'Plan to schedule maintenance service in the coming weeks.'
                                         });
                                     }
+                                } else {
+                                    recommendations.push({
+                                        type: 'info',
+                                        title: 'Maintenance Status Unknown',
+                                        message: 'No maintenance history found. Regular maintenance is recommended every 6 months.',
+                                        action: 'Please schedule initial maintenance service.'
+                                    });
                                 }
 
                                 if (recommendations.length === 0 && status.isGreat) {
