@@ -464,7 +464,7 @@
                     }
                 }
 
-                const concatenated = new Uint8Array(totalSize);
+                let concatenated = new Uint8Array(totalSize);
                 let offset = 0;
                 for(const chunk of chunks) {
                     concatenated.set(chunk, offset);
