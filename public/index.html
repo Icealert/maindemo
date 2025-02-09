@@ -2603,6 +2603,7 @@
         }
 
         function getStatusControls(deviceId, properties) {
+            // Keep the status calculation logic for internal use
             const warningProp = properties.find(p => p.name === 'warning');
             const criticalProp = properties.find(p => p.name === 'critical');
             
@@ -2614,51 +2615,12 @@
             const device = window.lastDevicesData.find(d => d.id === deviceId);
             const calculatedStatus = calculateDeviceStatus(device);
 
-            // Determine status states
+            // Determine status states (keep this for internal use)
             const shouldBeWarning = calculatedStatus.isWarning;
             const shouldBeCritical = calculatedStatus.isCritical;
-            
-            return `
-                <div class="mt-4 p-4 bg-gray-50 rounded-lg">
-                    <h3 class="font-medium text-gray-700 mb-3">Status Information</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Warning Status -->
-                        <div class="p-3 bg-yellow-50 rounded-lg ${warningValue !== shouldBeWarning ? 'ring-2 ring-yellow-500' : ''}">
-                            <p class="text-yellow-800 font-medium mb-2">Warning Status</p>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-3 h-3 rounded-full ${warningValue ? 'bg-yellow-500' : 'bg-gray-300'}"></div>
-                                <p class="text-sm text-yellow-700">
-                                    ${warningValue ? 'Active' : 'Inactive'}
-                                </p>
-                            </div>
-                            ${warningValue !== shouldBeWarning ? 
-                                `<p class="text-sm text-yellow-600 mt-2">
-                                    Expected state: ${shouldBeWarning ? 'Active' : 'Inactive'}
-                                </p>` 
-                                : ''}
-                        </div>
-                        
-                        <!-- Critical Status -->
-                        <div class="p-3 bg-red-50 rounded-lg ${criticalValue !== shouldBeCritical ? 'ring-2 ring-red-500' : ''}">
-                            <p class="text-red-800 font-medium mb-2">Critical Status</p>
-                            <div class="flex items-center space-x-2">
-                                <div class="w-3 h-3 rounded-full ${criticalValue ? 'bg-red-500' : 'bg-gray-300'}"></div>
-                                <p class="text-sm text-red-700">
-                                    ${criticalValue ? 'Active' : 'Inactive'}
-                                </p>
-                            </div>
-                            ${criticalValue !== shouldBeCritical ? 
-                                `<p class="text-sm text-red-600 mt-2">
-                                    Expected state: ${shouldBeCritical ? 'Active' : 'Inactive'}
-                                </p>` 
-                                : ''}
-                        </div>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-3">
-                        Note: Status values are automatically calculated based on device conditions.
-                    </p>
-                </div>
-            `;
+
+            // Return empty string to hide the section from view
+            return '';
         }
 
         // Add these new functions for graph handling
