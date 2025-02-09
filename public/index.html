@@ -431,6 +431,11 @@
             showLoading();
             
             try {
+                // Clear previous data to free up memory
+                if (window.lastDevicesData) {
+                    window.lastDevicesData = null;
+                }
+
                 // First check if server is healthy
                 const isHealthy = await checkServerHealth();
                 if (!isHealthy) {
@@ -441,32 +446,79 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const devices = await response.json();
+
+                // Use streaming for large data sets
+                const reader = response.body.getReader();
+                const chunks = [];
+                let totalSize = 0;
+
+                while(true) {
+                    const {done, value} = await reader.read();
+                    if (done) break;
+                    chunks.push(value);
+                    totalSize += value.length;
+                    
+                    // Memory safety check - prevent excessive memory usage
+                    if (totalSize > 50 * 1024 * 1024) { // 50MB limit
+                        throw new Error('Response too large');
+                    }
+                }
+
+                const concatenated = new Uint8Array(totalSize);
+                let offset = 0;
+                for(const chunk of chunks) {
+                    concatenated.set(chunk, offset);
+                    offset += chunk.length;
+                }
+
+                const devices = JSON.parse(new TextDecoder().decode(concatenated));
                 
                 if (devices.error) {
                     throw new Error(devices.message || devices.error);
                 }
                 
-                // Sort devices by name
+                // Sort devices by name - use more efficient sorting
                 devices.sort((a, b) => {
-                    // Extract numbers from device names (assuming format like "001", "002", etc.)
                     const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
                     const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
                     return aNum - bNum;
                 });
                 
-                // Store the sorted devices data for modal use
-                window.lastDevicesData = devices;
+                // Store only necessary data
+                window.lastDevicesData = devices.map(device => ({
+                    id: device.id,
+                    name: device.name,
+                    thing: {
+                        id: device.thing?.id,
+                        properties: device.thing?.properties?.map(prop => ({
+                            id: prop.id,
+                            name: prop.name,
+                            type: prop.type,
+                            last_value: prop.last_value,
+                            value_updated_at: prop.value_updated_at,
+                            permission: prop.permission
+                        }))
+                    },
+                    events: device.events?.map(event => ({
+                        name: event.name,
+                        value: event.value,
+                        updated_at: event.updated_at
+                    })),
+                    last_activity_at: device.last_activity_at
+                }));
                 
                 // Update last update time
                 updateLastUpdateTime();
                 
-                // Log raw device data to console
-                logToConsole('Received device data (sorted):');
-                logToConsole(devices);
+                // Log minimal device data
+                logToConsole('Received device data count: ' + devices.length);
                 
-                displayDevices(devices);
+                displayDevices(window.lastDevicesData);
                 hideLoading();
+
+                // Clear unused objects
+                chunks.length = 0;
+                concatenated = null;
             } catch (error) {
                 console.error('Error fetching devices:', error);
                 showError(error.message || 'Failed to fetch devices. Please try again later.');
@@ -2758,16 +2810,23 @@
             // Hide or show stats based on number of selected days
             if (selectedDays.length > 1) {
                 statsContainer.classList.add('opacity-50', 'pointer-events-none');
-                // Clear stats when multiple days are selected
-                document.getElementById('tempRange').textContent = '-';
-                document.getElementById('tempAvg').textContent = '-';
-                document.getElementById('tempStdDev').textContent = '-';
-                document.getElementById('tempMode').textContent = '-';
+                clearStats();
             } else {
                 statsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
 
+            // Use WeakMap for caching chart data
+            const chartDataCache = new WeakMap();
+
             const device = window.lastDevicesData[deviceIndex];
+            if (!device) return;
+
+            // Check cache first
+            const cachedData = chartDataCache.get(device);
+            if (cachedData && cachedData.timestamp > Date.now() - 300000) { // 5 minute cache
+                processChartData(cachedData.data);
+                return;
+            }
 
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
@@ -2775,184 +2834,68 @@
                     return;
                 }
 
-                // Destroy existing chart if it exists
-                const existingChart = Chart.getChart('tempChart');
-                if (existingChart) {
-                    existingChart.destroy();
-                }
-
-                // Process temperature data for each selected day
-                const allDatasets = [];
-                let deviceThreshold = 34; // Default value
-                let hasAnyData = false;
-
-                for (const day of selectedDays) {
-                    const { datasets, thresholdF, noData } = processTemperatureByHour(data.timestamps, data.temperature, day);
-                    
-                    if (noData) {
-                        // Add a text annotation for this day
-                        const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
-                        logToConsole(`No data available for ${dayLabel}`, 'warning');
-                    } else {
-                        hasAnyData = true;
-                        // Filter out datasets based on visibility toggles
-                        const filteredDatasets = datasets.filter(d => {
-                            if (d.label === 'Ice Level' && window.iceLevelVisible === false) return false;
-                            if (d.label.includes('Temperature') && d.label !== 'Temperature Threshold' && window.tempLineVisible === false) return false;
-                            return true;
-                        });
-                        
-                        allDatasets.push(...filteredDatasets);
-                        deviceThreshold = thresholdF;
-                    }
-                }
-
-                // Create hour labels (00:00 to 23:00)
-                const hourLabels = Array.from({ length: 24 }, (_, i) => 
-                    `${i.toString().padStart(2, '0')}:00`
-                );
-
-                // Get the canvas context
-                const ctx = document.getElementById('tempChart').getContext('2d');
-                
-                // Build the new chart with updated options
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: hourLabels,
-                        datasets: allDatasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    title: (context) => {
-                                        const hour = parseInt(context[0].label);
-                                        const nextHour = (hour + 1) % 24;
-                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
-                                    },
-                                    label: (context) => {
-                                        const value = context.raw;
-                                        if (value === null) return `${context.dataset.label}: No data`;
-                                        
-                                        if (context.dataset.yAxisID === 'y-ice') {
-                                            // Only show ice level if there's data
-                                            if (value === 1 || value === 0) {
-                                                const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
-                                                const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
-                                                const placement = (sensorPlacement * 100).toFixed(0);
-                                                return `Ice Level: ${value === 1 ? `More than ${placement}%` : `Less than ${placement}%`} full`;
-                                            }
-                                            return null; // Don't show anything if no data
-                                        }
-                                        
-                                        // Check if this is the threshold line
-                                        if (context.dataset.label === 'Temperature Threshold') {
-                                            return `Temperature Threshold: ${value.toFixed(1)}°F`;
-                                        }
-                                        
-                                        const temp = value.toFixed(1);
-                                        return `Temperature: ${temp}°F`;
-                                    }
-                                },
-                                titleAlign: 'center',
-                                bodyAlign: 'left',
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleFont: { size: 13, weight: 'bold' },
-                                bodyFont: { size: 12 },
-                                padding: 12
-                            },
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 15
-                                }
-                              }
-                        },
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Hour of Day'
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                }
-                            },
-                            'y-temp': {
-                                type: 'linear',
-                                display: window.tempLineVisible !== false,
-                                position: 'left',
-                                title: {
-                                    display: true,
-                                    text: 'Temperature (°F)'
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                },
-                                ticks: {
-                                    callback: value => `${value}°F`
-                                }
-                            },
-                            'y-ice': {
-                                type: 'linear',
-                                display: window.iceLevelVisible !== false,
-                                position: 'right',
-                                title: {
-                                    display: true,
-                                    text: 'Ice Level'
-                                },
-                                min: -0.1,
-                                max: 1.1,
-                                grid: {
-                                    display: false
-                                },
-                                ticks: {
-                                    callback: value => value === 1 ? 'Above' : value === 0 ? 'Below' : '',
-                                    stepSize: 1
-                                }
-                            }
-                        }
-                    }
+                // Cache the data
+                chartDataCache.set(device, {
+                    timestamp: Date.now(),
+                    data: data
                 });
 
-                // If there's no data for any selected day, show a message
-                if (!hasAnyData) {
-                    const chartContainer = document.getElementById('tempChart').parentElement;
-                    // Remove any existing no-data message
-                    const existingMessage = chartContainer.querySelector('.no-data-message');
-                    if (existingMessage) {
-                        existingMessage.remove();
-                    }
-                    
-                    const noDataMessage = document.createElement('div');
-                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
-                    noDataMessage.innerHTML = `
-                        <div class="text-gray-500 text-center">
-                            <p class="text-lg font-medium">No temperature data available</p>
-                            <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
-                        </div>
-                    `;
-                    chartContainer.appendChild(noDataMessage);
-                } else {
-                    // If we have data, make sure to remove any existing no-data message
-                    const chartContainer = document.getElementById('tempChart').parentElement;
-                    const existingMessage = chartContainer.querySelector('.no-data-message');
-                    if (existingMessage) {
-                        existingMessage.remove();
-                    }
-                }
+                processChartData(data);
             });
         }
+
+        // Helper function to clear stats
+        function clearStats() {
+            ['tempRange', 'tempAvg', 'tempStdDev', 'tempMode'].forEach(id => {
+                document.getElementById(id).textContent = '-';
+            });
+        }
+
+        // Optimize memory usage in intervals
+        let updateInterval;
+        function startDeviceUpdates() {
+            // Clear any existing interval
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            
+            // Initial fetch
+            fetchDevices();
+            
+            // Set new interval
+            updateInterval = setInterval(() => {
+                // Only fetch if the tab is visible
+                if (!document.hidden) {
+                    fetchDevices();
+                }
+            }, 21600000); // 6 hours
+        }
+
+        // Add visibility change handler
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Clear interval when tab is not visible
+                if (updateInterval) {
+                    clearInterval(updateInterval);
+                    updateInterval = null;
+                }
+            } else {
+                // Restart updates when tab becomes visible
+                startDeviceUpdates();
+            }
+        });
+
+        // Clean up resources when page unloads
+        window.addEventListener('unload', () => {
+            if (updateInterval) {
+                clearInterval(updateInterval);
+            }
+            clearTimeSinceFlowTimers();
+            window.lastDevicesData = null;
+        });
+
+        // Initialize updates
+        startDeviceUpdates();
 
         function processTemperatureByHour(timestamps, temperatures, selectedDay) {
             logToConsole('Processing temperature data:', 'info');
@@ -3977,15 +3920,6 @@
                 }
             });
         }
-
-        // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
-        fetchDevices();
-        const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
-
-        // Cleanup interval when page is unloaded
-        window.addEventListener('unload', () => {
-            clearInterval(interval);
-        });
 
         function showDisclaimer() {
             const modal = document.getElementById('disclaimer-modal');
