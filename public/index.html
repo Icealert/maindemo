@@ -495,6 +495,13 @@
                         const percentage = property.last_value * 100;
                         return `${percentage}%`;
                     }
+                    if (property.name.toLowerCase().includes('temp')) {
+                        const fahrenheit = celsiusToFahrenheit(property.last_value);
+                        return `${fahrenheit.toFixed(1)}°F`;
+                    }
+                    if (property.name.toLowerCase().includes('flow')) {
+                        return `${Number(property.last_value).toFixed(2)} L/min`;
+                    }
                     return Number(property.last_value).toFixed(2);
                 case 'INT':
                     return property.last_value.toString();
@@ -2255,7 +2262,7 @@
                                                                 <input 
                                                                     type="${getPropertyInputType(property)}"
                                                                     class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                                    value="${property.last_value || ''}"
+                                                                    value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
                                                                     placeholder="Enter new value"
                                                                     data-device-id="${device.id}"
                                                                     data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
@@ -2276,7 +2283,11 @@
                                                     </div>
                                                 ` : `
                                                     <div class="mt-3">
-                                                        <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">${formatPropertyValue(property)}</p>
+                                                        <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
+                                                            ${property.name.toLowerCase().includes('temp') ? 
+                                                                `${celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
+                                                                formatPropertyValue(property)}
+                                                        </p>
                                                     </div>
                                                 `}
                                                 
