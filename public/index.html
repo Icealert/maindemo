@@ -4270,7 +4270,7 @@
                 document.getElementById('flowTotal').textContent = '-';
                 document.getElementById('flowStdDev').textContent = '-';
                 document.getElementById('flowFrequency').textContent = '-';
-                } else {
+            } else {
                 statsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
             
@@ -4294,36 +4294,42 @@
                     existingMessage.remove();
                 }
 
-                // Get the start and end of the selected day
-            const now = new Date();
-            const dayStart = new Date(now);
-            dayStart.setDate(dayStart.getDate() - selectedDay);
-            dayStart.setHours(0, 0, 0, 0);
-            
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
-
-                // For today, only show data up to current time
-                const currentTime = selectedDay === 0 ? now : dayEnd;
-
                 // Filter data for the selected day
                 const dayData = [];
                 const timestamps = data.timestamps || [];
                 const flowValues = data.timeSinceFlow || [];
                 let allFlowValues = [];
 
+                // Group data by day
+                const dataByDay = {};
                 for (let i = 0; i < timestamps.length; i++) {
                     const timestamp = new Date(timestamps[i]);
-                    if (timestamp >= dayStart && timestamp <= currentTime) {
-                        const value = flowValues[i];
-                        if (value !== null && value !== undefined) {
-                            dayData.push({
-                                timestamp: timestamp,
-                                value: value
-                            });
-                            allFlowValues.push(value);
-                        }
+                    const dateKey = timestamp.toISOString().split('T')[0];
+                    
+                    if (!dataByDay[dateKey]) {
+                        dataByDay[dateKey] = [];
                     }
+
+                    const value = flowValues[i];
+                    if (value !== null && value !== undefined) {
+                        dataByDay[dateKey].push({
+                            timestamp: timestamp,
+                            value: value
+                        });
+                    }
+                }
+
+                // Sort days in descending order
+                const sortedDays = Object.keys(dataByDay).sort().reverse();
+                
+                // Get data for the selected day index
+                const selectedData = sortedDays[selectedDay] ? dataByDay[sortedDays[selectedDay]] : [];
+                
+                if (selectedData && selectedData.length > 0) {
+                    selectedData.forEach(point => {
+                        dayData.push(point);
+                        allFlowValues.push(point.value);
+                    });
                 }
 
                 // Update statistics if we have data for a single day
@@ -4339,7 +4345,6 @@
                     document.getElementById('flowTotal').textContent = 
                         `${totalFlow.toFixed(3)} L/min`;
                 
-                // Calculate standard deviation
                     const stdDev = calculateStdDev(allFlowValues);
                     document.getElementById('flowStdDev').textContent = 
                         `±${stdDev.toFixed(3)} L/min`;
@@ -4347,12 +4352,20 @@
                     // Calculate frequency (number of data points)
                     document.getElementById('flowFrequency').textContent = 
                         `${allFlowValues.length} points`;
+
+                    // Update time since last flow
+                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+                    const lastFlowTime = dayData[dayData.length - 1].timestamp;
+                    const now = new Date();
+                    const timeSinceFlow = now - lastFlowTime;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
                 } else {
                     // Clear stats when no data or multiple days selected
                     document.getElementById('flowRange').textContent = '-';
                     document.getElementById('flowTotal').textContent = '-';
                     document.getElementById('flowStdDev').textContent = '-';
                     document.getElementById('flowFrequency').textContent = '-';
+                    document.getElementById('timeSinceLastFlow').textContent = '-';
                 }
 
                 // Check if we have any data for the selected day
@@ -4363,7 +4376,7 @@
                     noDataMessage.innerHTML = `
                         <div class="text-gray-500 text-center">
                             <p class="text-lg font-medium">No flow rate data available</p>
-                            <p class="text-sm">for ${selectedDay === 0 ? 'today' : selectedDay === 1 ? 'yesterday' : '2 days ago'}</p>
+                            <p class="text-sm">for selected day</p>
                         </div>
                     `;
                     chartContainer.appendChild(noDataMessage);
@@ -4387,8 +4400,8 @@
                             data: dayData.map(d => d.value),
                             borderColor: 'rgb(34, 197, 94)',
                             backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                tension: 0.1,
-                fill: true,
+                            tension: 0.1,
+                            fill: true,
                             pointRadius: 3,
                             pointHoverRadius: 5
                         }]
@@ -4404,7 +4417,8 @@
                             tooltip: {
                                 callbacks: {
                                     title: (context) => {
-                                        return `Time: ${context[0].label}`;
+                                        const point = dayData[context[0].dataIndex];
+                                        return `Time: ${point.timestamp.toLocaleString()}`;
                                     },
                                     label: (context) => {
                                         const value = context.raw;
@@ -4459,18 +4473,6 @@
                         }
                     }
                 });
-
-                // Update time since last flow stat
-                const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-                if (selectedDay === 0 && dayData.length > 0) {
-                    // Get the most recent flow data point
-                    const lastFlowTime = dayData[dayData.length - 1].timestamp;
-                    const timeSinceFlow = now - lastFlowTime;
-                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
-                } else {
-                    // For past days or no data, show disabled state
-                    timeSinceLastFlowEl.textContent = selectedDay === 0 ? '-' : 'N/A for past days';
-                }
             }).catch(error => {
                 logToConsole(`Error updating flow graph: ${error.message}`, 'error');
             });
