@@ -357,185 +357,335 @@
         </div>
     </div>
 
-    <!-- Add FAQ Modal before the script tag -->
     <!-- FAQ Modal -->
     <div id="faq-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-3xl w-full max-h-[90vh] overflow-y-auto">
-            <div class="flex justify-between items-start mb-6">
-                <h2 class="text-xl font-bold text-gray-800">Frequently Asked Questions</h2>
-                <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700">
+        <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
+                    <p class="text-sm text-gray-600 mt-1">Find answers to common questions about IceAlert</p>
+                </div>
+                <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700 transition-colors">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                     </svg>
                 </button>
             </div>
-            <div class="space-y-4">
-                <!-- FAQ 1 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">What is IceAlert and how does it work?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+
+            <!-- Search Bar -->
+            <div class="relative mb-8">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    id="faq-search" 
+                    class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Search frequently asked questions..."
+                    onkeyup="searchFAQ(this.value)"
+                >
+            </div>
+
+            <!-- FAQ Categories -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- General Questions -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
+                            General Information
+                        </h3>
+                    </div>
+                    
+                    <!-- What is IceAlert -->
+                    <div class="faq-item" data-category="general">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q1</span>
+                                    <span class="font-medium text-gray-800">What is IceAlert?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-blue-800">IceAlert is an advanced monitoring system for ice machines that:</p>
+                                <ul class="mt-2 space-y-2 text-blue-700">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Uses temperature sensors to track ice levels in real-time
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Monitors water flow to determine ice production status
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Sends alerts when potential issues are detected
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">IceAlert is an advanced monitoring system for ice machines that uses temperature and flow sensors to track ice levels and machine performance in real-time. It works by placing temperature sensors at specific heights in your ice machine and monitoring water flow to determine ice production status, sending alerts when issues are detected.</p>
+                    </div>
+
+                    <!-- Accuracy -->
+                    <div class="faq-item" data-category="general">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q2</span>
+                                    <span class="font-medium text-gray-800">How accurate is the monitoring?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-12 h-12 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl font-bold text-blue-600">95%</span>
+                                    </div>
+                                    <p class="ml-4 text-blue-800">Accuracy rate in ice level detection</p>
+                                </div>
+                                <div class="space-y-3 text-blue-700">
+                                    <p>Our system achieves this high accuracy through:</p>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Precise temperature sensor calibration
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Strategic sensor placement
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Advanced temperature threshold algorithms
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- FAQ 2 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">How accurate is the ice level monitoring?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                <!-- Alerts & Monitoring -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                             </svg>
+                            Alerts & Monitoring
+                        </h3>
+                    </div>
+
+                    <!-- Alert Types -->
+                    <div class="faq-item" data-category="alerts">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-semibold text-sm">Q3</span>
+                                    <span class="font-medium text-gray-800">What types of alerts are provided?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">Low Ice Level Alerts</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Triggered when ice drops below sensor level</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">No Water Flow Alerts</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Notifies when water flow stops</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">Temperature Threshold Alerts</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Alerts when temperature exceeds set threshold</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">Connection Status</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Monitors device connectivity</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">IceAlert's monitoring system is highly accurate, using precise temperature sensors to determine ice levels. The system is calibrated based on your specific sensor placement (measured as a percentage from the bottom of the bin) and can detect when ice levels drop below the sensor position with approximately 95% accuracy.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Categories -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                <!-- Maintenance -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Maintenance & Settings
+                        </h3>
+                    </div>
+
+                    <!-- Maintenance Schedule -->
+                    <div class="faq-item" data-category="maintenance">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-semibold text-sm">Q4</span>
+                                    <span class="font-medium text-gray-800">What is the recommended maintenance schedule?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <h4 class="font-medium text-green-900">Every 6 Months</h4>
+                                        <p class="text-sm text-green-700">Regular maintenance ensures optimal performance</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        <div>
+                                            <h5 class="font-medium text-green-800">Maintenance Includes:</h5>
+                                            <ul class="mt-2 space-y-2 text-green-700 text-sm">
+                                                <li>• Cleaning and sanitizing</li>
+                                                <li>• Component inspection</li>
+                                                <li>• Sensor calibration check</li>
+                                                <li>• Performance testing</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- FAQ 3 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">What types of alerts does IceAlert provide?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                <!-- Troubleshooting -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">IceAlert provides several types of alerts:</p>
-                        <ul class="list-disc ml-5 mt-2 space-y-1 text-gray-600">
-                            <li>Low ice level alerts when ice drops below sensor level</li>
-                            <li>No water flow alerts when water flow stops</li>
-                            <li>Temperature threshold alerts</li>
-                            <li>Connection status alerts</li>
-                            <li>Maintenance due reminders</li>
-                        </ul>
+                            Troubleshooting
+                        </h3>
                     </div>
-                </div>
 
-                <!-- FAQ 4 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">How often should maintenance be performed?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
+                    <!-- Disconnection Issues -->
+                    <div class="faq-item" data-category="troubleshooting">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-600 font-semibold text-sm">Q5</span>
+                                    <span class="font-medium text-gray-800">What should I do if my device shows "Disconnected"?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-red-50 rounded-lg p-4">
+                                <div class="space-y-4">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-red-600 font-semibold">1</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h5 class="font-medium text-red-800">Check Power Supply</h5>
+                                            <p class="text-sm text-red-700 mt-1">Verify the device is properly powered</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-red-600 font-semibold">2</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h5 class="font-medium text-red-800">Verify WiFi Connection</h5>
+                                            <p class="text-sm text-red-700 mt-1">Check network connectivity</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-red-600 font-semibold">3</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h5 class="font-medium text-red-800">Restart Device</h5>
+                                            <p class="text-sm text-red-700 mt-1">Power cycle the device if needed</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">We recommend performing regular maintenance every 6 months to ensure optimal performance and longevity of your ice machine. This includes cleaning, sanitizing, and checking all components. IceAlert tracks maintenance history and will send reminders when maintenance is due.</p>
-                    </div>
-                </div>
-
-                <!-- FAQ 5 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">What should I do if my device shows "Disconnected"?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">If your device shows as disconnected, follow these steps:</p>
-                        <ol class="list-decimal ml-5 mt-2 space-y-1 text-gray-600">
-                            <li>Check if the ice machine is powered on</li>
-                            <li>Verify the power connection to the IceAlert device</li>
-                            <li>Check your WiFi connection</li>
-                            <li>Try power cycling the device</li>
-                            <li>Contact support if the issue persists</li>
-                        </ol>
-                    </div>
-                </div>
-
-                <!-- FAQ 6 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">Can I adjust the temperature threshold settings?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">Yes, you can adjust the temperature threshold settings in the device properties section. This allows you to fine-tune when alerts are triggered based on your specific needs and ice machine characteristics. We recommend starting with the default settings and adjusting only if necessary.</p>
-                    </div>
-                </div>
-
-                <!-- FAQ 7 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">How does the flow monitoring work?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">IceAlert monitors water flow using advanced flow sensors that measure the rate of water entering the ice machine. The system tracks flow rates and patterns to detect potential issues like clogs or water supply problems. When no flow is detected for longer than the critical time setting, alerts are triggered to notify you of potential problems.</p>
-                    </div>
-                </div>
-
-                <!-- FAQ 8 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">What does the sensor placement percentage mean?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">The sensor placement percentage indicates where the temperature sensor is positioned in your ice bin, measured from the bottom. For example, a 75% placement means the sensor is located three-quarters of the way up from the bottom of the bin. This setting helps IceAlert accurately determine ice levels and when to trigger low-ice alerts.</p>
-                    </div>
-                </div>
-
-                <!-- FAQ 9 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">How do I interpret the status indicators?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">IceAlert uses three main status indicators:</p>
-                        <ul class="list-disc ml-5 mt-2 space-y-1 text-gray-600">
-                            <li><span class="text-emerald-600 font-medium">Great</span>: Everything is operating normally</li>
-                            <li><span class="text-yellow-600 font-medium">Warning</span>: Minor issues detected (e.g., ice level dropping)</li>
-                            <li><span class="text-red-600 font-medium">Critical</span>: Immediate attention required (e.g., no water flow, disconnected)</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- FAQ 10 -->
-                <div class="border border-gray-200 rounded-lg">
-                    <button class="w-full px-4 py-3 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg hover:bg-gray-50" onclick="toggleFAQ(this)">
-                        <div class="flex items-center justify-between">
-                            <span class="font-medium text-gray-800">Can I monitor multiple devices from one dashboard?</span>
-                            <svg class="w-5 h-5 text-gray-500 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                            </svg>
-                        </div>
-                    </button>
-                    <div class="hidden px-4 pb-3">
-                        <p class="text-gray-600">Yes, IceAlert is designed to monitor multiple devices from a single dashboard. You can view all your ice machines at once, with clear status indicators for each. The dashboard provides quick access to detailed information for each device, making it easy to manage multiple locations or machines.</p>
                     </div>
                 </div>
             </div>
