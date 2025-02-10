@@ -4300,36 +4300,27 @@
                 const flowValues = data.timeSinceFlow || [];
                 let allFlowValues = [];
 
-                // Group data by day
-                const dataByDay = {};
+                // Set reference date (Feb 10, 2025)
+                const referenceDate = new Date('2025-02-10');
+                const targetDate = new Date(referenceDate);
+                targetDate.setDate(referenceDate.getDate() - selectedDay);
+                const targetDateStr = targetDate.toISOString().split('T')[0];
+
+                // Filter data for the selected day
                 for (let i = 0; i < timestamps.length; i++) {
                     const timestamp = new Date(timestamps[i]);
-                    const dateKey = timestamp.toISOString().split('T')[0];
+                    const dateStr = timestamp.toISOString().split('T')[0];
                     
-                    if (!dataByDay[dateKey]) {
-                        dataByDay[dateKey] = [];
+                    if (dateStr === targetDateStr) {
+                        const value = flowValues[i];
+                        if (value !== null && value !== undefined) {
+                            dayData.push({
+                                timestamp: timestamp,
+                                value: value
+                            });
+                            allFlowValues.push(value);
+                        }
                     }
-
-                    const value = flowValues[i];
-                    if (value !== null && value !== undefined) {
-                        dataByDay[dateKey].push({
-                            timestamp: timestamp,
-                            value: value
-                        });
-                    }
-                }
-
-                // Sort days in descending order
-                const sortedDays = Object.keys(dataByDay).sort().reverse();
-                
-                // Get data for the selected day index
-                const selectedData = sortedDays[selectedDay] ? dataByDay[sortedDays[selectedDay]] : [];
-                
-                if (selectedData && selectedData.length > 0) {
-                    selectedData.forEach(point => {
-                        dayData.push(point);
-                        allFlowValues.push(point.value);
-                    });
                 }
 
                 // Update statistics if we have data for a single day
@@ -4376,7 +4367,7 @@
                     noDataMessage.innerHTML = `
                         <div class="text-gray-500 text-center">
                             <p class="text-lg font-medium">No flow rate data available</p>
-                            <p class="text-sm">for selected day</p>
+                            <p class="text-sm">for ${selectedDay === 0 ? 'Feb 10' : selectedDay === 1 ? 'Feb 9' : 'Feb 8'}</p>
                         </div>
                     `;
                     chartContainer.appendChild(noDataMessage);
