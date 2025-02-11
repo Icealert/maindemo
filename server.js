@@ -37,7 +37,7 @@ const CLIENT_SECRET = process.env.CLIENT_SECRET;
 // Enable CORS and JSON parsing
 app.use(cors({
   origin: [
-    'https://icealert.up.railway.app',
+    'https://freezesense.up.railway.app',
     'http://localhost:3000' // for local development
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
