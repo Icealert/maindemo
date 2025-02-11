@@ -1,4 +1,4 @@
-# IceAlert - Ice Machine Monitoring System
+# FreezeSense - Ice Machine Monitoring System
 
 A real-time web dashboard for monitoring and controlling Arduino IoT devices, specifically designed for ice machine monitoring. Built with Node.js and vanilla JavaScript, featuring a clean and responsive UI using TailwindCSS.
 
@@ -17,7 +17,7 @@ A real-time web dashboard for monitoring and controlling Arduino IoT devices, sp
 ## Contact & Support
 
 ### Business & Sales Inquiries
-For information about purchasing IceAlert units or exploring customized monitoring solutions for your business, please contact:
+For information about purchasing FreezeSense units or exploring customized monitoring solutions for your business, please contact:
 
 **Aarya Shah**  
 Email: icealertdevice@gmail.com
@@ -88,4 +88,4 @@ This application is currently in beta. Users should be aware that:
 
 This project is proprietary software developed for a specific client. All rights reserved.
 
-© 2024 IceAlert 
+© 2024 FreezeSense 

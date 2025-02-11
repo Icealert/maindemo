@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IceAlert - Commercial & Residential Ice Machine Monitoring</title>
+    <title>FreezeSense - Commercial & Residential Ice Machine Monitoring</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232563eb' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3v18M12 3l4 4M12 3L8 7M12 21l4-4M12 21l-4-4M3 12h18M3 12l4-4M3 12l4 4M21 12l-4-4M21 12l-4 4'/%3E%3C/svg%3E" />
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -172,7 +172,7 @@
                                   stroke-linecap="round" stroke-linejoin="round"/>
                         </svg>
                         <div>
-                            <h1 class="text-2xl font-bold text-gray-800">IceAlert</h1>
+                            <h1 class="text-2xl font-bold text-gray-800">FreezeSense</h1>
                             <p class="text-sm text-gray-600">Commercial & Residential Ice Machine Monitoring</p>
                             <div class="flex items-center mt-1">
                                 <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
@@ -292,7 +292,7 @@
                 </button>
             </div>
             <div class="text-gray-600 space-y-4">
-                <p>Welcome to the IceAlert Beta version. Please be aware that:</p>
+                <p>Welcome to the FreezeSense Beta version. Please be aware that:</p>
                 <ul class="list-disc pl-5 space-y-2">
                     <li>This is a beta release and features may be incomplete or subject to change</li>
                     <li>Data accuracy and system reliability are being continuously improved</li>
@@ -364,7 +364,7 @@
             <div class="flex justify-between items-start mb-8">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
-                    <p class="text-sm text-gray-600 mt-1">Find answers to common questions about IceAlert</p>
+                    <p class="text-sm text-gray-600 mt-1">Find answers to common questions about FreezeSense</p>
                 </div>
                 <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700 transition-colors">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -402,13 +402,13 @@
                         </h3>
                     </div>
                     
-                    <!-- What is IceAlert -->
+                    <!-- What is FreezeSense -->
                     <div class="faq-item" data-category="general">
                         <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
                             <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
                                 <div class="flex items-center space-x-3">
                                     <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q1</span>
-                                    <span class="font-medium text-gray-800">What is IceAlert?</span>
+                                    <span class="font-medium text-gray-800">What is FreezeSense?</span>
                                 </div>
                                 <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
@@ -417,7 +417,7 @@
                         </button>
                         <div class="hidden px-14 pb-5">
                             <div class="bg-blue-50 rounded-lg p-4">
-                                <p class="text-blue-800">IceAlert is an advanced monitoring system for ice machines that:</p>
+                                <p class="text-blue-800">FreezeSense is an advanced monitoring system for ice machines that:</p>
                                 <ul class="mt-2 space-y-2 text-blue-700">
                                     <li class="flex items-start">
                                         <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1796,7 +1796,7 @@
                                 <div>
                                     <p class="text-xs font-medium text-gray-500">Ice Machine PN/SN</p>
                                     <p class="text-sm font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'Icemachine_PN_SN')?.last_value || 'N/A'}</p>
-                                    <p class="text-xs text-gray-500 mt-1 italic">Track which ice machine this IceAlert device is currently installed in</p>
+                                    <p class="text-xs text-gray-500 mt-1 italic">Track which ice machine this FreezeSense device is currently installed in</p>
                                 </div>
                             </div>
 
@@ -1934,7 +1934,7 @@
                                                 </summary>
                                                 <div class="p-2 pt-0 text-red-700">
                                                     <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>Ensure the Ice-Alert device is receiving power:
+                                                        <li>Ensure the FreezeSense device is receiving power:
                                                             <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
                                                                 <li>Inspect the power cable to confirm it is securely connected</li>
                                                                 <li>Check the wall socket where the power adapter is plugged in</li>
@@ -2007,7 +2007,7 @@
                                                     <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
                                                         <li>If all previous steps fail:
                                                             <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
-                                                                <li>Support is for Ice-Alert device issues only</li>
+                                                                <li>Support is for FreezeSense device issues only</li>
                                                                 <li>For ice machine issues, refer to machine troubleshooting guide</li>
                                                             </ul>
                                                         </li>
@@ -2125,7 +2125,7 @@
                                                         <div>
                                                             <p class="font-medium">🔹 Adjust Temperature Threshold:</p>
                                                             <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Navigate to the Ice-Alert Properties Section in the system settings</li>
+                                                                <li>Navigate to the FreezeSense Properties Section in the system settings</li>
                                                                 <li>Locate the Temperature Threshold setting</li>
                                                                 <li>Increase the threshold slightly to reduce false alerts</li>
                                                                 <li>Save the settings and monitor to ensure proper functionality</li>
@@ -2626,7 +2626,7 @@
                                                             </svg>
                                                 <div>
                                                                 <p class="text-sm font-medium text-gray-800 mb-1">What is Ice Machine PN/SN?</p>
-                                                                <p class="text-xs text-gray-600 leading-relaxed">This field helps track which ice machine this IceAlert device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
+                                                                <p class="text-xs text-gray-600 leading-relaxed">This field helps track which ice machine this FreezeSense device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
                                                 </div>
                                             </div>
                                                     </div>
