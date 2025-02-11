@@ -4934,6 +4934,16 @@
                 icon.style.transform = 'rotate(180deg)';
             }
         }
+
+        function showSetupGuide() {
+            document.getElementById('setup-modal').classList.remove('hidden');
+            document.getElementById('setup-modal').classList.add('flex');
+        }
+
+        function hideSetupGuide() {
+            document.getElementById('setup-modal').classList.add('hidden');
+            document.getElementById('setup-modal').classList.remove('flex');
+        }
     </script>
 </body>
 </html> 
