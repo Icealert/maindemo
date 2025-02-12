@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
+const winston = require('winston');
+require('winston-daily-rotate-file');
 
 // Load environment variables
 dotenv.config();
