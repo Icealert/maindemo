@@ -1315,7 +1315,9 @@
                 }, 'info');
 
                 // Refresh the devices list to show the new value
-                fetchDevices();
+                await fetchDevices();
+                location.reload(true); // Force reload from server
+                
             } catch (error) {
                 logToConsole({
                     message: 'Error updating property',
