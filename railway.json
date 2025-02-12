@@ -9,9 +9,7 @@
     "restartPolicyMaxRetries": 10,
     "startCommand": "node server.js",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 5,
-    "healthcheckInterval": 5,
-    "healthcheckHealthyThreshold": 1
+    "healthcheckTimeout": 10
   },
   "buildCommand": "npm install",
   "builds": [

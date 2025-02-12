@@ -17,8 +17,8 @@
     "cors": "^2.8.5",
     "date-fns": "^2.30.0",
     "dotenv": "^16.3.1",
-    "fastify": "^4.23.2",
-    "nodemailer": "^6.9.5"
+    "fastify": "^5.0.0",
+    "nodemailer": "^7.0.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

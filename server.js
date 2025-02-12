@@ -407,46 +407,46 @@ fastify.post('/api/notifications/settings', async (req, res) => {
 // Start the server
 fastify.listen({ 
   port: port,
-  host: '0.0.0.0' 
+  host: '0.0.0.0'
 }, () => {
-  console.log(`Server running at http://localhost:${port}`);
-  console.log('Press Ctrl+C to quit.');
+    console.log(`Server running at http://localhost:${port}`);
+    console.log('Press Ctrl+C to quit.');
 
-  // Check notifications every 5 minutes
-  setInterval(async () => {
-      try {
-          const client = IotApi.ApiClient.instance;
-          client.authentications['oauth2'].accessToken = await getToken();
-          const devicesApi = new IotApi.DevicesV2Api(client);
-          const devices = await devicesApi.devicesV2List();
+    // Check notifications every 5 minutes
+    setInterval(async () => {
+        try {
+            const client = IotApi.ApiClient.instance;
+            client.authentications['oauth2'].accessToken = await getToken();
+            const devicesApi = new IotApi.DevicesV2Api(client);
+            const devices = await devicesApi.devicesV2List();
 
-          const now = Date.now();
-          
-          for (const device of devices) {
-              const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
-              const criticalProp = device.thing.properties.find(p => p.name === 'critical');
-              
-              if (!emailProp?.last_value) continue;
-              
-              const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
-              const lastSent = lastSentTimes.get(device.id) || 0;
-              const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
-              
-              const timeSinceLast = now - lastSent;
-              
-              if (isCritical) {
-                  if (!lastSent || timeSinceLast >= cooldown) {
-                      await sendNotificationEmail(device, emailProp.last_value);
-                      lastSentTimes.set(device.id, now);
-                  }
-              } else {
-                  if (lastSent) lastSentTimes.delete(device.id);
-              }
-          }
-      } catch (error) {
-          console.error('Notification check failed:', error);
-      }
-  }, 300000); // Check every 5 minutes but respect 1h cooldown
+            const now = Date.now();
+            
+            for (const device of devices) {
+                const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+                const criticalProp = device.thing.properties.find(p => p.name === 'critical');
+                
+                if (!emailProp?.last_value) continue;
+                
+                const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
+                const lastSent = lastSentTimes.get(device.id) || 0;
+                const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
+                
+                const timeSinceLast = now - lastSent;
+                
+                if (isCritical) {
+                    if (!lastSent || timeSinceLast >= cooldown) {
+                        await sendNotificationEmail(device, emailProp.last_value);
+                        lastSentTimes.set(device.id, now);
+                    }
+                } else {
+                    if (lastSent) lastSentTimes.delete(device.id);
+                }
+            }
+        } catch (error) {
+            console.error('Notification check failed:', error);
+        }
+    }, 300000); // Check every 5 minutes but respect 1h cooldown
 });
 
 async function handleCriticalUpdate(deviceId, criticalValue) {
