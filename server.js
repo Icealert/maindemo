@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 const path = require('path');
+const axios = require('axios');
 
 // Load environment variables
 dotenv.config();
@@ -29,7 +30,6 @@ const port = process.env.PORT || 8080;
 
 // Import Arduino IoT client code
 const IotApi = require('@arduino/arduino-iot-client');
-const rp = require('request-promise');
 
 // Use environment variables for sensitive data
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -119,9 +119,9 @@ async function getToken() {
             clientIdStart: options.form.client_id?.substring(0, 5)
         });
 
-        const response = await rp(options);
+        const response = await axios(options);
         console.log('Access token received successfully');
-        return response['access_token'];
+        return response['data']['access_token'];
     } catch (error) {
         console.error("Failed getting an access token:", {
             status: error.statusCode,
