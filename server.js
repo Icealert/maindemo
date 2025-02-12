@@ -412,10 +412,12 @@ app.listen(port, () => {
                 
                 const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
                 const lastSent = lastSentTimes.get(device.id) || 0;
-                const cooldown = 60 * 60 * 1000;
+                const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
+                
+                const timeSinceLast = now - lastSent;
                 
                 if (isCritical) {
-                    if (!lastSent || (now - lastSent) >= cooldown) {
+                    if (!lastSent || timeSinceLast >= cooldown) {
                         await sendNotificationEmail(device, emailProp.last_value);
                         lastSentTimes.set(device.id, now);
                     }
@@ -441,11 +443,17 @@ async function handleCriticalUpdate(deviceId, criticalValue) {
 
         const isCritical = String(criticalValue).toLowerCase() === 'true';
         const lastSent = lastSentTimes.get(deviceId) || 0;
-        const cooldown = 60 * 60 * 1000; // 1 hour
+        const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
 
-        if (isCritical && (!lastSent || (Date.now() - lastSent) >= cooldown)) {
-            await sendNotificationEmail(device, emailProp.last_value);
-            lastSentTimes.set(deviceId, Date.now());
+        const timeSinceLast = Date.now() - lastSent;
+        
+        if (isCritical) {
+            if (!lastSent || timeSinceLast >= cooldown) {
+                await sendNotificationEmail(device, emailProp.last_value);
+                lastSentTimes.set(deviceId, Date.now());
+            }
+        } else {
+            if (lastSent) lastSentTimes.delete(deviceId);
         }
     } catch (error) {
         console.error('Immediate notification failed:', error);
