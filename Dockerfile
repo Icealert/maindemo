@@ -1,5 +1,5 @@
 # Use Node.js LTS version
-FROM node:20-alpine
+FROM node:16-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -21,4 +21,4 @@ ENV NODE_ENV=production \
     PORT=8080
 
 # Start the app
-CMD ["node", "--max-old-space-size=512", "server.js"]
+CMD ["npm", "start"]
