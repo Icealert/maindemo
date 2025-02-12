@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 const path = require('path');
 const axios = require('axios');
+const fastifyCors = require('@fastify/cors');
 
 // Load environment variables
 dotenv.config();
@@ -36,7 +37,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 // Enable CORS and JSON parsing
-fastify.register(require('fastify-cors'), {
+fastify.register(fastifyCors, {
   origin: [
     'https://freezesense.up.railway.app',
     'http://localhost:3000' // for local development
