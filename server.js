@@ -6,6 +6,30 @@ const nodemailer = require('nodemailer');
 // Load environment variables
 dotenv.config();
 
+// Memory cleanup interval (every 15 minutes)
+const CLEANUP_INTERVAL = 15 * 60 * 1000;
+
+// Initialize Maps with max sizes
+const lastSentTimes = new Map();
+const MAX_MAP_SIZE = 1000;
+
+// Cleanup function for Maps
+function cleanupMaps() {
+    if (lastSentTimes.size > MAX_MAP_SIZE) {
+        const entriesToKeep = Array.from(lastSentTimes.entries())
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, MAX_MAP_SIZE / 2);
+        lastSentTimes.clear();
+        entriesToKeep.forEach(([key, value]) => lastSentTimes.set(key, value));
+    }
+}
+
+// Schedule regular cleanups
+setInterval(() => {
+    cleanupMaps();
+    global.gc && global.gc(); // Force garbage collection if available
+}, CLEANUP_INTERVAL);
+
 // Log environment status (without sensitive data)
 console.log('Starting server with environment:', {
     NODE_ENV: process.env.NODE_ENV,
@@ -67,9 +91,6 @@ const transporter = nodemailer.createTransport({
 if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn('Email notifications disabled - missing EMAIL_USER/EMAIL_PASS in environment');
 }
-
-// Add at the top of server.js
-const lastSentTimes = new Map(); // Track last notification times
 
 // Function to get OAuth token
 async function getToken() {
@@ -275,78 +296,87 @@ async function checkCriticalStatus() {
     });
 }
 
-// Simplified email sending
-async function sendNotificationEmail(device, email) {
-    // Get device properties
-    const deviceName = device.name || 'Unnamed Device';
-    const deviceId = device.id;
-    const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
-    const criticalReasons = [];
-
-    // Check critical factors
-    const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
-    const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
-    if (tempProp && tempThreshold && tempProp.last_value > tempThreshold.last_value) {
-        criticalReasons.push(`High temperature (${tempProp.last_value}°C > ${tempThreshold.last_value}°C threshold)`);
-    }
-
-    const flowProp = device.thing.properties.find(p => p.name === 'cloudflowrate');
-    const flowThreshold = device.thing.properties.find(p => p.name === 'noFlowCriticalTime');
-    if (flowProp && flowThreshold && flowProp.last_value === 0) {
-        criticalReasons.push(`No water flow detected for ${flowThreshold.last_value} hours`);
-    }
-
-    const statusProp = device.thing.properties.find(p => p.name === 'r_status');
-    if (statusProp && statusProp.last_value !== 'CONNECTED') {
-        criticalReasons.push(`Device disconnected (last seen: ${new Date(statusProp.updated_at).toLocaleString()})`);
-    }
-
-    // Build email content
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
-        subject: `🚨 CRITICAL ALERT: ${deviceName} requires attention`,
-        html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h1 style="color: #dc2626; border-bottom: 2px solid #dc2626; padding-bottom: 0.5rem;">
-                    FreezeSense Critical Alert
-                </h1>
-                
-                <h2 style="color: #1e3a8a; margin-top: 1.5rem;">Device Information</h2>
-                <ul style="list-style: none; padding: 0;">
-                    <li><strong>Name:</strong> ${deviceName}</li>
-                    <li><strong>ID:</strong> ${deviceId}</li>
-                    <li><strong>Location:</strong> ${location}</li>
-                    <li><strong>Alert Time:</strong> ${new Date().toLocaleString()}</li>
-                </ul>
-
-                <h2 style="color: #dc2626; margin-top: 1.5rem;">Critical Status Details</h2>
-                <div style="background-color: #fef2f2; padding: 1rem; border-radius: 0.5rem;">
-                    ${criticalReasons.length > 0 ? `
-                        <p style="font-weight: bold;">Detected Issues:</p>
-                        <ul style="padding-left: 1.5rem;">
-                            ${criticalReasons.map(reason => `<li>• ${reason}</li>`).join('')}
-                        </ul>
-                    ` : `
-                        <p>Critical status detected but no specific issues identified</p>
-                    `}
-                </div>
-
-                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
-                    <p style="font-size: 0.875rem; color: #6b7280;">
-                        This is an automated alert from FreezeSense Monitoring System. 
-                        Please verify the device status physically before taking action.
-                    </p>
-                </div>
-            </div>
-        `
-    };
-
+// Modify your notification check interval to use less memory
+setInterval(async () => {
     try {
-        await transporter.sendMail(mailOptions);
+        const client = IotApi.ApiClient.instance;
+        client.authentications['oauth2'].accessToken = await getToken();
+        const devicesApi = new IotApi.DevicesV2Api(client);
+        
+        // Process devices in chunks to reduce memory usage
+        const devices = await devicesApi.devicesV2List();
+        const chunkSize = 10;
+        
+        for (let i = 0; i < devices.length; i += chunkSize) {
+            const chunk = devices.slice(i, i + chunkSize);
+            for (const device of chunk) {
+                const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+                const criticalProp = device.thing.properties.find(p => p.name === 'critical');
+                
+                if (!emailProp?.last_value) continue;
+                
+                const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
+                const lastSent = lastSentTimes.get(device.id) || 0;
+                const cooldown = 60 * 60 * 1000;
+                
+                if (isCritical && Date.now() - lastSent >= cooldown) {
+                    await sendNotificationEmail(device, emailProp.last_value);
+                    lastSentTimes.set(device.id, Date.now());
+                } else if (!isCritical) {
+                    lastSentTimes.delete(device.id);
+                }
+            }
+            // Small delay between chunks to prevent memory spikes
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    } catch (error) {
+        console.error('Notification check failed:', error.message);
+    }
+}, 300000);
+
+// Modify email sending to use less memory
+async function sendNotificationEmail(device, email) {
+    try {
+        const deviceName = device.name || 'Unnamed Device';
+        const deviceId = device.id;
+        const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
+        const criticalReasons = [];
+
+        // Process properties one at a time instead of keeping them all in memory
+        const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
+        const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
+        if (tempProp && tempThreshold && tempProp.last_value > tempThreshold.last_value) {
+            criticalReasons.push(`High temperature (${tempProp.last_value}°C > ${tempThreshold.last_value}°C threshold)`);
+        }
+
+        const flowProp = device.thing.properties.find(p => p.name === 'cloudflowrate');
+        const flowThreshold = device.thing.properties.find(p => p.name === 'noFlowCriticalTime');
+        if (flowProp && flowThreshold && flowProp.last_value === 0) {
+            criticalReasons.push(`No water flow detected for ${flowThreshold.last_value} hours`);
+        }
+
+        const statusProp = device.thing.properties.find(p => p.name === 'r_status');
+        if (statusProp && statusProp.last_value !== 'CONNECTED') {
+            criticalReasons.push(`Device disconnected (last seen: ${new Date(statusProp.updated_at).toLocaleString()})`);
+        }
+
+        // Send email with minimal HTML template
+        await transporter.sendMail({
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: `🚨 CRITICAL ALERT: ${deviceName}`,
+            html: `
+                <div style="font-family:sans-serif">
+                    <h2>FreezeSense Alert - ${deviceName}</h2>
+                    <p>Device ID: ${deviceId}<br>Location: ${location}</p>
+                    <div style="background:#fee">${criticalReasons.join('<br>')}</div>
+                </div>
+            `
+        });
+
         console.log(`Alert sent to ${email} for device ${device.id}`);
     } catch (error) {
-        console.error('Email failed:', error);
+        console.error('Email failed:', error.message);
     }
 }
 
@@ -393,42 +423,6 @@ app.post('/api/notifications/settings', async (req, res) => {
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
     console.log('Press Ctrl+C to quit.');
-
-    // Check notifications every 5 minutes
-    setInterval(async () => {
-        try {
-            const client = IotApi.ApiClient.instance;
-            client.authentications['oauth2'].accessToken = await getToken();
-            const devicesApi = new IotApi.DevicesV2Api(client);
-            const devices = await devicesApi.devicesV2List();
-
-            const now = Date.now();
-            
-            for (const device of devices) {
-                const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
-                const criticalProp = device.thing.properties.find(p => p.name === 'critical');
-                
-                if (!emailProp?.last_value) continue;
-                
-                const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
-                const lastSent = lastSentTimes.get(device.id) || 0;
-                const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
-                
-                const timeSinceLast = now - lastSent;
-                
-                if (isCritical) {
-                    if (!lastSent || timeSinceLast >= cooldown) {
-                        await sendNotificationEmail(device, emailProp.last_value);
-                        lastSentTimes.set(device.id, now);
-                    }
-                } else {
-                    if (lastSent) lastSentTimes.delete(device.id);
-                }
-            }
-        } catch (error) {
-            console.error('Notification check failed:', error);
-        }
-    }, 300000); // Check every 5 minutes but respect 1h cooldown
 });
 
 async function handleCriticalUpdate(deviceId, criticalValue) {
