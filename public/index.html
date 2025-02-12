@@ -1028,6 +1028,53 @@
         </div>
     </div>
 
+    <!-- Simplified frontend using existing properties -->
+    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mt-6">
+        <div class="flex items-center space-x-2 mb-4">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-900">Email Notifications</h3>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex items-center space-x-3">
+                <input 
+                    type="email" 
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                    value="{{emailPropertyValue}}"
+                    disabled
+                >
+                <p class="text-sm text-gray-500">Configured in device properties</p>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+                <input 
+                    type="checkbox" 
+                    {{notificationsEnabled ? 'checked' : ''}}
+                    onchange="updateNotificationPreference(this.checked)"
+                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                >
+                <label class="text-sm text-gray-700">
+                    Receive critical status alerts
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Simplified frontend logic
+    function updateNotificationPreference(enabled) {
+        const property = {
+            name: 'notificationsEnabled',
+            type: 'BOOLEAN',
+            last_value: enabled
+        };
+        
+        updatePropertyValue(deviceId, property);
+    }
+    </script>
+
     <script>
         // Update this at the start of your script
         const API_URL = window.location.hostname === 'localhost' 
@@ -4944,6 +4991,66 @@
             document.getElementById('setup-modal').classList.add('hidden');
             document.getElementById('setup-modal').classList.remove('flex');
         }
+
+        // Add to script section
+        async function saveNotificationSettings(deviceId) {
+            const email = document.getElementById('notification-email').value;
+            const enabled = document.getElementById('enable-notifications').checked;
+
+            try {
+                const response = await fetch(`${API_URL}/api/notifications/settings`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ deviceId, email, enabled })
+                });
+
+                if (!response.ok) throw new Error('Failed to save settings');
+                
+                showToast('Notification settings saved successfully', 'success');
+            } catch (error) {
+                showToast(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function showToast(message, type) {
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
+                type === 'error' ? 'bg-red-500' : 'bg-green-500'
+            }`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            
+            setTimeout(() => toast.remove(), 3000);
+        }
     </script>
+
+    <!-- Simplified email notification section -->
+    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mt-6">
+        <div class="flex items-center space-x-2 mb-4">
+            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <h3 class="text-xl font-semibold text-gray-900">Email Alerts</h3>
+        </div>
+        
+        <div class="space-y-4">
+            <div class="flex items-center space-x-3">
+                <input 
+                    type="email" 
+                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg"
+                    value="{{emailPropertyValue}}"
+                    disabled
+                >
+                <p class="text-sm text-gray-500">Configured in device properties</p>
+            </div>
+            <p class="text-sm text-gray-600">
+                Alerts will automatically send to this email when device enters critical status
+            </p>
+        </div>
+    </div>
 </body>
 </html> 

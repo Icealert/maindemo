@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const nodemailer = require('nodemailer');
 
 // Load environment variables
 dotenv.config();
@@ -47,6 +48,15 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.static('public'));
+
+// Configure email transporter
+const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
 
 // Function to get OAuth token
 async function getToken() {
@@ -229,6 +239,38 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
         });
     }
 });
+
+// Simplified notification check
+async function checkCriticalStatus() {
+    const devices = await getDevicesFromDB();
+    
+    devices.forEach(device => {
+        const notificationEmail = device.thing.properties.find(p => p.name === 'email')?.last_value;
+        
+        if (isCritical(device) && notificationEmail) {
+            sendNotificationEmail(device, notificationEmail);
+        }
+    });
+}
+
+// Simplified email sending
+async function sendNotificationEmail(device, email) {
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to: email,
+        subject: `Critical Alert: ${device.name}`,
+        html: `<h2>Device ${device.name} is in critical status!</h2>
+            <p>Current status: ${device.status}</p>
+            <p>Last updated: ${new Date(device.lastUpdate).toLocaleString()}</p>`
+    };
+
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`Alert sent to ${email} for device ${device.id}`);
+    } catch (error) {
+        console.error('Email failed:', error);
+    }
+}
 
 // Start the server
 app.listen(port, () => {
