@@ -1318,7 +1318,7 @@
                 await fetchDevices();
                 setTimeout(() => {
                     location.reload(true);
-                }, 5000); // Wait 5 seconds before reloading
+                }, 3000); // Wait 3 seconds before reloading
                 
             } catch (error) {
                 logToConsole({
@@ -4984,6 +4984,11 @@
             document.body.appendChild(toast);
             
             setTimeout(() => toast.remove(), 3000);
+        }
+
+        async function handleUpdate(event, deviceId, property) {
+            event.preventDefault();
+            await updatePropertyValue(deviceId, property);
         }
     </script>
 
