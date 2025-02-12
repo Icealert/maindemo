@@ -277,13 +277,47 @@ async function checkCriticalStatus() {
 
 // Simplified email sending
 async function sendNotificationEmail(device, email) {
+    const criticalReasons = [];
+    const properties = device.thing.properties || [];
+    
+    // Check temperature
+    const tempProp = properties.find(p => p.name === 'cloudtemp');
+    const tempThreshold = properties.find(p => p.name === 'tempThresholdMax');
+    if (tempProp?.last_value > tempThreshold?.last_value) {
+        criticalReasons.push(`High temperature (${tempProp.last_value}°C)`);
+    }
+    
+    // Check flow
+    const flowProp = properties.find(p => p.name === 'cloudflowrate');
+    const flowThreshold = properties.find(p => p.name === 'noFlowCriticalTime');
+    if (flowProp?.last_value === 0) {
+        criticalReasons.push(`No water flow detected`);
+    }
+    
+    // Check connection
+    const statusProp = properties.find(p => p.name === 'r_status');
+    if (statusProp?.last_value !== 'CONNECTED') {
+        criticalReasons.push(`Device disconnected`);
+    }
+
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: `Critical Alert: ${device.name}`,
-        html: `<h2>Device ${device.name} is in critical status!</h2>
-            <p>Critical status: ${device.thing.properties.find(p => p.name === 'critical')?.last_value}</p>
-            <p>Last updated: ${new Date().toLocaleString()}</p>`
+        subject: `CRITICAL ALERT: ${device.name}`,
+        html: `<h2 style="color: #dc2626;">${device.name} requires immediate attention!</h2>
+            <div style="background-color: #fef2f2; padding: 1rem; border-radius: 0.5rem;">
+                <h3>Device Details:</h3>
+                <p><strong>ID:</strong> ${device.id}</p>
+                <p><strong>Location:</strong> ${device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown'}</p>
+                <p><strong>Last Update:</strong> ${new Date().toLocaleString()}</p>
+            </div>
+            <div style="margin-top: 1rem;">
+                <h3 style="color: #dc2626;">Critical Reasons:</h3>
+                <ul>
+                    ${criticalReasons.map(reason => `<li>• ${reason}</li>`).join('') || '<li>Unknown critical state</li>'}
+                </ul>
+            </div>
+            <p style="margin-top: 1rem;">Please address this issue immediately to prevent equipment damage or service interruption.</p>`
     };
 
     try {
