@@ -1316,7 +1316,9 @@
 
                 // Refresh the devices list to show the new value
                 await fetchDevices();
-                location.reload(true); // Force reload from server
+                setTimeout(() => {
+                    location.reload(true);
+                }, 2000); // Wait 2 seconds before reloading
                 
             } catch (error) {
                 logToConsole({
