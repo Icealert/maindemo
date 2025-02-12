@@ -1028,57 +1028,7 @@
         </div>
     </div>
 
-    <!-- Simplified frontend using existing properties -->
-    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mt-6">
-        <div class="flex items-center space-x-2 mb-4">
-            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-            </svg>
-            <h3 class="text-xl font-semibold text-gray-900">Email Notifications</h3>
-        </div>
-        
-        <div class="space-y-4">
-            <div class="flex items-center space-x-3">
-                <input 
-                    type="email" 
-                    id="notification-email"
-                    class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter notification email"
-                    value=""
-                >
-                <button 
-                    onclick="saveNotificationSettings()"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                    Save
-                </button>
-            </div>
-            
-            <div class="flex items-center space-x-2">
-                <input 
-                    type="checkbox" 
-                    id="enable-notifications"
-                    class="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                >
-                <label class="text-sm text-gray-700">
-                    Receive critical status alerts
-                </label>
-            </div>
-        </div>
-    </div>
-
-    <script>
-    // Simplified frontend logic
-    function updateNotificationPreference(enabled) {
-        const property = {
-            name: 'notificationsEnabled',
-            type: 'BOOLEAN',
-            last_value: enabled
-        };
-        
-        updatePropertyValue(deviceId, property);
-    }
-    </script>
+  
 
     <script>
         // Update this at the start of your script
