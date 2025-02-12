@@ -1530,14 +1530,16 @@
 
             const criticalTime = parseFloat(element.dataset.criticalTime);
             const cardElement = element.closest('.property-card');
-            const deviceId = element.dataset.deviceId; // Add device ID to track updates per device
+            const deviceId = element.dataset.deviceId;
 
-            // Log initial state for debugging
+            // Log initial state only once when timer starts
             logToConsole(`Initializing flow timer for device ${deviceId}:`, {
                 startTime,
                 criticalTime,
                 currentTime: new Date().toISOString()
             });
+
+            let lastCriticalState = false; // Track previous critical state
 
             const update = () => {
                 const timeSinceFlowMs = new Date() - new Date(startTime);
@@ -1547,13 +1549,17 @@
                 // Update warning state
                 cardElement.className = `property-card ${getFlowCardClass(timeSinceFlowHours, criticalTime)} p-2 rounded-lg`;
                 
-                // Log for debugging
-                if (timeSinceFlowHours >= criticalTime) {
-                    logToConsole(`Critical flow time reached for device ${deviceId}:`, {
-                        timeSinceFlowHours,
-                        criticalTime,
-                        lastUpdate: startTime
-                    });
+                // Only log when critical state changes
+                const isCriticalNow = timeSinceFlowHours >= criticalTime;
+                if (isCriticalNow !== lastCriticalState) {
+                    lastCriticalState = isCriticalNow;
+                    if (isCriticalNow) {
+                        logToConsole(`Flow state changed to critical for device ${deviceId}:`, {
+                            timeSinceFlowHours,
+                            criticalTime,
+                            lastUpdate: startTime
+                        });
+                    }
                 }
             };
 
