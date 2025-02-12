@@ -11,16 +11,5 @@
     "healthcheckPath": "/health",
     "healthcheckTimeout": 10
   },
-  "buildCommand": "npm install",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/node",
-      "config": {
-        "maxLambdaSize": "50mb",
-        "includeFiles": ["public/**/*"],
-        "externalNodeModules": ["@arduino/arduino-iot-client"]
-      }
-    }
-  ]
+  "buildCommand": "npm install"
 } 
