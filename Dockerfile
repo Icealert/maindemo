@@ -1,5 +1,5 @@
 # Use Node.js LTS version
-FROM node:16-alpine
+FROM node:20-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
@@ -8,7 +8,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci --only=production
 
 # Copy app source
 COPY . .
@@ -21,4 +21,4 @@ ENV NODE_ENV=production \
     PORT=8080
 
 # Start the app
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
