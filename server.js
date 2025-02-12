@@ -277,47 +277,69 @@ async function checkCriticalStatus() {
 
 // Simplified email sending
 async function sendNotificationEmail(device, email) {
+    // Get device properties
+    const deviceName = device.name || 'Unnamed Device';
+    const deviceId = device.id;
+    const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
     const criticalReasons = [];
-    const properties = device.thing.properties || [];
-    
-    // Check temperature
-    const tempProp = properties.find(p => p.name === 'cloudtemp');
-    const tempThreshold = properties.find(p => p.name === 'tempThresholdMax');
-    if (tempProp?.last_value > tempThreshold?.last_value) {
-        criticalReasons.push(`High temperature (${tempProp.last_value}°C)`);
-    }
-    
-    // Check flow
-    const flowProp = properties.find(p => p.name === 'cloudflowrate');
-    const flowThreshold = properties.find(p => p.name === 'noFlowCriticalTime');
-    if (flowProp?.last_value === 0) {
-        criticalReasons.push(`No water flow detected`);
-    }
-    
-    // Check connection
-    const statusProp = properties.find(p => p.name === 'r_status');
-    if (statusProp?.last_value !== 'CONNECTED') {
-        criticalReasons.push(`Device disconnected`);
+
+    // Check critical factors
+    const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
+    const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
+    if (tempProp && tempThreshold && tempProp.last_value > tempThreshold.last_value) {
+        criticalReasons.push(`High temperature (${tempProp.last_value}°C > ${tempThreshold.last_value}°C threshold)`);
     }
 
+    const flowProp = device.thing.properties.find(p => p.name === 'cloudflowrate');
+    const flowThreshold = device.thing.properties.find(p => p.name === 'noFlowCriticalTime');
+    if (flowProp && flowThreshold && flowProp.last_value === 0) {
+        criticalReasons.push(`No water flow detected for ${flowThreshold.last_value} hours`);
+    }
+
+    const statusProp = device.thing.properties.find(p => p.name === 'r_status');
+    if (statusProp && statusProp.last_value !== 'CONNECTED') {
+        criticalReasons.push(`Device disconnected (last seen: ${new Date(statusProp.updated_at).toLocaleString()})`);
+    }
+
+    // Build email content
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to: email,
-        subject: `CRITICAL ALERT: ${device.name}`,
-        html: `<h2 style="color: #dc2626;">${device.name} requires immediate attention!</h2>
-            <div style="background-color: #fef2f2; padding: 1rem; border-radius: 0.5rem;">
-                <h3>Device Details:</h3>
-                <p><strong>ID:</strong> ${device.id}</p>
-                <p><strong>Location:</strong> ${device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown'}</p>
-                <p><strong>Last Update:</strong> ${new Date().toLocaleString()}</p>
-            </div>
-            <div style="margin-top: 1rem;">
-                <h3 style="color: #dc2626;">Critical Reasons:</h3>
-                <ul>
-                    ${criticalReasons.map(reason => `<li>• ${reason}</li>`).join('') || '<li>Unknown critical state</li>'}
+        subject: `🚨 CRITICAL ALERT: ${deviceName} requires attention`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h1 style="color: #dc2626; border-bottom: 2px solid #dc2626; padding-bottom: 0.5rem;">
+                    FreezeSense Critical Alert
+                </h1>
+                
+                <h2 style="color: #1e3a8a; margin-top: 1.5rem;">Device Information</h2>
+                <ul style="list-style: none; padding: 0;">
+                    <li><strong>Name:</strong> ${deviceName}</li>
+                    <li><strong>ID:</strong> ${deviceId}</li>
+                    <li><strong>Location:</strong> ${location}</li>
+                    <li><strong>Alert Time:</strong> ${new Date().toLocaleString()}</li>
                 </ul>
+
+                <h2 style="color: #dc2626; margin-top: 1.5rem;">Critical Status Details</h2>
+                <div style="background-color: #fef2f2; padding: 1rem; border-radius: 0.5rem;">
+                    ${criticalReasons.length > 0 ? `
+                        <p style="font-weight: bold;">Detected Issues:</p>
+                        <ul style="padding-left: 1.5rem;">
+                            ${criticalReasons.map(reason => `<li>• ${reason}</li>`).join('')}
+                        </ul>
+                    ` : `
+                        <p>Critical status detected but no specific issues identified</p>
+                    `}
+                </div>
+
+                <div style="margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #e5e7eb;">
+                    <p style="font-size: 0.875rem; color: #6b7280;">
+                        This is an automated alert from FreezeSense Monitoring System. 
+                        Please verify the device status physically before taking action.
+                    </p>
+                </div>
             </div>
-            <p style="margin-top: 1rem;">Please address this issue immediately to prevent equipment damage or service interruption.</p>`
+        `
     };
 
     try {
