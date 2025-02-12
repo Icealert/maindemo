@@ -273,8 +273,8 @@ async function sendNotificationEmail(device, email) {
         to: email,
         subject: `Critical Alert: ${device.name}`,
         html: `<h2>Device ${device.name} is in critical status!</h2>
-            <p>Current status: ${device.status}</p>
-            <p>Last updated: ${new Date(device.lastUpdate).toLocaleString()}</p>`
+            <p>Critical status: ${device.thing.properties.find(p => p.name === 'critical')?.last_value}</p>
+            <p>Last updated: ${new Date().toLocaleString()}</p>`
     };
 
     try {
@@ -341,23 +341,20 @@ app.listen(port, () => {
             
             for (const device of devices) {
                 const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
-                const notifyProp = device.thing.properties.find(p => p.name === 'notificationsEnabled');
                 const criticalProp = device.thing.properties.find(p => p.name === 'critical');
                 
-                if (!emailProp?.last_value || notifyProp?.last_value !== true) continue;
+                if (!emailProp?.last_value) continue;
                 
-                const isCritical = criticalProp?.last_value === true;
+                const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
                 const lastSent = lastSentTimes.get(device.id) || 0;
-                const cooldown = 60 * 60 * 1000; // 1 hour
+                const cooldown = 60 * 60 * 1000;
                 
                 if (isCritical) {
-                    // Send immediately if first time or cooldown expired
                     if (!lastSent || (now - lastSent) >= cooldown) {
                         await sendNotificationEmail(device, emailProp.last_value);
                         lastSentTimes.set(device.id, now);
                     }
                 } else {
-                    // Clear timer when status returns to normal
                     if (lastSent) lastSentTimes.delete(device.id);
                 }
             }
