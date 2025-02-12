@@ -32,7 +32,7 @@ const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 // Initialize Maps with max sizes
 const lastSentTimes = new Map();
-const MAX_MAP_SIZE = 500; // Reduced from 1000
+const MAX_MAP_SIZE = 100; // Reduced from 500 to minimize memory footprint
 
 // Cache for OAuth tokens with expiration
 let tokenCache = {
@@ -42,7 +42,7 @@ let tokenCache = {
 
 // Cleanup function for Maps and Cache
 function cleanupMemory() {
-    // Clean up lastSentTimes map
+    // Clean up lastSentTimes map more aggressively
     if (lastSentTimes.size > MAX_MAP_SIZE) {
         const entriesToKeep = Array.from(lastSentTimes.entries())
             .sort((a, b) => b[1] - a[1])
@@ -62,8 +62,8 @@ function cleanupMemory() {
     }
 }
 
-// Schedule regular cleanups
-setInterval(cleanupMemory, CLEANUP_INTERVAL);
+// Schedule more frequent cleanups
+setInterval(cleanupMemory, CLEANUP_INTERVAL / 5);
 
 // Log environment status (without sensitive data)
 console.log('Starting server with environment:', {
@@ -337,17 +337,24 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
     }
 });
 
-// Simplified notification check
-async function checkCriticalStatus() {
-    const devices = await getDevicesFromDB();
+// Modify notification check interval to use streaming and batching
+async function* getDevicesStream(devicesApi) {
+    const BATCH_SIZE = 5;
+    let offset = 0;
     
-    devices.forEach(device => {
-        const notificationEmail = device.thing.properties.find(p => p.name === 'email')?.last_value;
+    while (true) {
+        const devices = await devicesApi.devicesV2List();
+        if (!devices || devices.length === 0) break;
         
-        if (isCritical(device) && notificationEmail) {
-            sendNotificationEmail(device, notificationEmail);
+        for (let i = 0; i < devices.length; i += BATCH_SIZE) {
+            yield devices.slice(i, i + BATCH_SIZE);
+            // Small delay between batches to prevent memory spikes
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
-    });
+        
+        offset += devices.length;
+        if (devices.length < BATCH_SIZE) break;
+    }
 }
 
 // Modify your notification check interval to use less memory
@@ -357,13 +364,9 @@ setInterval(async () => {
         client.authentications['oauth2'].accessToken = await getToken();
         const devicesApi = new IotApi.DevicesV2Api(client);
         
-        // Process devices in chunks to reduce memory usage
-        const devices = await devicesApi.devicesV2List();
-        const chunkSize = 10;
-        
-        for (let i = 0; i < devices.length; i += chunkSize) {
-            const chunk = devices.slice(i, i + chunkSize);
-            for (const device of chunk) {
+        // Process devices in smaller chunks using generator
+        for await (const deviceBatch of getDevicesStream(devicesApi)) {
+            for (const device of deviceBatch) {
                 const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
                 const criticalProp = device.thing.properties.find(p => p.name === 'critical');
                 
@@ -380,15 +383,13 @@ setInterval(async () => {
                     lastSentTimes.delete(device.id);
                 }
             }
-            // Small delay between chunks to prevent memory spikes
-            await new Promise(resolve => setTimeout(resolve, 1000));
         }
     } catch (error) {
         console.error('Notification check failed:', error.message);
     }
 }, 300000);
 
-// Modify email sending to use streams for attachments
+// Optimize email sending to use less memory
 async function sendNotificationEmail(device, email) {
     try {
         const deviceName = device.name || 'Unnamed Device';
@@ -396,7 +397,7 @@ async function sendNotificationEmail(device, email) {
         const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
         const criticalReasons = [];
 
-        // Process properties one at a time
+        // Process properties one at a time and clean up references
         const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
         const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
         if (tempProp && tempThreshold && tempProp.last_value > tempThreshold.last_value) {
@@ -409,15 +410,20 @@ async function sendNotificationEmail(device, email) {
             criticalReasons.push(`No water flow detected for ${flowThreshold.last_value} hours`);
         }
 
-        // Send minimal HTML email
+        // Send minimal HTML email with reduced memory footprint
+        const htmlContent = `<div style="font-family:sans-serif"><h2>${deviceName}</h2><p>ID: ${deviceId}<br>Location: ${location}</p><div style="background:#fee">${criticalReasons.join('<br>')}</div></div>`;
+        
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: email,
             subject: `🚨 CRITICAL: ${deviceName}`,
-            html: `<div style="font-family:sans-serif"><h2>${deviceName}</h2><p>ID: ${deviceId}<br>Location: ${location}</p><div style="background:#fee">${criticalReasons.join('<br>')}</div></div>`
+            html: htmlContent
         });
 
         logger.info(`Alert sent to ${email} for device ${device.id}`);
+        
+        // Clear references to help GC
+        criticalReasons.length = 0;
     } catch (error) {
         logger.error('Email failed:', error);
     }
