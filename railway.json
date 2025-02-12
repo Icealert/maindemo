@@ -9,7 +9,20 @@
     "restartPolicyMaxRetries": 10,
     "startCommand": "node server.js",
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 10
+    "healthcheckTimeout": 5,
+    "healthcheckInterval": 5,
+    "healthcheckHealthyThreshold": 1
   },
-  "buildCommand": "npm install"
+  "buildCommand": "npm install",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "includeFiles": ["public/**/*"],
+        "externalNodeModules": ["@arduino/arduino-iot-client"]
+      }
+    }
+  ]
 } 
