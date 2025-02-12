@@ -1,7 +1,8 @@
-const express = require('express');
+const fastify = require('fastify')({ logger: true });
 const cors = require('cors');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
+const path = require('path');
 
 // Load environment variables
 dotenv.config();
@@ -24,7 +25,6 @@ if (missingEnvVars.length > 0) {
     process.exit(1);
 }
 
-const app = express();
 const port = process.env.PORT || 8080;
 
 // Import Arduino IoT client code
@@ -36,7 +36,7 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 // Enable CORS and JSON parsing
-app.use(cors({
+fastify.register(require('fastify-cors'), {
   origin: [
     'https://freezesense.up.railway.app',
     'http://localhost:3000' // for local development
@@ -45,9 +45,23 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
   credentials: true,
   optionsSuccessStatus: 200
-}));
-app.use(express.json());
-app.use(express.static('public'));
+});
+
+// Static files handling
+fastify.register(require('fastify-static'), {
+  root: path.join(__dirname, 'public'),
+  prefix: '/'
+});
+
+// Replace express.json() with Fastify content parser
+fastify.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
+  try {
+    done(null, JSON.parse(body))
+  } catch (err) {
+    err.statusCode = 400
+    done(err, undefined)
+  }
+});
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
@@ -120,12 +134,12 @@ async function getToken() {
 }
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+fastify.get('/health', (req, res) => {
     res.json({ status: 'healthy' });
 });
 
 // API endpoint to get devices data
-app.get('/api/devices', async (req, res) => {
+fastify.get('/api/devices', async (request, reply) => {
     try {
         console.log('Fetching devices...');
         var client = IotApi.ApiClient.instance;
@@ -137,14 +151,14 @@ app.get('/api/devices', async (req, res) => {
         const devices = await devicesApi.devicesV2List();
         
         console.log(`Found ${devices.length} devices`);
-        res.json(devices);
+        reply.send(devices);
     } catch (error) {
         console.error('Error fetching devices:', {
             status: error.statusCode,
             message: error.message,
             error: error.error
         });
-        res.status(500).json({ 
+        reply.code(500).send({ 
             error: 'Failed to fetch devices',
             details: error.message
         });
@@ -152,7 +166,7 @@ app.get('/api/devices', async (req, res) => {
 });
 
 // API endpoint to update device properties
-app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
+fastify.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
         console.log('Received update request for device:', req.params.id);
         console.log('Original request body:', JSON.stringify(req.body, null, 2));
@@ -229,7 +243,7 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
 });
 
 // Time series data endpoint
-app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
+fastify.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
     try {
         const token = await getToken();
         
@@ -351,7 +365,7 @@ async function sendNotificationEmail(device, email) {
 }
 
 // Add to server.js
-app.post('/api/notifications/settings', async (req, res) => {
+fastify.post('/api/notifications/settings', async (req, res) => {
     try {
         const { deviceId, email, enabled } = req.body;
         
@@ -390,7 +404,7 @@ app.post('/api/notifications/settings', async (req, res) => {
 });
 
 // Start the server
-app.listen(port, () => {
+fastify.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
     console.log('Press Ctrl+C to quit.');
 
