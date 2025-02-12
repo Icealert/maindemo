@@ -49,7 +49,7 @@ fastify.register(fastifyCors, {
 });
 
 // Static files handling
-fastify.register(require('fastify-static'), {
+fastify.register(require('@fastify/static'), {
   root: path.join(__dirname, 'public'),
   prefix: '/'
 });
@@ -405,7 +405,7 @@ fastify.post('/api/notifications/settings', async (req, res) => {
 });
 
 // Start the server
-fastify.listen(port, () => {
+fastify.listen({ port: port }, () => {
     console.log(`Server running at http://localhost:${port}`);
     console.log('Press Ctrl+C to quit.');
 
