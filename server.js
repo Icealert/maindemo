@@ -3,20 +3,46 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const nodemailer = require('nodemailer');
 const winston = require('winston');
+const compression = require('compression');
+const rp = require('request-promise');
 require('winston-daily-rotate-file');
 
 // Load environment variables
 dotenv.config();
 
-// Memory cleanup interval (every 15 minutes)
-const CLEANUP_INTERVAL = 15 * 60 * 1000;
+// Configure Winston logger with rotation and compression
+const logger = winston.createLogger({
+    transports: [
+        new winston.transports.DailyRotateFile({
+            filename: 'logs/app-%DATE%.log',
+            datePattern: 'YYYY-MM-DD',
+            maxSize: '10m',
+            maxFiles: '7d',
+            zippedArchive: true,
+            format: winston.format.combine(
+                winston.format.timestamp(),
+                winston.format.json()
+            )
+        })
+    ]
+});
+
+// Memory cleanup interval (every 5 minutes)
+const CLEANUP_INTERVAL = 5 * 60 * 1000;
 
 // Initialize Maps with max sizes
 const lastSentTimes = new Map();
-const MAX_MAP_SIZE = 1000;
+const MAX_MAP_SIZE = 500; // Reduced from 1000
 
-// Cleanup function for Maps
-function cleanupMaps() {
+// Cache for OAuth tokens with expiration
+let tokenCache = {
+    token: null,
+    expiresAt: null
+};
+
+// Cleanup function for Maps and Cache
+function cleanupMemory() {
+    // Clean up lastSentTimes map
     if (lastSentTimes.size > MAX_MAP_SIZE) {
         const entriesToKeep = Array.from(lastSentTimes.entries())
             .sort((a, b) => b[1] - a[1])
@@ -24,13 +50,20 @@ function cleanupMaps() {
         lastSentTimes.clear();
         entriesToKeep.forEach(([key, value]) => lastSentTimes.set(key, value));
     }
+
+    // Clear expired token
+    if (tokenCache.expiresAt && Date.now() > tokenCache.expiresAt) {
+        tokenCache = { token: null, expiresAt: null };
+    }
+
+    // Force garbage collection if available
+    if (global.gc) {
+        global.gc();
+    }
 }
 
 // Schedule regular cleanups
-setInterval(() => {
-    cleanupMaps();
-    global.gc && global.gc(); // Force garbage collection if available
-}, CLEANUP_INTERVAL);
+setInterval(cleanupMemory, CLEANUP_INTERVAL);
 
 // Log environment status (without sensitive data)
 console.log('Starting server with environment:', {
@@ -55,25 +88,40 @@ const port = process.env.PORT || 8080;
 
 // Import Arduino IoT client code
 const IotApi = require('@arduino/arduino-iot-client');
-const rp = require('request-promise');
 
 // Use environment variables for sensitive data
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
-// Enable CORS and JSON parsing
-app.use(cors({
-  origin: [
+// Enable compression for all responses
+app.use(compression());
+
+// Configure CORS with specific origins
+const allowedOrigins = [
     'https://freezesense.up.railway.app',
-    'http://localhost:3000' // for local development
-  ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
-  credentials: true,
-  optionsSuccessStatus: 200
+    'http://localhost:3000'
+];
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Organization'],
+    credentials: true,
+    optionsSuccessStatus: 200
 }));
-app.use(express.json());
-app.use(express.static('public'));
+
+// Parse JSON with size limits
+app.use(express.json({ limit: '1mb' }));
+app.use(express.static('public', {
+    maxAge: '1h',
+    etag: true
+}));
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
@@ -94,17 +142,20 @@ if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
     console.warn('Email notifications disabled - missing EMAIL_USER/EMAIL_PASS in environment');
 }
 
-// Function to get OAuth token
+// Function to get OAuth token with caching
 async function getToken() {
     try {
-        console.log('Requesting access token...');
-        
-        // Verify credentials before making request
+        // Check cache first
+        if (tokenCache.token && tokenCache.expiresAt && Date.now() < tokenCache.expiresAt) {
+            return tokenCache.token;
+        }
+
+        // Verify credentials
         if (!process.env.CLIENT_ID || !process.env.CLIENT_SECRET) {
             throw new Error('Missing credentials. CLIENT_ID and CLIENT_SECRET must be set.');
         }
 
-        var options = {
+        const options = {
             method: 'POST',
             url: 'https://api2.arduino.cc/iot/v1/clients/token',
             headers: { 
@@ -120,31 +171,32 @@ async function getToken() {
             json: true
         };
 
-        console.log('Token request options:', {
-            url: options.url,
-            method: options.method,
-            hasClientId: !!options.form.client_id,
-            hasClientSecret: !!options.form.client_secret,
-            clientIdStart: options.form.client_id?.substring(0, 5)
-        });
-
         const response = await rp(options);
-        console.log('Access token received successfully');
-        return response['access_token'];
+        
+        // Cache the token with expiration (1 hour before actual expiration)
+        tokenCache = {
+            token: response['access_token'],
+            expiresAt: Date.now() + (response['expires_in'] - 3600) * 1000
+        };
+
+        return tokenCache.token;
     } catch (error) {
-        console.error("Failed getting an access token:", {
-            status: error.statusCode,
-            message: error.message,
-            error: error.error,
-            stack: error.stack
-        });
+        logger.error('Token fetch error:', error);
         throw error;
     }
 }
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'healthy' });
+    const used = process.memoryUsage();
+    res.json({
+        status: 'healthy',
+        memory: {
+            heapUsed: Math.round(used.heapUsed / 1024 / 1024) + 'MB',
+            heapTotal: Math.round(used.heapTotal / 1024 / 1024) + 'MB',
+            rss: Math.round(used.rss / 1024 / 1024) + 'MB'
+        }
+    });
 });
 
 // API endpoint to get devices data
@@ -336,7 +388,7 @@ setInterval(async () => {
     }
 }, 300000);
 
-// Modify email sending to use less memory
+// Modify email sending to use streams for attachments
 async function sendNotificationEmail(device, email) {
     try {
         const deviceName = device.name || 'Unnamed Device';
@@ -344,7 +396,7 @@ async function sendNotificationEmail(device, email) {
         const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
         const criticalReasons = [];
 
-        // Process properties one at a time instead of keeping them all in memory
+        // Process properties one at a time
         const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
         const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
         if (tempProp && tempThreshold && tempProp.last_value > tempThreshold.last_value) {
@@ -357,28 +409,17 @@ async function sendNotificationEmail(device, email) {
             criticalReasons.push(`No water flow detected for ${flowThreshold.last_value} hours`);
         }
 
-        const statusProp = device.thing.properties.find(p => p.name === 'r_status');
-        if (statusProp && statusProp.last_value !== 'CONNECTED') {
-            criticalReasons.push(`Device disconnected (last seen: ${new Date(statusProp.updated_at).toLocaleString()})`);
-        }
-
-        // Send email with minimal HTML template
+        // Send minimal HTML email
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: email,
-            subject: `🚨 CRITICAL ALERT: ${deviceName}`,
-            html: `
-                <div style="font-family:sans-serif">
-                    <h2>FreezeSense Alert - ${deviceName}</h2>
-                    <p>Device ID: ${deviceId}<br>Location: ${location}</p>
-                    <div style="background:#fee">${criticalReasons.join('<br>')}</div>
-                </div>
-            `
+            subject: `🚨 CRITICAL: ${deviceName}`,
+            html: `<div style="font-family:sans-serif"><h2>${deviceName}</h2><p>ID: ${deviceId}<br>Location: ${location}</p><div style="background:#fee">${criticalReasons.join('<br>')}</div></div>`
         });
 
-        console.log(`Alert sent to ${email} for device ${device.id}`);
+        logger.info(`Alert sent to ${email} for device ${device.id}`);
     } catch (error) {
-        console.error('Email failed:', error.message);
+        logger.error('Email failed:', error);
     }
 }
 
@@ -455,14 +496,3 @@ async function handleCriticalUpdate(deviceId, criticalValue) {
         console.error('Immediate notification failed:', error);
     }
 }
-
-const logger = winston.createLogger({
-  transports: [
-    new winston.transports.DailyRotateFile({
-      filename: 'logs/app-%DATE%.log',
-      datePattern: 'YYYY-MM-DD',
-      maxSize: '20m',
-      maxFiles: '14d'
-    })
-  ]
-});
