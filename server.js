@@ -63,6 +63,14 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Add to the top of server.js
+if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
+    console.warn('Email notifications disabled - missing EMAIL_USER/EMAIL_PASS in environment');
+}
+
+// Add at the top of server.js
+const lastSentTimes = new Map(); // Track last notification times
+
 // Function to get OAuth token
 async function getToken() {
     try {
@@ -277,8 +285,84 @@ async function sendNotificationEmail(device, email) {
     }
 }
 
+// Add to server.js
+app.post('/api/notifications/settings', async (req, res) => {
+    try {
+        const { deviceId, email, enabled } = req.body;
+        
+        // Validate email format
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ error: 'Invalid email format' });
+        }
+
+        // Get the device
+        const client = IotApi.ApiClient.instance;
+        client.authentications['oauth2'].accessToken = await getToken();
+        const devicesApi = new IotApi.DevicesV2Api(client);
+        const device = await devicesApi.devicesV2Show(deviceId);
+
+        // Update properties
+        const propertiesApi = new IotApi.PropertiesV2Api(client);
+        const thingId = device.thing.id;
+
+        // Update email property
+        const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+        await propertiesApi.propertiesV2Publish(thingId, emailProp.id, { value: email });
+
+        // Update notification enabled property
+        const notifyProp = device.thing.properties.find(p => p.name === 'notificationsEnabled');
+        await propertiesApi.propertiesV2Publish(thingId, notifyProp.id, { value: enabled });
+
+        res.json({ success: true });
+
+    } catch (error) {
+        console.error('Notification settings error:', error);
+        res.status(500).json({ 
+            error: 'Failed to save settings',
+            details: error.message 
+        });
+    }
+});
+
 // Start the server
 app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
     console.log('Press Ctrl+C to quit.');
+
+    // Check notifications every 5 minutes
+    setInterval(async () => {
+        try {
+            const client = IotApi.ApiClient.instance;
+            client.authentications['oauth2'].accessToken = await getToken();
+            const devicesApi = new IotApi.DevicesV2Api(client);
+            const devices = await devicesApi.devicesV2List();
+
+            const now = Date.now();
+            
+            for (const device of devices) {
+                const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+                const notifyProp = device.thing.properties.find(p => p.name === 'notificationsEnabled');
+                const criticalProp = device.thing.properties.find(p => p.name === 'critical');
+                
+                if (!emailProp?.last_value || notifyProp?.last_value !== true) continue;
+                
+                const isCritical = criticalProp?.last_value === true;
+                const lastSent = lastSentTimes.get(device.id) || 0;
+                const cooldown = 60 * 60 * 1000; // 1 hour
+                
+                if (isCritical) {
+                    // Send immediately if first time or cooldown expired
+                    if (!lastSent || (now - lastSent) >= cooldown) {
+                        await sendNotificationEmail(device, emailProp.last_value);
+                        lastSentTimes.set(device.id, now);
+                    }
+                } else {
+                    // Clear timer when status returns to normal
+                    if (lastSent) lastSentTimes.delete(device.id);
+                }
+            }
+        } catch (error) {
+            console.error('Notification check failed:', error);
+        }
+    }, 300000); // Check every 5 minutes but respect 1h cooldown
 });
