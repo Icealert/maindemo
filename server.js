@@ -199,6 +199,15 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
         const publishPayload = { value: newValue };
         const data = await propertiesApi.propertiesV2Publish(thingId, propertyId, publishPayload, opts);
 
+        // Check if critical status is being updated
+        const criticalUpdate = req.body.propertiesValues.properties.find(
+            p => p.name === 'critical'
+        );
+        
+        if (criticalUpdate) {
+            await handleCriticalUpdate(deviceId, criticalUpdate.value);
+        }
+
         // 7) Send response
         res.json({
             success: true,
@@ -363,3 +372,26 @@ app.listen(port, () => {
         }
     }, 300000); // Check every 5 minutes but respect 1h cooldown
 });
+
+async function handleCriticalUpdate(deviceId, criticalValue) {
+    try {
+        const client = IotApi.ApiClient.instance;
+        client.authentications['oauth2'].accessToken = await getToken();
+        const devicesApi = new IotApi.DevicesV2Api(client);
+        const device = await devicesApi.devicesV2Show(deviceId);
+
+        const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+        if (!emailProp?.last_value) return;
+
+        const isCritical = String(criticalValue).toLowerCase() === 'true';
+        const lastSent = lastSentTimes.get(deviceId) || 0;
+        const cooldown = 60 * 60 * 1000; // 1 hour
+
+        if (isCritical && (!lastSent || (Date.now() - lastSent) >= cooldown)) {
+            await sendNotificationEmail(device, emailProp.last_value);
+            lastSentTimes.set(deviceId, Date.now());
+        }
+    } catch (error) {
+        console.error('Immediate notification failed:', error);
+    }
+}
