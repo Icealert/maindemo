@@ -413,9 +413,16 @@ async function sendNotificationEmail(device, email) {
         const flowProp = device.thing.properties.find(p => p.name === 'cloudflowrate');
         const flowThreshold = device.thing.properties.find(p => p.name === 'noFlowCriticalTime');
         if (flowProp && flowThreshold && flowProp.last_value === 0) {
+            // Calculate time since last flow
+            const lastUpdate = new Date(flowProp.last_update);
+            const now = new Date();
+            const diffMs = now - lastUpdate;
+            const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            
             criticalReasons.push(`<div class="alert">
                 <strong>No Water Flow Alert</strong><br>
-                Time without flow: ${flowThreshold.last_value} hours<br>
+                Time without flow: ${diffHours} hours ${diffMinutes} minutes<br>
                 Critical threshold: ${flowThreshold.last_value} hours
             </div>`);
         }
