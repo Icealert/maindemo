@@ -4098,15 +4098,35 @@
         const tempProperty = properties.find(p => p.name === 'cloudtemp');
         const flowProperty = properties.find(p => p.name === 'cloudflowrate');
 
-        // Log property details for debugging
-        logToConsole('Found properties:', {
-            temperature: tempProperty?.id,
-            flowRate: flowProperty?.id
-        });
+        // Log detailed property information
+        logToConsole('Device and Property Details:', {
+            deviceId: device.id,
+            thingId: device.thing.id,
+            temperature: {
+                id: tempProperty?.id,
+                type: tempProperty?.type,
+                name: tempProperty?.name,
+                lastValue: tempProperty?.last_value
+            },
+            flowRate: {
+                id: flowProperty?.id,
+                type: flowProperty?.type,
+                name: flowProperty?.name,
+                lastValue: flowProperty?.last_value
+            }
+        }, 'info');
 
         // 2) Compute interval to stay under 1000 points
         const timeRangeSeconds = hours * 3600;
         const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
+
+        // Log time range details
+        logToConsole('Time Range Configuration:', {
+            startTime: from.toISOString(),
+            endTime: now.toISOString(),
+            totalHours: hours,
+            intervalSeconds: interval
+        }, 'info');
 
         // 3) Basic fetch options
         const fetchOptions = {
@@ -4125,6 +4145,19 @@
             aggregation: 'AVG',
             desc: 'false'
         }).toString();
+
+        // Log API request details
+        logToConsole('API Request Details:', {
+            temperatureEndpoint: tempProperty ? `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}` : 'No temperature property',
+            flowEndpoint: flowProperty ? `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}` : 'No flow property',
+            queryParams: {
+                interval,
+                from: from.toISOString(),
+                to: now.toISOString(),
+                aggregation: 'AVG',
+                desc: 'false'
+            }
+        }, 'info');
 
         // 5) Make parallel fetch calls for temperature and flow
         const [tempResponse, flowResponse] = await Promise.all([
@@ -4157,18 +4190,45 @@
                 : Promise.resolve({ data: [] })
         ]);
 
+        // Log complete raw response data
+        logToConsole('Complete Temperature Response Data:', tempResponse.data, 'info');
+        logToConsole('Complete Flow Response Data:', flowResponse.data, 'info');
+
         // 6) Process the responses
         const tempResult = parseTsArray(tempResponse.data || []);
         const flowResult = parseTsArray(flowResponse.data || []);
 
-        // Log the results for debugging
-        logToConsole('Time series data fetched:', {
-            temperaturePoints: tempResult.times.length,
-            flowPoints: flowResult.times.length
-        });
+        // Log complete processed data
+        logToConsole('Complete Temperature Data:', {
+            times: tempResult.times,
+            values: tempResult.values,
+            totalPoints: tempResult.times.length,
+            timeRange: {
+                first: tempResult.times[0],
+                last: tempResult.times[tempResult.times.length - 1]
+            },
+            valueRange: {
+                min: Math.min(...tempResult.values.filter(v => v !== null)),
+                max: Math.max(...tempResult.values.filter(v => v !== null))
+            }
+        }, 'info');
+
+        logToConsole('Complete Flow Data:', {
+            times: flowResult.times,
+            values: flowResult.values,
+            totalPoints: flowResult.times.length,
+            timeRange: {
+                first: flowResult.times[0],
+                last: flowResult.times[flowResult.times.length - 1]
+            },
+            valueRange: {
+                min: Math.min(...flowResult.values.filter(v => v !== null)),
+                max: Math.max(...flowResult.values.filter(v => v !== null))
+            }
+        }, 'info');
 
         // 7) Return formatted data
-        return {
+        const formattedData = {
             timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
             temperature: tempResult.values,
             timeSinceFlow: flowResult.values,
@@ -4178,6 +4238,22 @@
                 return f <= 34 ? 100 : 0;
             }) || []
         };
+
+        // Log complete formatted data
+        logToConsole('Complete Formatted Data:', {
+            timestamps: formattedData.timestamps,
+            temperature: formattedData.temperature,
+            timeSinceFlow: formattedData.timeSinceFlow,
+            iceLevel: formattedData.iceLevel,
+            counts: {
+                timestamps: formattedData.timestamps.length,
+                temperature: formattedData.temperature.length,
+                flow: formattedData.timeSinceFlow.length,
+                iceLevel: formattedData.iceLevel.length
+            }
+        }, 'info');
+
+        return formattedData;
 
     } catch (error) {
         logToConsole(`Error fetching time series: ${error.message}`, 'error');
