@@ -4809,92 +4809,91 @@
             });
         }
 
-        function processFlowByHour(response) {
-            logToConsole('Processing flow data with response:', 'debug');
-            
-            // Get the raw response data from the nested structure
-            const rawResponse = response.rawResponse;
-            
-            // Get current time in local timezone
-            const now = new Date();
-            const yesterday = new Date(now);
-            yesterday.setDate(yesterday.getDate() - 1);
-            yesterday.setHours(0, 0, 0, 0);
-            
-            const today = new Date(now);
-            today.setHours(0, 0, 0, 0);
-            
-            logToConsole('Time boundaries for data filtering:', 'debug');
-            logToConsole({
-                yesterdayStart: yesterday.toLocaleString(),
-                todayStart: today.toLocaleString(),
-                currentTime: now.toLocaleString()
-            }, 'debug');
+        function processFlowByHour(timestamps, flowValues, selectedDay) {
+            logToConsole('Processing flow data:', 'info');
+            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
+            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
-            if (!rawResponse || !rawResponse.data || !Array.isArray(rawResponse.data)) {
-                logToConsole('Invalid raw response structure', 'warn');
-                return { datasets: [], noData: true };
-            }
-
-            // Convert UTC timestamps to local time
-            const data = rawResponse.data.map(point => {
-                const utcTime = new Date(point.time);
-                return {
-                    timestamp: utcTime,
-                    flow: point.value
-                };
-            });
-
-            logToConsole('Processing flow data points:', 'debug');
-            logToConsole(`Total data points: ${data.length}`, 'info');
-            logToConsole('Sample data points:', 'debug');
-            logToConsole(data.slice(0, 5).map(d => ({
-                utc: d.timestamp.toISOString(),
-                local: d.timestamp.toLocaleString(),
-                flow: d.flow
-            })), 'debug');
-
-            // Group data by day
-            const yesterdayData = data.filter(point => {
-                const isYesterday = point.timestamp >= yesterday && point.timestamp < today;
-                return isYesterday;
-            });
-
-            const todayData = data.filter(point => {
-                const isToday = point.timestamp >= today && point.timestamp <= now;
-                return isToday;
-            });
-
-            logToConsole('Data points found:', 'info');
-            logToConsole({
-                total: data.length,
-                yesterday: yesterdayData.length,
-                today: todayData.length,
-                yesterdayRange: `${yesterday.toLocaleString()} - ${today.toLocaleString()}`,
-                todayRange: `${today.toLocaleString()} - ${now.toLocaleString()}`
-            }, 'info');
-
-            // Process data for the selected day
-            const selectedData = selectedDay === 0 ? todayData : yesterdayData;
-            
-            if (selectedData.length === 0) {
-                logToConsole(`No flow data available for ${selectedDay === 0 ? 'Today' : 'Yesterday'}`, 'warn');
-                return { datasets: [], noData: true };
-            }
-
-            // Group by hour and calculate averages
             const hourlyData = {};
-            selectedData.forEach(point => {
-                const hour = point.timestamp.getHours();
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            const dayStart = new Date(now);
+            dayStart.setDate(dayStart.getDate() - selectedDay);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Track if we have any data for this day
+            let hasDataForDay = false;
+            let allFlowsForDay = [];
+
+            // Process each flow reading
+            for (let i = 0; i < timestamps.length; i++) {
+                const timestamp = new Date(timestamps[i]);
+                const flow = flowValues[i];
+                
+                if (flow === null || flow === undefined) continue;
+                
+                if (timestamp < dayStart || timestamp > dayEnd) continue;
+                
+                const hour = timestamp.getHours();
+                if (selectedDay === 0 && hour > currentHour) continue;
+                
+                hasDataForDay = true;
+                allFlowsForDay.push(flow);
+
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = {
                         flows: [],
                         hour,
-                        date: new Date(point.timestamp)
+                        date: new Date(timestamp)
                     };
                 }
-                hourlyData[hour].flows.push(point.flow);
-            });
+                
+                hourlyData[hour].flows.push(flow);
+            }
+
+            // Update statistics if we have data
+            if (hasDataForDay) {
+                // Calculate daily range
+                const minFlow = Math.min(...allFlowsForDay);
+                const maxFlow = Math.max(...allFlowsForDay);
+                document.getElementById('flowRange').textContent = 
+                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
+
+                // Calculate total flow
+                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
+                document.getElementById('flowTotal').textContent = 
+                    `${totalFlow.toFixed(3)} L/min`;
+
+                // Calculate standard deviation
+                const stdDev = calculateStdDev(allFlowsForDay);
+                document.getElementById('flowStdDev').textContent = 
+                    `±${stdDev.toFixed(3)} L/min`;
+
+                // Update frequency
+                document.getElementById('flowFrequency').textContent = 
+                    `${allFlowsForDay.length} points`;
+
+                // Update time since last flow if it's today
+                if (selectedDay === 0 && allFlowsForDay.length > 0) {
+                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
+                    const timeSinceFlow = now - lastFlowTime;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
+                }
+            }
+
+            // If no data for this day, return empty datasets
+            if (!hasDataForDay) {
+                return {
+                    datasets: [],
+                    noData: true
+                };
+            }
 
             // Create hourly averages
             const hourlyAverages = Array(24).fill(null);
@@ -4902,15 +4901,15 @@
                 if (hourData.flows.length > 0) {
                     const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
                     hourlyAverages[hourData.hour] = avgFlow;
-                    logToConsole(`Hour ${hourData.hour} average: ${avgFlow.toFixed(3)}`, 'debug');
                 }
             });
 
             // Create dataset
-            const dayLabels = ['Today', 'Yesterday'];
+            const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
             const colors = [
                 { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
-                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' }
+                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
+                { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
             ];
 
             const datasets = [{
