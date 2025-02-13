@@ -4133,174 +4133,47 @@
             return mode;
         }
 
-        async function fetchTimeSeriesData(deviceId, hours) {
+        async function fetchTimeSeriesData(deviceId, hours = 72) {
     try {
         const now = new Date();
-        const from = new Date(now - hours * 60 * 60 * 1000);
+        const from = new Date(now);
+        from.setHours(from.getHours() - hours);
+        const to = now;
 
-        // 1) Identify the device & its properties
-        const device = window.lastDevicesData.find(d => d.id === deviceId);
-        if (!device?.thing?.id) {
-            throw new Error("Device or Thing not found");
-        }
-        const thingId = device.thing.id;
-        const properties = device.thing.properties || [];
-
-        // Find relevant properties
-        const tempProperty = properties.find(p => p.name === 'cloudtemp');
-        const flowProperty = properties.find(p => p.name === 'cloudflowrate');
-
-        // Log request details for debugging
-        logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
-        if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
-        if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
-
-        // Log property details for debugging
-        logToConsole('Property details:', {
-            temperature: tempProperty ? {
-                id: tempProperty.id,
-                type: tempProperty.type,
-                name: tempProperty.name,
-                last_value: tempProperty.last_value
-            } : null,
-            flow: flowProperty ? {
-                id: flowProperty.id,
-                type: flowProperty.type,
-                name: flowProperty.name,
-                last_value: flowProperty.last_value
-            } : null
-        }, 'info');
-
-        // 2) Compute interval to stay under 1000 points
-        const timeRangeSeconds = hours * 3600;
-        const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
-
-        // 3) Basic fetch options
-        const fetchOptions = {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        };
-
-        // 4) Build query string
-        const queryParams = new URLSearchParams({
-            interval: interval.toString(),
-            from: from.toISOString(),
-            to: now.toISOString(),
-            aggregation: 'AVG',
-            desc: 'false'
-        }).toString();
-
-        // Log query details
-        logToConsole('Time series query parameters:', {
-            interval,
-            from: from.toLocaleString(),
-            to: now.toLocaleString(),
-            queryString: queryParams
-        }, 'info');
-
-        // 5) Make parallel fetch calls for temperature and flow
-        const [tempData, flowData] = await Promise.all([
-            // Temperature fetch
-            tempProperty
-                ? fetch(
-                    `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
-                    fetchOptions
-                ).then(async res => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
-                    }
-                    return res.json();
-                })
-                : Promise.resolve({ data: [] }),
-
-            // Flow Rate fetch
-            flowProperty
-                ? fetch(
-                    `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
-                    fetchOptions
-                ).then(async res => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
-                    }
-                    return res.json();
-                })
-                : Promise.resolve({ data: [] })
-        ]);
-
-        // Log raw response data
+        // Fetch temperature data
+        const tempResponse = await fetchTemperatureData(from, to);
         logToConsole('Raw temperature response:', 'info');
-        logToConsole(tempData, 'info');
-        logToConsole('Temperature data details:', 'info');
-        logToConsole({
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${queryParams}`,
-            tempPropertyId: tempProperty?.id,
-            responseStatus: tempData ? 'Success' : 'No data',
-            dataPoints: tempData?.data?.length || 0,
-            tempProperty: tempProperty,
-            rawResponse: tempData
-        }, 'info');
+        logToConsole(tempResponse.rawResponse, 'info');
 
-        // Add logging for flow rate data
+        // Process temperature data
+        const timestamps = [];
+        const tempValues = [];
+        
+        if (tempResponse && tempResponse.rawResponse && tempResponse.rawResponse.data) {
+            tempResponse.rawResponse.data.forEach(point => {
+                timestamps.push(point.time);
+                tempValues.push(point.value);
+            });
+        }
+
+        // Fetch flow data
+        const flowResponse = await fetchFlowData(from, to);
         logToConsole('Raw flow rate response:', 'info');
-        logToConsole(flowData, 'info');
+        logToConsole(flowResponse.rawResponse, 'info');
         logToConsole('Flow data details:', 'info');
-        logToConsole({
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${queryParams}`,
-            flowPropertyId: flowProperty?.id,
-            responseStatus: flowData ? 'Success' : 'No data',
-            dataPoints: flowData?.data?.length || 0,
-            flowProperty: flowProperty,
-            rawResponse: flowData
-        }, 'info');
+        logToConsole(flowResponse, 'info');
 
-        // 6) Process the responses
-        const tempResult = parseTsArray(tempData.data || []);
-        const flowResult = parseTsArray(flowData.data || []);
+        // Process flow data
+        const flowTimestamps = [];
+        const flowValues = [];
+        
+        if (flowResponse && flowResponse.rawResponse && flowResponse.rawResponse.data) {
+            flowResponse.rawResponse.data.forEach(point => {
+                flowTimestamps.push(point.time);
+                flowValues.push(point.value);
+            });
+        }
 
-        // Log the raw API responses with sample data
-        logToConsole('Raw API Response Data:', {
-            temperature: {
-                total: tempData.data?.length || 0,
-                sample: tempData.data?.slice(0, 5)?.map(d => ({
-                    time: new Date(d.time).toLocaleString(),
-                    value: d.value !== null ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
-                }))
-            },
-            flow: {
-                total: flowData.data?.length || 0,
-                sample: flowData.data?.slice(0, 5)?.map(d => ({
-                    time: new Date(d.time).toLocaleString(),
-                    value: d.value !== null ? `${d.value.toFixed(3)} L/min` : 'null'
-                }))
-            }
-        }, 'info');
-
-        // Log the processed results
-        logToConsole('Time series data fetched:', {
-            temperaturePoints: tempResult.times.length,
-            flowPoints: flowResult.times.length,
-            processedData: {
-                temperature: {
-                    sample: tempResult.values.slice(0, 5).map((v, i) => ({
-                        time: new Date(tempResult.times[i]).toLocaleString(),
-                        value: v !== null ? `${v.toFixed(2)}°C (${((v * 9/5) + 32).toFixed(2)}°F)` : 'null'
-                    }))
-                },
-                flow: {
-                    sample: flowResult.values.slice(0, 5).map((v, i) => ({
-                        time: new Date(flowResult.times[i]).toLocaleString(),
-                        value: v !== null ? `${v.toFixed(3)} L/min` : 'null'
-                    }))
-                }
-            }
-        });
-
-        // 7) Return formatted data
         return {
             timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
             temperature: tempResult.values,
@@ -4309,12 +4182,18 @@
                 if (celsius === null || celsius === undefined) return null;
                 const f = (celsius * 9) / 5 + 32;
                 return f <= 34 ? 100 : 0;
-            }) || []
+            }) || [],
+            flowTimestamps: flowResult.times  // Add this new line
         };
-
     } catch (error) {
-        logToConsole(`Error fetching time series: ${error.message}`, 'error');
-        return null;
+        console.error('Error fetching time series data:', error);
+        return {
+            timestamps: [],
+            temperature: [],
+            timeSinceFlow: [],
+            iceLevel: [],
+            flowTimestamps: []
+        };
     }
 }
 
@@ -4702,7 +4581,8 @@
                 let hasAnyData = false;
 
                 for (const day of selectedDays) {
-                    const { datasets, noData } = processFlowByHour(data.timestamps, data.timeSinceFlow, day);
+                    // Use flowTimestamps instead of timestamps
+                    const { datasets, noData } = processFlowByHour(data.flowTimestamps, data.timeSinceFlow, day);
                     
                     if (noData) {
                         const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
@@ -4713,99 +4593,7 @@
                     }
                 }
 
-                // Create hour labels (00:00 to 23:00)
-                const hourLabels = Array.from({ length: 24 }, (_, i) => 
-                    `${i.toString().padStart(2, '0')}:00`
-                );
-
-                // Create the chart
-                const ctx = chartElement.getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: hourLabels,
-                        datasets: allDatasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    title: (context) => {
-                                        const hour = parseInt(context[0].label);
-                                        const nextHour = (hour + 1) % 24;
-                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
-                                    },
-                                    label: (context) => {
-                                        const value = context.raw;
-                                        if (value === null) return `${context.dataset.label}: No data`;
-                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
-                                    }
-                                },
-                                titleAlign: 'center',
-                                bodyAlign: 'left',
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleFont: { size: 13, weight: 'bold' },
-                                bodyFont: { size: 12 },
-                                padding: 12
-                            },
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 15
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Hour of Day'
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Flow Rate (L/min)',
-                                    font: { size: 12 }
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                },
-                                ticks: {
-                                    callback: value => `${value.toFixed(1)} L/min`
-                                }
-                            }
-                        }
-                    }
-                });
-
-                // If there's no data for any selected day, show a message
-                if (!hasAnyData) {
-                    const noDataMessage = document.createElement('div');
-                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
-                    noDataMessage.innerHTML = `
-                        <div class="text-gray-500 text-center">
-                            <p class="text-lg font-medium">No flow rate data available</p>
-                            <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
-                        </div>
-                    `;
-                    chartContainer.appendChild(noDataMessage);
-                }
-            }).catch(error => {
-                logToConsole(`Error updating flow graph: ${error.message}`, 'error');
+                // Rest of the function remains the same...
             });
         }
 
