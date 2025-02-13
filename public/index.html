@@ -4082,201 +4082,107 @@
         }
 
         async function fetchTimeSeriesData(deviceId, hours) {
-  try {
-    const now = new Date();
-    const from = new Date(now - hours * 60 * 60 * 1000);
+    try {
+        const now = new Date();
+        const from = new Date(now - hours * 60 * 60 * 1000);
 
-    // 1) Identify the device & its properties
-    const device = window.lastDevicesData.find(d => d.id === deviceId);
-    if (!device?.thing?.id) {
-      throw new Error("Device or Thing not found");
-    }
-    const thingId = device.thing.id;
-    const properties = device.thing.properties || [];
+        // 1) Identify the device & its properties
+        const device = window.lastDevicesData.find(d => d.id === deviceId);
+        if (!device?.thing?.id) {
+            throw new Error("Device or Thing not found");
+        }
+        const thingId = device.thing.id;
+        const properties = device.thing.properties || [];
 
-    // Helper function to check if a property is numeric
-    function isNumericProperty(prop) {
-      const numericTypes = [
-        'FLOAT', 'INT', 'NUMBER', 'DOUBLE', 'LONG',
-        'TEMPERATURE', // Add custom numeric types
-        'FLOW_RATE'
-      ];
-      return numericTypes.includes(prop.type?.toUpperCase());
-    }
+        // Find relevant properties
+        const tempProperty = properties.find(p => p.name === 'cloudtemp');
+        const flowProperty = properties.find(p => p.name === 'cloudflowrate');
 
-    // Find relevant properties, ensuring they are numeric
-    const tempProperty = properties.find(p => p.name === 'cloudtemp');
-    const flowProperty = properties.find(p => p.name === 'cloudflowrate');
+        // Log property details for debugging
+        logToConsole('Found properties:', {
+            temperature: tempProperty?.id,
+            flowRate: flowProperty?.id
+        });
 
-    // Log property types for debugging
-    logToConsole('Property types:', 'info');
-    properties.forEach(p => {
-      logToConsole(`${p.name}: ${p.type}`, 'info');
-    });
+        // 2) Compute interval to stay under 1000 points
+        const timeRangeSeconds = hours * 3600;
+        const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
 
-    if (!tempProperty) {
-      logToConsole('Temperature property not found', 'warning');
-    } else if (!isNumericProperty(tempProperty)) {
-      logToConsole(`Temperature property type ${tempProperty.type} is not numeric`, 'warning');
-    }
-
-    if (!flowProperty) {
-      logToConsole('Flow rate property not found', 'warning');
-    } else if (!isNumericProperty(flowProperty)) {
-      logToConsole(`Flow rate property type ${flowProperty.type} is not numeric`, 'warning');
-    }
-
-    // 2) Compute interval to stay under 1000 points
-    const timeRangeSeconds = hours * 3600;
-    const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
-
-    // 3) Basic fetch options with required headers
-    const fetchOptions = {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    };
-
-    // Helper function to build the query string according to API specs
-    function buildQuery() {
-      return new URLSearchParams({
-        interval: interval.toString(),
-        from: from.toISOString(),
-        to: now.toISOString(),
-        aggregation: 'AVG',
-        desc: 'false'
-      }).toString();
-    }
-
-    // Log the request details for debugging
-    logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
-    if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
-    if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
-
-    // 4) Make parallel fetch calls for each numeric property
-    const [tempData, flowData] = await Promise.all([
-      // Temperature
-      tempProperty
-        ? fetch(
-            `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${buildQuery()}`,
-            fetchOptions
-          ).then(async res => {
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
+        // 3) Basic fetch options
+        const fetchOptions = {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
-            return res.json();
-          })
-        : Promise.resolve({ data: [] }),
+        };
 
-      // Flow Rate
-      flowProperty
-        ? fetch(
-            `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${buildQuery()}`,
-            fetchOptions
-          ).then(async res => {
-            if (!res.ok) {
-              const errorText = await res.text();
-              throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
-            }
-            return res.json();
-          })
-        : Promise.resolve({ data: [] })
-    ]);
+        // 4) Build query string
+        const queryParams = new URLSearchParams({
+            interval: interval.toString(),
+            from: from.toISOString(),
+            to: now.toISOString(),
+            aggregation: 'AVG',
+            desc: 'false'
+        }).toString();
 
-    // Log raw response data
-    logToConsole('Raw temperature response:', 'info');
-    logToConsole(tempData, 'info');
+        // 5) Make parallel fetch calls for temperature and flow
+        const [tempResponse, flowResponse] = await Promise.all([
+            // Temperature fetch (keeping existing code)
+            tempProperty
+                ? fetch(
+                    `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
+                    fetchOptions
+                ).then(async res => {
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
+                    }
+                    return res.json();
+                })
+                : Promise.resolve({ data: [] }),
 
-    // Add logging for flow rate data
-    logToConsole('Raw flow rate response:', 'info');
-    logToConsole(flowData, 'info');
-    logToConsole('Flow data details:', 'info');
-    logToConsole({
-        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${buildQuery()}`,
-        flowPropertyId: flowProperty?.id,
-        responseStatus: flowData ? 'Success' : 'No data',
-        dataPoints: flowData?.data?.length || 0,
-        flowProperty: flowProperty,
-        rawResponse: flowData
-    }, 'info');
+            // Flow fetch (mirroring temperature fetch exactly)
+            flowProperty
+                ? fetch(
+                    `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
+                    fetchOptions
+                ).then(async res => {
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
+                    }
+                    return res.json();
+                })
+                : Promise.resolve({ data: [] })
+        ]);
 
-    // 5) Process the data using parseTsArray
-    const tempResult = parseTsArray(tempData.data || []);
-    const flowResult = parseTsArray(flowData.data || []);
+        // 6) Process the responses
+        const tempResult = parseTsArray(tempResponse.data || []);
+        const flowResult = parseTsArray(flowResponse.data || []);
 
-    // Log processed results
-    logToConsole('Processed flow data:', 'info');
-    logToConsole({
-        flowTimes: flowResult.times.length,
-        flowValues: flowResult.values.length,
-        sampleTimes: flowResult.times.slice(0, 3),
-        sampleValues: flowResult.values.slice(0, 3),
-        rawFlowData: flowData.data
-    }, 'info');
+        // Log the results for debugging
+        logToConsole('Time series data fetched:', {
+            temperaturePoints: tempResult.times.length,
+            flowPoints: flowResult.times.length
+        });
 
-    // For warning and critical status, we'll use the current values since they're boolean
-    const warningProperty = properties.find(p => p.name === 'warning');
-    const criticalProperty = properties.find(p => p.name === 'critical');
-    
-    // Convert boolean values to 1 or 0 for the graph
-    const currentWarningValue = warningProperty?.last_value === true || warningProperty?.last_value === "true" ? 1 : 0;
-    const currentCriticalValue = criticalProperty?.last_value === true || criticalProperty?.last_value === "true" ? 1 : 0;
+        // 7) Return formatted data
+        return {
+            timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
+            temperature: tempResult.values,
+            timeSinceFlow: flowResult.values,
+            iceLevel: tempResult.values?.map(celsius => {
+                if (celsius === null || celsius === undefined) return null;
+                const f = (celsius * 9) / 5 + 32;
+                return f <= 34 ? 100 : 0;
+            }) || []
+        };
 
-    // Log the boolean values for debugging
-    logToConsole('Status values:', {
-        warningRaw: warningProperty?.last_value,
-        warningConverted: currentWarningValue,
-        criticalRaw: criticalProperty?.last_value,
-        criticalConverted: currentCriticalValue
-    }, 'info');
-
-    // 6) Use the first available time series for timestamps
-    const primaryTimes = tempResult.times.length ? tempResult.times :
-                        flowResult.times.length ? flowResult.times : 
-                        [new Date().toISOString()];
-
-    // Log processed data
-    logToConsole('Processed data:', 'info');
-    logToConsole(`Temperature times: ${tempResult.times.length}`, 'info');
-    logToConsole(`Temperature values: ${tempResult.values.length}`, 'info');
-    logToConsole(`Flow rate times: ${flowResult.times.length}`, 'info');
-    logToConsole(`Flow rate values: ${flowResult.values.length}`, 'info');
-    logToConsole('Warning status:', warningProperty?.last_value, 'info');
-    logToConsole('Critical status:', criticalProperty?.last_value, 'info');
-
-    // Add detailed flow rate data logging
-    logToConsole('Flow rate data details:', 'info');
-    if (flowResult.times.length > 0) {
-        const flowDataDetails = flowResult.times.map((time, index) => ({
-            timestamp: new Date(time).toLocaleString(),
-            value: flowResult.values[index]
-        }));
-        logToConsole(flowDataDetails, 'info');
-    } else {
-        logToConsole('No flow rate data available', 'warning');
+    } catch (error) {
+        logToConsole(`Error fetching time series: ${error.message}`, 'error');
+        return null;
     }
-
-    // 7) Return formatted data for the charts
-    return {
-      timestamps: primaryTimes.map(t => new Date(t).toLocaleString()),
-      temperature: tempResult.values,
-      timeSinceFlow: flowResult.values,
-      // For boolean properties, return arrays with the current value repeated
-      warningStatus: new Array(primaryTimes.length).fill(currentWarningValue),
-      criticalStatus: new Array(primaryTimes.length).fill(currentCriticalValue),
-      iceLevel: tempResult.values?.map(celsius => {
-        if (celsius === null || celsius === undefined) return null;
-        const f = (celsius * 9) / 5 + 32;
-        return f <= 34 ? 100 : 0;
-      }) || []
-    };
-  } catch (error) {
-    logToConsole(`Error fetching timeseries: ${error.message}`, 'error');
-    return null;
-  }
 }
 
         function updateStatusGraph(deviceIndex, selectedDay) {
