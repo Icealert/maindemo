@@ -4676,7 +4676,7 @@
         function processFlowByHour(timestamps, flowValues, selectedDay) {
             logToConsole('Processing flow data:', 'info');
             logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
+            logToConsole('Flow values:', flowValues);  // Log the actual values
             logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
             const hourlyData = {};
