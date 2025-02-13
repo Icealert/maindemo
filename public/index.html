@@ -3754,7 +3754,7 @@
                                     title: (context) => {
                                         const hour = parseInt(context[0].label);
                                         const nextHour = (hour + 1) % 24;
-                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00 CST`;
+                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
                                     },
                                     label: (context) => {
                                         const value = context.raw;
@@ -3799,7 +3799,7 @@
                             x: {
                                 title: {
                                     display: true,
-                                    text: 'Hour of Day (CST)'
+                                    text: 'Hour of Day'
                                 },
                                 grid: {
                                     display: true,
@@ -3873,12 +3873,6 @@
             });
         }
 
-        // Add UTC to CST conversion helper function
-        function convertUTCtoCST(utcDate) {
-            const date = new Date(utcDate);
-            return new Date(date.toLocaleString('en-US', { timeZone: 'America/Chicago' }));
-        }
-
         function processTemperatureByHour(timestamps, temperatures, selectedDay) {
             logToConsole('Processing temperature data:', 'info');
             logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
@@ -3886,10 +3880,10 @@
             logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
             const hourlyData = {};
-            const now = convertUTCtoCST(new Date());
+            const now = new Date();
             const currentHour = now.getHours();
             
-            const dayStart = convertUTCtoCST(new Date());
+            const dayStart = new Date(now);
             dayStart.setDate(dayStart.getDate() - selectedDay);
             dayStart.setHours(0, 0, 0, 0);
             
@@ -3907,7 +3901,7 @@
 
             // Process each temperature reading
             for (let i = 0; i < timestamps.length; i++) {
-                const timestamp = convertUTCtoCST(new Date(timestamps[i]));
+                const timestamp = new Date(timestamps[i]);
                 const temp = temperatures[i];
                 
                 if (temp === null || temp === undefined) continue;
@@ -4340,8 +4334,8 @@
                     return;
                 }
 
-                // Get the start and end of the selected day in CST
-                const now = convertUTCtoCST(new Date());
+                // Get the start and end of the selected day
+                const now = new Date();
                 const dayStart = new Date(now);
                 dayStart.setDate(dayStart.getDate() - selectedDay);
                 dayStart.setHours(0, 0, 0, 0);
@@ -4358,9 +4352,24 @@
                 const warningStatus = data.warningStatus || [];
                 const criticalStatus = data.criticalStatus || [];
 
-                // Process each data point with CST conversion
+                // Log raw data for debugging
+                logToConsole('Raw status data:', {
+                    total: {
+                        timestamps: timestamps.length,
+                        warningStatus: warningStatus.length,
+                        criticalStatus: criticalStatus.length
+                    },
+                    sampleData: timestamps.slice(0, 5).map((t, i) => ({
+                        time: new Date(t).toLocaleString(),
+                        warning: warningStatus[i],
+                        critical: criticalStatus[i],
+                        status: warningStatus[i] ? 'Warning' : criticalStatus[i] ? 'Critical' : 'Great'
+                    }))
+                });
+
+                // Process each data point
                 for (let i = 0; i < timestamps.length; i++) {
-                    const timestamp = convertUTCtoCST(new Date(timestamps[i]));
+                    const timestamp = new Date(timestamps[i]);
                     if (timestamp >= dayStart && timestamp <= currentTime) {
                         const warning = warningStatus[i];
                         const critical = criticalStatus[i];
@@ -4730,7 +4739,7 @@
                                     title: (context) => {
                                         const hour = parseInt(context[0].label);
                                         const nextHour = (hour + 1) % 24;
-                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00 CST`;
+                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
                                     },
                                     label: (context) => {
                                         const value = context.raw;
@@ -4808,11 +4817,14 @@
 
             const hourlyData = {};
             // Get current time in CST
-            const now = convertUTCtoCST(new Date());
+            const cstOffset = -6; // CST is UTC-6
+            const now = new Date();
+            // Convert current time to CST
+            now.setHours(now.getHours() + cstOffset);
+            
             const currentHour = now.getHours();
             
-            // Set up day boundaries in CST
-            const dayStart = convertUTCtoCST(new Date());
+            const dayStart = new Date(now);
             dayStart.setDate(dayStart.getDate() - selectedDay);
             dayStart.setHours(0, 0, 0, 0);
             
@@ -4826,14 +4838,17 @@
             // Process each flow reading
             for (let i = 0; i < timestamps.length; i++) {
                 // Convert UTC timestamp to CST
-                const timestamp = convertUTCtoCST(new Date(timestamps[i]));
+                const utcTimestamp = new Date(timestamps[i]);
+                const cstTimestamp = new Date(utcTimestamp);
+                cstTimestamp.setHours(utcTimestamp.getHours() + cstOffset);
+                
                 const flow = flowValues[i];
                 
                 if (flow === null || flow === undefined) continue;
                 
-                if (timestamp < dayStart || timestamp > dayEnd) continue;
+                if (cstTimestamp < dayStart || cstTimestamp > dayEnd) continue;
                 
-                const hour = timestamp.getHours();
+                const hour = cstTimestamp.getHours();
                 if (selectedDay === 0 && hour > currentHour) continue;
                 
                 hasDataForDay = true;
@@ -4843,12 +4858,23 @@
                     hourlyData[hour] = {
                         flows: [],
                         hour,
-                        date: new Date(timestamp)
+                        date: new Date(cstTimestamp)
                     };
                 }
                 
                 hourlyData[hour].flows.push(flow);
             }
+
+            // Log timezone conversion details for debugging
+            logToConsole('Timezone conversion details:', {
+                originalTimezone: 'UTC',
+                convertedTimezone: 'CST',
+                offset: `${cstOffset} hours`,
+                sampleConversion: timestamps.length > 0 ? {
+                    originalTime: new Date(timestamps[0]).toISOString(),
+                    convertedTime: new Date(new Date(timestamps[0]).setHours(new Date(timestamps[0]).getHours() + cstOffset)).toLocaleString('en-US', { timeZone: 'America/Chicago' })
+                } : null
+            });
 
             // Update statistics if we have data
             if (hasDataForDay) {
@@ -4875,9 +4901,10 @@
                 // Update time since last flow if it's today
                 if (selectedDay === 0 && allFlowsForDay.length > 0) {
                     const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-                    const lastFlowTime = convertUTCtoCST(new Date(timestamps[timestamps.length - 1]));
+                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
+                    lastFlowTime.setHours(lastFlowTime.getHours() + cstOffset); // Convert to CST
                     const timeSinceFlow = now - lastFlowTime;
-                    timeSinceLastFlowEl.textContent = `${formatTimeDuration(timeSinceFlow)} (Last flow: ${lastFlowTime.toLocaleString()} CST)`;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
                 }
             }
 
@@ -4907,7 +4934,7 @@
             ];
 
             const datasets = [{
-                label: `Flow Rate (${dayLabels[selectedDay]})`,
+                label: `Flow Rate (${dayLabels[selectedDay]} CST)`,
                 data: hourlyAverages,
                 borderColor: colors[selectedDay].border,
                 backgroundColor: colors[selectedDay].background,
