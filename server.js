@@ -434,26 +434,47 @@ async function sendNotificationEmail(device, email) {
         <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f8f9fa;">
             <!-- Header -->
             <div style="background: linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                <h1 style="margin: 0; font-size: 28px; font-weight: 600;">🚨 Critical Alert</h1>
-                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Immediate Attention Required</p>
+                <h1 style="margin: 0; font-size: 32px; font-weight: 600;">🚨 Critical Alert</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 18px;">Immediate Attention Required</p>
             </div>
             
             <!-- Main Content -->
             <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <!-- Device Info -->
                 <div style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
-                    <h2 style="color: #333; margin: 0 0 10px 0; font-size: 24px;">${deviceName}</h2>
-                    <p style="color: #666; font-size: 16px; margin: 0;">
+                    <h2 style="color: #333; margin: 0 0 10px 0; font-size: 28px;">${deviceName}</h2>
+                    <p style="color: #666; font-size: 18px; margin: 0;">
                         <strong style="color: #444;">Location:</strong> 
                         <span style="background: #f8f9fa; padding: 3px 8px; border-radius: 4px;">${location}</span>
                     </p>
                 </div>
                 
                 <!-- Alert Details -->
-                <div style="background: #fff4f4; padding: 20px; border-radius: 8px; border-left: 4px solid #ff4444; margin: 20px 0;">
+                <div style="background: #fff4f4; padding: 25px; border-radius: 8px; border-left: 6px solid #ff4444; margin: 20px 0;">
                     ${criticalReasons.map(reason => reason.replace(
                         '<div class="alert">',
-                        '<div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">'
+                        '<div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.08);">'
+                    ).replace(
+                        '<strong>',
+                        '<strong style="font-size: 24px; color: #ff4444; display: block; margin-bottom: 10px;">'
+                    ).replace(
+                        '<br>',
+                        '</strong><div style="font-size: 20px; color: #444; line-height: 1.5;">'
+                    ).replace(
+                        'Current:',
+                        '<span style="color: #ff6b6b;">Current:</span>'
+                    ).replace(
+                        'Threshold:',
+                        '<span style="color: #ff6b6b;">Threshold:</span>'
+                    ).replace(
+                        'Time without flow:',
+                        '<span style="color: #ff6b6b;">Time without flow:</span>'
+                    ).replace(
+                        'Critical threshold:',
+                        '<span style="color: #ff6b6b;">Critical threshold:</span>'
+                    ).replace(
+                        '</div>',
+                        '</div></div>'
                     )).join('')}
                 </div>
                 
@@ -461,20 +482,29 @@ async function sendNotificationEmail(device, email) {
                 <div style="margin: 30px 0; text-align: center;">
                     <a href="https://freezesense.up.railway.app/" 
                        style="display: inline-block; background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); 
-                              color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px;
-                              font-weight: 600; font-size: 16px; transition: all 0.3s ease;">
+                              color: white; padding: 16px 32px; text-decoration: none; border-radius: 6px;
+                              font-weight: 600; font-size: 18px; transition: all 0.3s ease;">
                         View Dashboard
                     </a>
                 </div>
                 
                 <!-- Footer -->
                 <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
-                    <p style="color: #666; font-size: 14px; margin: 0;">
+                    <p style="color: #666; font-size: 16px; margin: 0;">
                         This is an automated alert from <strong>FreezeSense</strong>.<br>
                         Please verify all critical alerts through physical inspection.
                     </p>
-                    <p style="color: #888; font-size: 12px; margin: 10px 0 0 0;">
-                        Alert generated at: ${new Date().toLocaleString()}
+                    <p style="color: #888; font-size: 14px; margin: 10px 0 0 0;">
+                        Alert generated at: ${new Date().toLocaleString('en-US', { 
+                            timeZone: 'America/Chicago',
+                            year: 'numeric',
+                            month: '2-digit',
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: true
+                        })} CST
                     </p>
                 </div>
             </div>
