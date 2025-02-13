@@ -4809,112 +4809,81 @@
             });
         }
 
-        function processFlowByHour(timestamps, flowValues, selectedDay) {
-            logToConsole('Processing flow data:', 'info');
-            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
-            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
-
-            const hourlyData = {};
-            // Get current time in CST
-            const cstOffset = -6; // CST is UTC-6
+        function processFlowByHour(rawResponse) {
+            console.log("[Debug] Processing flow data with raw response:", JSON.stringify(rawResponse, null, 2));
+            
             const now = new Date();
-            // Convert current time to CST
-            now.setHours(now.getHours() + cstOffset);
+            const yesterday = new Date(now);
+            yesterday.setDate(yesterday.getDate() - 1);
+            yesterday.setHours(0, 0, 0, 0);
             
-            const currentHour = now.getHours();
+            const today = new Date(now);
+            today.setHours(0, 0, 0, 0);
             
-            const dayStart = new Date(now);
-            dayStart.setDate(dayStart.getDate() - selectedDay);
-            dayStart.setHours(0, 0, 0, 0);
-            
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
+            console.log("[Debug] Time boundaries for data filtering:");
+            console.log("Yesterday start (local):", yesterday.toLocaleString());
+            console.log("Today start (local):", today.toLocaleString());
+            console.log("Current time (local):", now.toLocaleString());
 
-            // Track if we have any data for this day
-            let hasDataForDay = false;
-            let allFlowsForDay = [];
+            if (!rawResponse || !rawResponse.data || !Array.isArray(rawResponse.data)) {
+                console.warn("[Debug] Invalid raw response structure:", rawResponse);
+                return { datasets: [], noData: true };
+            }
 
-            // Process each flow reading
-            for (let i = 0; i < timestamps.length; i++) {
-                // Convert UTC timestamp to CST
-                const utcTimestamp = new Date(timestamps[i]);
-                const cstTimestamp = new Date(utcTimestamp);
-                cstTimestamp.setHours(utcTimestamp.getHours() + cstOffset);
-                
-                const flow = flowValues[i];
-                
-                if (flow === null || flow === undefined) continue;
-                
-                if (cstTimestamp < dayStart || cstTimestamp > dayEnd) continue;
-                
-                const hour = cstTimestamp.getHours();
-                if (selectedDay === 0 && hour > currentHour) continue;
-                
-                hasDataForDay = true;
-                allFlowsForDay.push(flow);
-                
+            // Convert the raw response data into our needed format
+            const data = rawResponse.data.map(point => ({
+                timestamp: new Date(point.time),
+                flow: point.value
+            }));
+
+            // Group data by day (today and yesterday)
+            const yesterdayData = data.filter(point => {
+                const isYesterday = point.timestamp >= yesterday && point.timestamp < today;
+                console.log("[Debug] Yesterday check for point:", {
+                    time: point.timestamp.toLocaleString(),
+                    value: point.flow,
+                    isYesterday
+                });
+                return isYesterday;
+            });
+
+            const todayData = data.filter(point => {
+                const isToday = point.timestamp >= today && point.timestamp <= now;
+                console.log("[Debug] Today check for point:", {
+                    time: point.timestamp.toLocaleString(),
+                    value: point.flow,
+                    isToday
+                });
+                return isToday;
+            });
+
+            console.log("[Debug] Data points found:", {
+                total: data.length,
+                yesterday: yesterdayData.length,
+                today: todayData.length
+            });
+
+            // Process data for the selected day
+            const hourlyData = {};
+            const selectedData = selectedDay === 0 ? todayData : yesterdayData;
+
+            if (selectedData.length === 0) {
+                console.log("[Debug] No data found for", selectedDay === 0 ? "today" : "yesterday");
+                return { datasets: [], noData: true };
+            }
+
+            // Group by hour
+            selectedData.forEach(point => {
+                const hour = point.timestamp.getHours();
                 if (!hourlyData[hour]) {
                     hourlyData[hour] = {
                         flows: [],
                         hour,
-                        date: new Date(cstTimestamp)
+                        date: new Date(point.timestamp)
                     };
                 }
-                
-                hourlyData[hour].flows.push(flow);
-            }
-
-            // Log timezone conversion details for debugging
-            logToConsole('Timezone conversion details:', {
-                originalTimezone: 'UTC',
-                convertedTimezone: 'CST',
-                offset: `${cstOffset} hours`,
-                sampleConversion: timestamps.length > 0 ? {
-                    originalTime: new Date(timestamps[0]).toISOString(),
-                    convertedTime: new Date(new Date(timestamps[0]).setHours(new Date(timestamps[0]).getHours() + cstOffset)).toLocaleString('en-US', { timeZone: 'America/Chicago' })
-                } : null
+                hourlyData[hour].flows.push(point.flow);
             });
-
-            // Update statistics if we have data
-            if (hasDataForDay) {
-                // Calculate daily range
-                const minFlow = Math.min(...allFlowsForDay);
-                const maxFlow = Math.max(...allFlowsForDay);
-                document.getElementById('flowRange').textContent = 
-                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
-
-                // Calculate total flow
-                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
-                document.getElementById('flowTotal').textContent = 
-                    `${totalFlow.toFixed(3)} L/min`;
-
-                // Calculate standard deviation
-                const stdDev = calculateStdDev(allFlowsForDay);
-                document.getElementById('flowStdDev').textContent = 
-                    `±${stdDev.toFixed(3)} L/min`;
-
-                // Update frequency
-                document.getElementById('flowFrequency').textContent = 
-                    `${allFlowsForDay.length} points`;
-
-                // Update time since last flow if it's today
-                if (selectedDay === 0 && allFlowsForDay.length > 0) {
-                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
-                    lastFlowTime.setHours(lastFlowTime.getHours() + cstOffset); // Convert to CST
-                    const timeSinceFlow = now - lastFlowTime;
-                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
-                }
-            }
-
-            // If no data for this day, return empty datasets
-            if (!hasDataForDay) {
-                return {
-                    datasets: [],
-                    noData: true
-                };
-            }
 
             // Create hourly averages
             const hourlyAverages = Array(24).fill(null);
@@ -4922,19 +4891,19 @@
                 if (hourData.flows.length > 0) {
                     const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
                     hourlyAverages[hourData.hour] = avgFlow;
+                    console.log("[Debug] Hour", hourData.hour, "average:", avgFlow);
                 }
             });
 
             // Create dataset
-            const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
+            const dayLabels = ['Today', 'Yesterday'];
             const colors = [
                 { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
-                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
-                { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
+                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' }
             ];
 
             const datasets = [{
-                label: `Flow Rate (${dayLabels[selectedDay]} CST)`,
+                label: `Flow Rate (${dayLabels[selectedDay]})`,
                 data: hourlyAverages,
                 borderColor: colors[selectedDay].border,
                 backgroundColor: colors[selectedDay].background,
