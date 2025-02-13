@@ -4810,8 +4810,10 @@
         }
 
         function processFlowByHour(rawResponse) {
-            console.log("[Debug] Processing flow data with raw response:", JSON.stringify(rawResponse, null, 2));
+            logToConsole('Processing flow data with raw response:', 'debug');
+            logToConsole(JSON.stringify(rawResponse, null, 2), 'debug');
             
+            // Get current time in local timezone
             const now = new Date();
             const yesterday = new Date(now);
             yesterday.setDate(yesterday.getDate() - 1);
@@ -4820,59 +4822,62 @@
             const today = new Date(now);
             today.setHours(0, 0, 0, 0);
             
-            console.log("[Debug] Time boundaries for data filtering:");
-            console.log("Yesterday start (local):", yesterday.toLocaleString());
-            console.log("Today start (local):", today.toLocaleString());
-            console.log("Current time (local):", now.toLocaleString());
+            logToConsole('Time boundaries for data filtering:', 'debug');
+            logToConsole({
+                yesterdayStart: yesterday.toLocaleString(),
+                todayStart: today.toLocaleString(),
+                currentTime: now.toLocaleString()
+            }, 'debug');
 
             if (!rawResponse || !rawResponse.data || !Array.isArray(rawResponse.data)) {
-                console.warn("[Debug] Invalid raw response structure:", rawResponse);
+                logToConsole('Invalid raw response structure', 'warn');
                 return { datasets: [], noData: true };
             }
 
-            // Convert the raw response data into our needed format
-            const data = rawResponse.data.map(point => ({
-                timestamp: new Date(point.time),
-                flow: point.value
-            }));
+            // Convert UTC timestamps to local time
+            const data = rawResponse.data.map(point => {
+                const utcTime = new Date(point.time);
+                return {
+                    timestamp: utcTime,
+                    flow: point.value
+                };
+            });
 
-            // Group data by day (today and yesterday)
+            logToConsole('Converted timestamps:', 'debug');
+            logToConsole(data.slice(0, 5).map(d => ({
+                utc: d.timestamp.toISOString(),
+                local: d.timestamp.toLocaleString(),
+                flow: d.flow
+            })), 'debug');
+
+            // Group data by day
             const yesterdayData = data.filter(point => {
                 const isYesterday = point.timestamp >= yesterday && point.timestamp < today;
-                console.log("[Debug] Yesterday check for point:", {
-                    time: point.timestamp.toLocaleString(),
-                    value: point.flow,
-                    isYesterday
-                });
                 return isYesterday;
             });
 
             const todayData = data.filter(point => {
                 const isToday = point.timestamp >= today && point.timestamp <= now;
-                console.log("[Debug] Today check for point:", {
-                    time: point.timestamp.toLocaleString(),
-                    value: point.flow,
-                    isToday
-                });
                 return isToday;
             });
 
-            console.log("[Debug] Data points found:", {
+            logToConsole('Data points found:', 'info');
+            logToConsole({
                 total: data.length,
                 yesterday: yesterdayData.length,
                 today: todayData.length
-            });
+            }, 'info');
 
             // Process data for the selected day
-            const hourlyData = {};
             const selectedData = selectedDay === 0 ? todayData : yesterdayData;
-
+            
             if (selectedData.length === 0) {
-                console.log("[Debug] No data found for", selectedDay === 0 ? "today" : "yesterday");
+                logToConsole(`No flow data available for ${selectedDay === 0 ? 'Today' : 'Yesterday'}`, 'warn');
                 return { datasets: [], noData: true };
             }
 
-            // Group by hour
+            // Group by hour and calculate averages
+            const hourlyData = {};
             selectedData.forEach(point => {
                 const hour = point.timestamp.getHours();
                 if (!hourlyData[hour]) {
@@ -4891,7 +4896,7 @@
                 if (hourData.flows.length > 0) {
                     const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
                     hourlyAverages[hourData.hour] = avgFlow;
-                    console.log("[Debug] Hour", hourData.hour, "average:", avgFlow);
+                    logToConsole(`Hour ${hourData.hour} average: ${avgFlow.toFixed(3)}`, 'debug');
                 }
             });
 
