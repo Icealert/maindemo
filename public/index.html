@@ -4150,11 +4150,26 @@
         const tempProperty = properties.find(p => p.name === 'cloudtemp');
         const flowProperty = properties.find(p => p.name === 'cloudflowrate');
 
+        // Log request details for debugging
+        logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
+        if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+        if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+
         // Log property details for debugging
-        logToConsole('Found properties:', {
-            temperature: tempProperty?.id,
-            flowRate: flowProperty?.id
-        });
+        logToConsole('Property details:', {
+            temperature: tempProperty ? {
+                id: tempProperty.id,
+                type: tempProperty.type,
+                name: tempProperty.name,
+                last_value: tempProperty.last_value
+            } : null,
+            flow: flowProperty ? {
+                id: flowProperty.id,
+                type: flowProperty.type,
+                name: flowProperty.name,
+                last_value: flowProperty.last_value
+            } : null
+        }, 'info');
 
         // 2) Compute interval to stay under 1000 points
         const timeRangeSeconds = hours * 3600;
@@ -4178,6 +4193,14 @@
             desc: 'false'
         }).toString();
 
+        // Log query details
+        logToConsole('Time series query parameters:', {
+            interval,
+            from: from.toLocaleString(),
+            to: now.toLocaleString(),
+            queryString: queryParams
+        }, 'info');
+
         // 5) Make parallel fetch calls for temperature and flow
         const [tempResponse, flowResponse] = await Promise.all([
             // Temperature fetch (keeping existing code)
@@ -4191,15 +4214,12 @@
                         throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
                     }
                     const json = await res.json();
-                    // Log raw temperature response
+                    // Log complete raw response
                     logToConsole('Raw temperature API response:', {
-                        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}`,
-                        params: queryParams,
-                        responseStructure: {
-                            keys: Object.keys(json),
-                            dataLength: json.data?.length || 0,
-                            sampleData: json.data?.slice(0, 3)
-                        }
+                        url: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}`,
+                        status: res.status,
+                        headers: Object.fromEntries(res.headers.entries()),
+                        data: json
                     }, 'info');
                     return json;
                 })
@@ -4216,15 +4236,12 @@
                         throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
                     }
                     const json = await res.json();
-                    // Log raw flow response
+                    // Log complete raw response
                     logToConsole('Raw flow API response:', {
-                        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}`,
-                        params: queryParams,
-                        responseStructure: {
-                            keys: Object.keys(json),
-                            dataLength: json.data?.length || 0,
-                            sampleData: json.data?.slice(0, 3)
-                        }
+                        url: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}`,
+                        status: res.status,
+                        headers: Object.fromEntries(res.headers.entries()),
+                        data: json
                     }, 'info');
                     return json;
                 })
