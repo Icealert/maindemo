@@ -1066,22 +1066,74 @@
             consoleOutput.scrollTop = consoleOutput.scrollHeight;
         }
         function parseTsArray(arr) {
-  if (!Array.isArray(arr)) {
-    logToConsole('parseTsArray received non-array input:', 'warning');
-    logToConsole(arr, 'warning');
-    return { times: [], values: [] };
-  }
+            // Log the raw input for debugging
+            logToConsole('parseTsArray raw input:', {
+                isArray: Array.isArray(arr),
+                length: arr?.length || 0,
+                sample: arr?.slice(0, 3),
+                type: typeof arr
+            }, 'info');
 
-  const result = {
-    times: arr.map(obj => obj.time || obj.timestamp),
-    values: arr.map(obj => obj.value)
-  };
+            if (!Array.isArray(arr)) {
+                logToConsole('parseTsArray received non-array input:', arr, 'warning');
+                return { times: [], values: [] };
+            }
 
-  logToConsole('parseTsArray result:', 'info');
-  logToConsole(`Times: ${result.times.length}, Values: ${result.values.length}`, 'info');
+            // Map the data, handling different possible property names
+            const result = {
+                times: arr.map(obj => {
+                    // Try different possible timestamp properties
+                    const timestamp = obj.time || obj.timestamp || obj.created_at || obj.date;
+                    if (!timestamp) {
+                        logToConsole('Missing timestamp in object:', obj, 'warning');
+                    }
+                    return timestamp;
+                }),
+                values: arr.map(obj => {
+                    // Try to get value, handling different possible structures
+                    const value = obj.hasOwnProperty('value') ? obj.value :
+                                 obj.hasOwnProperty('data') ? obj.data :
+                                 obj.hasOwnProperty('reading') ? obj.reading : null;
+                    
+                    if (value === undefined || value === null) {
+                        logToConsole('Missing value in object:', obj, 'warning');
+                    }
+                    return value;
+                })
+            };
 
-  return result;
-}
+            // Validate array lengths match
+            if (result.times.length !== result.values.length) {
+                logToConsole('Array length mismatch in parseTsArray:', {
+                    timesLength: result.times.length,
+                    valuesLength: result.values.length,
+                    sampleTimes: result.times.slice(0, 3),
+                    sampleValues: result.values.slice(0, 3)
+                }, 'error');
+            }
+
+            // Remove any entries where either time or value is null/undefined
+            const validIndices = result.times.map((time, i) => 
+                time && result.values[i] !== undefined && result.values[i] !== null ? i : -1
+            ).filter(i => i !== -1);
+
+            const cleanResult = {
+                times: validIndices.map(i => result.times[i]),
+                values: validIndices.map(i => result.values[i])
+            };
+
+            // Log the final processed result
+            logToConsole('parseTsArray processed result:', {
+                originalLength: arr.length,
+                validLength: cleanResult.times.length,
+                sample: validIndices.slice(0, 3).map(i => ({
+                    time: new Date(cleanResult.times[i]).toLocaleString(),
+                    value: cleanResult.values[i]
+                }))
+            }, 'info');
+
+            return cleanResult;
+        }
         function showLoading() {
             statusEl.classList.remove('hidden');
             errorEl.classList.add('hidden');
@@ -4138,7 +4190,18 @@
                         const errorText = await res.text();
                         throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
                     }
-                    return res.json();
+                    const json = await res.json();
+                    // Log raw temperature response
+                    logToConsole('Raw temperature API response:', {
+                        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}`,
+                        params: queryParams,
+                        responseStructure: {
+                            keys: Object.keys(json),
+                            dataLength: json.data?.length || 0,
+                            sampleData: json.data?.slice(0, 3)
+                        }
+                    }, 'info');
+                    return json;
                 })
                 : Promise.resolve({ data: [] }),
 
@@ -4152,7 +4215,18 @@
                         const errorText = await res.text();
                         throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
                     }
-                    return res.json();
+                    const json = await res.json();
+                    // Log raw flow response
+                    logToConsole('Raw flow API response:', {
+                        endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}`,
+                        params: queryParams,
+                        responseStructure: {
+                            keys: Object.keys(json),
+                            dataLength: json.data?.length || 0,
+                            sampleData: json.data?.slice(0, 3)
+                        }
+                    }, 'info');
+                    return json;
                 })
                 : Promise.resolve({ data: [] })
         ]);
