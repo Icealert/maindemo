@@ -4158,8 +4158,18 @@
                 ]);
 
                 // Log raw API responses
-                logToConsole('Raw Temperature Data from API:', tempResponse.data);
-                logToConsole('Raw Flow Rate Data from API:', flowResponse.data);
+                logToConsole('Raw Temperature Data from API (first 5 readings):', 
+                    tempResponse.data?.slice(0, 5).map(d => ({
+                        time: new Date(d.time).toLocaleString(),
+                        value: d.value ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                    }))
+                );
+                logToConsole('Raw Flow Rate Data from API (first 5 readings):', 
+                    flowResponse.data?.slice(0, 5).map(d => ({
+                        time: new Date(d.time).toLocaleString(),
+                        value: d.value ? `${d.value.toFixed(3)} L/min` : 'null'
+                    }))
+                );
 
                 // 6) Process the responses
                 const tempResult = parseTsArray(tempResponse.data || []);
@@ -4684,7 +4694,8 @@
         function processFlowByHour(timestamps, flowValues, selectedDay) {
             logToConsole('Processing flow data:', 'info');
             logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
+            logToConsole('Flow values (first 5 points):', flowValues.slice(0, 5).map(v => v ? `${v.toFixed(3)} L/min` : 'null'));
+            logToConsole('Sample timestamps (first 5):', timestamps.slice(0, 5));
             logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
             const hourlyData = {};
