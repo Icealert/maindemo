@@ -2977,6 +2977,18 @@
                                                 </div>
                                             </div>
                                                     </div>
+                                                ` : property.name === 'notificationEmail' ? `
+                                                    <div class="mt-3 p-3 bg-emerald-50 rounded-lg border border-emerald-100">
+                                                        <div class="flex items-start space-x-2">
+                                                            <svg class="w-4 h-4 text-emerald-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                                            </svg>
+                                                            <div>
+                                                                <p class="text-sm font-medium text-emerald-800 mb-1">What is Notification Email?</p>
+                                                                <p class="text-xs text-emerald-600 leading-relaxed">This email address will receive critical alerts about your ice machine's status, including temperature warnings and water flow issues. Make sure to enter a valid email that is regularly monitored.</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
                                                 ` : property.name === 'cloudtemp' ? `
                                                     <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                                         <div class="flex items-start space-x-2">
