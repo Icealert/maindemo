@@ -4082,108 +4082,116 @@
         }
 
         async function fetchTimeSeriesData(deviceId, hours) {
-    try {
-        const now = new Date();
-        const from = new Date(now - hours * 60 * 60 * 1000);
+            try {
+                const now = new Date();
+                const from = new Date(now - hours * 60 * 60 * 1000);
 
-        // 1) Identify the device & its properties
-        const device = window.lastDevicesData.find(d => d.id === deviceId);
-        if (!device?.thing?.id) {
-            throw new Error("Device or Thing not found");
-        }
-        const thingId = device.thing.id;
-        const properties = device.thing.properties || [];
+                // 1) Identify the device & its properties
+                const device = window.lastDevicesData.find(d => d.id === deviceId);
+                if (!device?.thing?.id) {
+                    throw new Error("Device or Thing not found");
+                }
+                const thingId = device.thing.id;
+                const properties = device.thing.properties || [];
 
-        // Find relevant properties
-        const tempProperty = properties.find(p => p.name === 'cloudtemp');
-        const flowProperty = properties.find(p => p.name === 'cloudflowrate');
+                // Find relevant properties
+                const tempProperty = properties.find(p => p.name === 'cloudtemp');
+                const flowProperty = properties.find(p => p.name === 'cloudflowrate');
 
-        // Log property details for debugging
-        logToConsole('Found properties:', {
-            temperature: tempProperty?.id,
-            flowRate: flowProperty?.id
-        });
+                // Log property details for debugging
+                logToConsole('Found properties:', {
+                    temperature: tempProperty?.id,
+                    flowRate: flowProperty?.id
+                });
 
-        // 2) Compute interval to stay under 1000 points
-        const timeRangeSeconds = hours * 3600;
-        const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
+                // 2) Compute interval to stay under 1000 points
+                const timeRangeSeconds = hours * 3600;
+                const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
 
-        // 3) Basic fetch options
-        const fetchOptions = {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
+                // 3) Basic fetch options
+                const fetchOptions = {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                // 4) Build query string
+                const queryParams = new URLSearchParams({
+                    interval: interval.toString(),
+                    from: from.toISOString(),
+                    to: now.toISOString(),
+                    aggregation: 'AVG',
+                    desc: 'false'
+                }).toString();
+
+                // 5) Make parallel fetch calls for temperature and flow
+                const [tempResponse, flowResponse] = await Promise.all([
+                    // Temperature fetch
+                    tempProperty
+                        ? fetch(
+                            `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
+                            fetchOptions
+                        ).then(async res => {
+                            if (!res.ok) {
+                                const errorText = await res.text();
+                                throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
+                            }
+                            return res.json();
+                        })
+                        : Promise.resolve({ data: [] }),
+
+                    // Flow fetch
+                    flowProperty
+                        ? fetch(
+                            `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
+                            fetchOptions
+                        ).then(async res => {
+                            if (!res.ok) {
+                                const errorText = await res.text();
+                                throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
+                            }
+                            return res.json();
+                        })
+                        : Promise.resolve({ data: [] })
+                ]);
+
+                // Log raw API responses
+                logToConsole('Raw Temperature Data from API:', tempResponse.data);
+                logToConsole('Raw Flow Rate Data from API:', flowResponse.data);
+
+                // 6) Process the responses
+                const tempResult = parseTsArray(tempResponse.data || []);
+                const flowResult = parseTsArray(flowResponse.data || []);
+
+                // Log the processed results
+                logToConsole('Processed Temperature Data:', {
+                    timestamps: tempResult.times,
+                    values: tempResult.values
+                });
+                logToConsole('Processed Flow Rate Data:', {
+                    timestamps: flowResult.times,
+                    values: flowResult.values
+                });
+
+                // 7) Return formatted data
+                return {
+                    timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
+                    temperature: tempResult.values,
+                    timeSinceFlow: flowResult.values,
+                    iceLevel: tempResult.values?.map(celsius => {
+                        if (celsius === null || celsius === undefined) return null;
+                        const f = (celsius * 9) / 5 + 32;
+                        return f <= 34 ? 100 : 0;
+                    }) || []
+                };
+
+            } catch (error) {
+                logToConsole(`Error fetching time series: ${error.message}`, 'error');
+                return null;
             }
-        };
-
-        // 4) Build query string
-        const queryParams = new URLSearchParams({
-            interval: interval.toString(),
-            from: from.toISOString(),
-            to: now.toISOString(),
-            aggregation: 'AVG',
-            desc: 'false'
-        }).toString();
-
-        // 5) Make parallel fetch calls for temperature and flow
-        const [tempResponse, flowResponse] = await Promise.all([
-            // Temperature fetch (keeping existing code)
-            tempProperty
-                ? fetch(
-                    `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
-                    fetchOptions
-                ).then(async res => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
-                    }
-                    return res.json();
-                })
-                : Promise.resolve({ data: [] }),
-
-            // Flow fetch (mirroring temperature fetch exactly)
-            flowProperty
-                ? fetch(
-                    `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
-                    fetchOptions
-                ).then(async res => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
-                    }
-                    return res.json();
-                })
-                : Promise.resolve({ data: [] })
-        ]);
-
-        // 6) Process the responses
-        const tempResult = parseTsArray(tempResponse.data || []);
-        const flowResult = parseTsArray(flowResponse.data || []);
-
-        // Log the results for debugging
-        logToConsole('Time series data fetched:', {
-            temperaturePoints: tempResult.times.length,
-            flowPoints: flowResult.times.length
-        });
-
-        // 7) Return formatted data
-        return {
-            timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
-            temperature: tempResult.values,
-            timeSinceFlow: flowResult.values,
-            iceLevel: tempResult.values?.map(celsius => {
-                if (celsius === null || celsius === undefined) return null;
-                const f = (celsius * 9) / 5 + 32;
-                return f <= 34 ? 100 : 0;
-            }) || []
-        };
-
-    } catch (error) {
-        logToConsole(`Error fetching time series: ${error.message}`, 'error');
-        return null;
-    }
-}
+        }
 
         function updateStatusGraph(deviceIndex, selectedDay) {
             const device = window.lastDevicesData[deviceIndex];
@@ -4676,7 +4684,7 @@
         function processFlowByHour(timestamps, flowValues, selectedDay) {
             logToConsole('Processing flow data:', 'info');
             logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole('Flow values:', flowValues);  // Log the actual values
+            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
             logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
             const hourlyData = {};
