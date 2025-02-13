@@ -4161,10 +4161,42 @@
         const tempResult = parseTsArray(tempResponse.data || []);
         const flowResult = parseTsArray(flowResponse.data || []);
 
-        // Log the results for debugging
+        // Log the raw API responses with sample data
+        logToConsole('Raw API Response Data:', {
+            temperature: {
+                total: tempResponse.data?.length || 0,
+                sample: tempResponse.data?.slice(0, 5)?.map(d => ({
+                    time: new Date(d.time).toLocaleString(),
+                    value: d.value !== null ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                }))
+            },
+            flow: {
+                total: flowResponse.data?.length || 0,
+                sample: flowResponse.data?.slice(0, 5)?.map(d => ({
+                    time: new Date(d.time).toLocaleString(),
+                    value: d.value !== null ? `${d.value.toFixed(3)} L/min` : 'null'
+                }))
+            }
+        }, 'info');
+
+        // Log the processed results
         logToConsole('Time series data fetched:', {
             temperaturePoints: tempResult.times.length,
-            flowPoints: flowResult.times.length
+            flowPoints: flowResult.times.length,
+            processedData: {
+                temperature: {
+                    sample: tempResult.values.slice(0, 5).map((v, i) => ({
+                        time: new Date(tempResult.times[i]).toLocaleString(),
+                        value: v !== null ? `${v.toFixed(2)}°C (${((v * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                    }))
+                },
+                flow: {
+                    sample: flowResult.values.slice(0, 5).map((v, i) => ({
+                        time: new Date(flowResult.times[i]).toLocaleString(),
+                        value: v !== null ? `${v.toFixed(3)} L/min` : 'null'
+                    }))
+                }
+            }
         });
 
         // 7) Return formatted data
@@ -4221,14 +4253,17 @@
 
                 // Log raw data for debugging
                 logToConsole('Raw status data:', {
-                    timestamps: timestamps.length,
-                    warningStatus: warningStatus.length,
-                    criticalStatus: criticalStatus.length,
-                    sampleData: {
-                        timestamps: timestamps.slice(0, 5),
-                        warning: warningStatus.slice(0, 5),
-                        critical: criticalStatus.slice(0, 5)
-                    }
+                    total: {
+                        timestamps: timestamps.length,
+                        warningStatus: warningStatus.length,
+                        criticalStatus: criticalStatus.length
+                    },
+                    sampleData: timestamps.slice(0, 5).map((t, i) => ({
+                        time: new Date(t).toLocaleString(),
+                        warning: warningStatus[i],
+                        critical: criticalStatus[i],
+                        status: warningStatus[i] ? 'Warning' : criticalStatus[i] ? 'Critical' : 'Great'
+                    }))
                 });
 
                 // Process each data point
