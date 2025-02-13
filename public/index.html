@@ -4202,8 +4202,8 @@
         }, 'info');
 
         // 5) Make parallel fetch calls for temperature and flow
-        const [tempResponse, flowResponse] = await Promise.all([
-            // Temperature fetch (keeping existing code)
+        const [tempData, flowData] = await Promise.all([
+            // Temperature fetch
             tempProperty
                 ? fetch(
                     `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
@@ -4213,19 +4213,11 @@
                         const errorText = await res.text();
                         throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
                     }
-                    const json = await res.json();
-                    // Log complete raw response
-                    logToConsole('Raw temperature API response:', {
-                        url: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}`,
-                        status: res.status,
-                        headers: Object.fromEntries(res.headers.entries()),
-                        data: json
-                    }, 'info');
-                    return json;
+                    return res.json();
                 })
                 : Promise.resolve({ data: [] }),
 
-            // Flow fetch (mirroring temperature fetch exactly)
+            // Flow Rate fetch
             flowProperty
                 ? fetch(
                     `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
@@ -4233,37 +4225,55 @@
                 ).then(async res => {
                     if (!res.ok) {
                         const errorText = await res.text();
-                        throw new Error(`Flow fetch failed: ${res.status} - ${errorText}`);
+                        throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
                     }
-                    const json = await res.json();
-                    // Log complete raw response
-                    logToConsole('Raw flow API response:', {
-                        url: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}`,
-                        status: res.status,
-                        headers: Object.fromEntries(res.headers.entries()),
-                        data: json
-                    }, 'info');
-                    return json;
+                    return res.json();
                 })
                 : Promise.resolve({ data: [] })
         ]);
 
+        // Log raw response data
+        logToConsole('Raw temperature response:', 'info');
+        logToConsole(tempData, 'info');
+        logToConsole('Temperature data details:', 'info');
+        logToConsole({
+            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${queryParams}`,
+            tempPropertyId: tempProperty?.id,
+            responseStatus: tempData ? 'Success' : 'No data',
+            dataPoints: tempData?.data?.length || 0,
+            tempProperty: tempProperty,
+            rawResponse: tempData
+        }, 'info');
+
+        // Add logging for flow rate data
+        logToConsole('Raw flow rate response:', 'info');
+        logToConsole(flowData, 'info');
+        logToConsole('Flow data details:', 'info');
+        logToConsole({
+            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${queryParams}`,
+            flowPropertyId: flowProperty?.id,
+            responseStatus: flowData ? 'Success' : 'No data',
+            dataPoints: flowData?.data?.length || 0,
+            flowProperty: flowProperty,
+            rawResponse: flowData
+        }, 'info');
+
         // 6) Process the responses
-        const tempResult = parseTsArray(tempResponse.data || []);
-        const flowResult = parseTsArray(flowResponse.data || []);
+        const tempResult = parseTsArray(tempData.data || []);
+        const flowResult = parseTsArray(flowData.data || []);
 
         // Log the raw API responses with sample data
         logToConsole('Raw API Response Data:', {
             temperature: {
-                total: tempResponse.data?.length || 0,
-                sample: tempResponse.data?.slice(0, 5)?.map(d => ({
+                total: tempData.data?.length || 0,
+                sample: tempData.data?.slice(0, 5)?.map(d => ({
                     time: new Date(d.time).toLocaleString(),
                     value: d.value !== null ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
                 }))
             },
             flow: {
-                total: flowResponse.data?.length || 0,
-                sample: flowResponse.data?.slice(0, 5)?.map(d => ({
+                total: flowData.data?.length || 0,
+                sample: flowData.data?.slice(0, 5)?.map(d => ({
                     time: new Date(d.time).toLocaleString(),
                     value: d.value !== null ? `${d.value.toFixed(3)} L/min` : 'null'
                 }))
