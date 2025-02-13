@@ -393,7 +393,6 @@ setInterval(async () => {
 async function sendNotificationEmail(device, email) {
     try {
         const deviceName = device.name || 'Unnamed Device';
-        const deviceId = device.id;
         const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
         const criticalReasons = [];
 
@@ -401,22 +400,58 @@ async function sendNotificationEmail(device, email) {
         const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
         const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
         if (tempProp && tempThreshold && tempProp.last_value > tempThreshold.last_value) {
-            criticalReasons.push(`High temperature (${tempProp.last_value}°C > ${tempThreshold.last_value}°C threshold)`);
+            // Convert Celsius to Fahrenheit
+            const currentTempF = (tempProp.last_value * 9/5) + 32;
+            const thresholdTempF = (tempThreshold.last_value * 9/5) + 32;
+            criticalReasons.push(`<div class="alert">
+                <strong>High Temperature Alert</strong><br>
+                Current: ${currentTempF.toFixed(1)}°F<br>
+                Threshold: ${thresholdTempF.toFixed(1)}°F
+            </div>`);
         }
 
         const flowProp = device.thing.properties.find(p => p.name === 'cloudflowrate');
         const flowThreshold = device.thing.properties.find(p => p.name === 'noFlowCriticalTime');
         if (flowProp && flowThreshold && flowProp.last_value === 0) {
-            criticalReasons.push(`No water flow detected for ${flowThreshold.last_value} hours`);
+            criticalReasons.push(`<div class="alert">
+                <strong>No Water Flow Alert</strong><br>
+                Time without flow: ${flowThreshold.last_value} hours<br>
+                Critical threshold: ${flowThreshold.last_value} hours
+            </div>`);
         }
 
         // Send minimal HTML email with reduced memory footprint
-        const htmlContent = `<div style="font-family:sans-serif"><h2>${deviceName}</h2><p>ID: ${deviceId}<br>Location: ${location}</p><div style="background:#fee">${criticalReasons.join('<br>')}</div></div>`;
+        const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+            <div style="background-color: #ff4444; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="margin: 0;">🚨 Critical Alert</h1>
+            </div>
+            
+            <div style="background-color: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                <h2 style="color: #333; margin-top: 0;">${deviceName}</h2>
+                <p style="color: #666; font-size: 16px;"><strong>Location:</strong> ${location}</p>
+                
+                <div style="background-color: #fff4f4; padding: 15px; border-radius: 4px; margin: 20px 0;">
+                    ${criticalReasons.join('<br>')}
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="https://freezesense.up.railway.app/" 
+                       style="background-color: #0066cc; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; display: inline-block;">
+                       View Dashboard
+                    </a>
+                </div>
+                
+                <p style="color: #888; font-size: 12px; margin-top: 30px; text-align: center;">
+                    This is an automated alert from FreezeSense. Please verify all critical alerts through physical inspection.
+                </p>
+            </div>
+        </div>`;
         
         await transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: email,
-            subject: `🚨 CRITICAL: ${deviceName}`,
+            subject: `🚨 CRITICAL Alert: ${deviceName} at ${location}`,
             html: htmlContent
         });
 
