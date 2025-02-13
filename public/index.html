@@ -1,3 +1,1195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FreezeSense - Commercial & Residential Ice Machine Monitoring</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230ea5e9'/%3E%3Cpath d='M50 20 L30 35 L50 50 L70 35 Z' fill='white'/%3E%3Cpath d='M50 40 L30 55 L50 70 L70 55 Z' fill='%23e0f2fe'/%3E%3Cpath d='M50 60 L30 75 L50 90 L70 75 Z' fill='white'/%3E%3C/svg%3E" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            min-height: 100vh;
+        }
+
+        .device-card {
+            transition: all 0.2s ease-in-out;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            backdrop-filter: blur(8px);
+            background: rgba(255, 255, 255, 0.98);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.1);
+            cursor: default;
+        }
+
+        .device-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08), 0 6px 6px rgba(0, 0, 0, 0.12);
+            cursor: default;
+        }
+
+        .device-card .property-card {
+            transition: all 0.2s ease;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            cursor: default;
+        }
+
+        .device-card .property-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+            cursor: default;
+        }
+
+        .stat-card {
+            transition: transform 0.2s ease;
+            cursor: default;
+        }
+
+        .stat-card:hover {
+            transform: scale(1.05);
+            cursor: default;
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            cursor: default;
+        }
+
+        .property-card {
+            transition: all 0.2s ease;
+            cursor: default;
+        }
+
+        .property-card:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            cursor: default;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .connected-badge {
+            animation: pulse 2s infinite;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        @keyframes flash-red {
+            0%, 100% { 
+                color: #991B1B; 
+                background-color: #FEE2E2;
+            }
+            50% { 
+                color: #DC2626; 
+                background-color: #FEF2F2;
+            }
+        }
+
+        .temp-warning {
+            animation: flash-red 2s infinite;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        @keyframes flash-red-box {
+            0%, 100% { 
+                background: linear-gradient(to bottom right, #FEE2E2, #FEF2F2);
+                border-color: #DC2626;
+            }
+            50% { 
+                background: linear-gradient(to bottom right, #FEF2F2, #FEE2E2);
+                border-color: #991B1B;
+            }
+        }
+
+        .temp-warning-box, .flow-warning-box {
+            animation: flash-red-box 2s infinite;
+            border: 1px solid;
+        }
+
+        .temp-warning-box *, .flow-warning-box * {
+            color: #991B1B !important;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .time-range-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .time-range-button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .time-range-button.active {
+            background-color: #2563eb;
+            color: white;
+        }
+
+        .time-range-button:not(.active) {
+            background-color: #e5e7eb;
+            color: #374151;
+        }
+
+        .time-range-button:hover:not(.active) {
+            background-color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav class="glass-nav">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex flex-col space-y-3">
+                <!-- Top Row -->
+                <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-3 md:space-y-0">
+                    <div class="flex items-center space-x-3">
+                        <svg class="w-12 h-12 text-blue-600" viewBox="0 0 100 100" fill="none">
+                            <rect width="100" height="100" rx="20" fill="currentColor"/>
+                            <path d="M50 20 L30 35 L50 50 L70 35 Z" fill="white"/>
+                            <path d="M50 40 L30 55 L50 70 L70 55 Z" fill="#e0f2fe"/>
+                            <path d="M50 60 L30 75 L50 90 L70 75 Z" fill="white"/>
+                        </svg>
+                        <div>
+                            <h1 class="text-2xl font-bold text-gray-800">FreezeSense</h1>
+                            <p class="text-sm text-gray-600">Commercial & Residential Ice Machine Monitoring</p>
+                            <div class="flex items-center mt-1">
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">BETA</span>
+                                <button 
+                                    onclick="showDisclaimer()" 
+                                    class="ml-2 text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    View Disclaimer
+                                </button>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <button 
+                                    onclick="showContact()" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    Contact Us
+                                </button>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <button 
+                                    onclick="showFAQ()" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    FAQ
+                                </button>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <button 
+                                    onclick="showSetupGuide()" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    Setup Guide
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col md:flex-row items-center space-y-2 md:space-y-0 md:space-x-4">
+                        <div class="grid grid-cols-3 md:flex items-center gap-2 md:space-x-3 w-full md:w-auto">
+                            <div class="stat-card text-center px-3 py-1 bg-blue-50 rounded-md cursor-pointer hover:bg-blue-100 transition-all shadow-sm" onclick="showActiveDevices()">
+                                <p class="text-xs font-medium text-blue-600">Active</p>
+                                <p class="text-lg font-bold text-blue-700" id="activeDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-green-50 rounded-md cursor-pointer hover:bg-green-100 transition-colors" onclick="showConnectedDevices()">
+                                <p class="text-xs font-medium text-green-600">Connected</p>
+                                <p class="text-lg font-bold text-green-700" id="connectedDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-emerald-50 rounded-md cursor-pointer hover:bg-emerald-100 transition-colors" onclick="showGreatDevices()">
+                                <p class="text-xs font-medium text-emerald-600">Great</p>
+                                <p class="text-lg font-bold text-emerald-700" id="greatDevicesCount">-</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 md:flex items-center gap-2 md:space-x-3 w-full md:w-auto">
+                            <div class="text-center px-3 py-1 bg-yellow-50 rounded-md cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showWarningDevices()">
+                                <p class="text-xs font-medium text-yellow-600">Warning</p>
+                                <p class="text-lg font-bold text-yellow-700" id="warningDevicesCount">-</p>
+                            </div>
+                            <div class="text-center px-3 py-1 bg-red-50 rounded-md cursor-pointer hover:bg-red-100 transition-colors" onclick="showCriticalDevices()">
+                                <p class="text-xs font-medium text-red-600">Critical</p>
+                                <p class="text-lg font-bold text-red-700" id="criticalDevicesCount">-</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleConsole()" class="w-full md:w-auto bg-gray-800 text-white px-3 py-1.5 rounded-md hover:bg-gray-700 text-sm font-medium transition-colors">
+                            Debug Console
+                        </button>
+                    </div>
+                </div>
+                <!-- Bottom Row -->
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between border-t pt-2 space-y-2 md:space-y-0">
+                    <p class="text-sm text-gray-600">Real-time monitoring and alerts for ice machines and water systems</p>
+                    <div class="flex items-center text-sm text-gray-500">
+                        <span>Last Update: </span>
+                        <span id="lastUpdateTime" class="ml-1 text-gray-700">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-6">
+        <!-- Debug Console -->
+        <div id="debug-console" class="mb-4 hidden">
+            <div class="bg-gray-900 text-green-400 p-4 rounded-lg shadow-lg font-mono text-sm overflow-auto border border-gray-700" style="max-height: 300px; backdrop-filter: blur(8px);">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-white font-bold">Debug Console</h3>
+                    <button onclick="clearConsole()" class="text-gray-400 hover:text-white transition-colors">Clear</button>
+                </div>
+                <div id="console-output" class="whitespace-pre-wrap"></div>
+            </div>
+        </div>
+        
+        <!-- Loading and Error States -->
+        <div id="status" class="mb-4 text-center hidden">
+            <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                <p class="text-sm font-medium text-blue-600">Loading devices...</p>
+            </div>
+        </div>
+        
+        <div id="error" class="mb-4 hidden">
+            <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg" role="alert">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div>
+                        <p class="font-medium">Error</p>
+                        <p class="text-sm" id="error-message"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Devices will be populated here -->
+        </div>
+    </div>
+
+    <!-- Disclaimer Modal -->
+    <div id="disclaimer-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Beta Version Disclaimer</h2>
+                <button onclick="hideDisclaimer()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="text-gray-600 space-y-4">
+                <p>Welcome to the FreezeSense Beta version. Please be aware that:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>This is a beta release and features may be incomplete or subject to change</li>
+                    <li>Data accuracy and system reliability are being continuously improved</li>
+                    <li>The interface and functionality may be updated without prior notice</li>
+                    <li>We recommend verifying critical alerts through physical inspection</li>
+                    <li>Your feedback is valuable in helping us improve the system</li>
+                </ul>
+                <p class="text-sm mt-4">
+                    By using this beta version, you acknowledge that the system is under development and 
+                    should not be solely relied upon for critical ice machine monitoring without appropriate backup measures.
+                </p>
+                <hr class="my-4 border-gray-200" />
+                <div class="text-sm text-gray-500">
+                    <p>This application is being developed for a specific undisclosed client.</p>
+                    <div class="mt-4 space-y-3">
+                        <div>
+                            <p class="font-medium">Business & Sales Inquiries:</p>
+                            <p class="mt-1">For information about purchasing units or exploring customized monitoring solutions for your business, please contact:</p>
+                            <p class="font-medium mt-1">Aarya Shah</p>
+                            <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                        </div>
+                        <div>
+                            <p class="font-medium">Technical Support & Development:</p>
+                            <p class="mt-1">For questions about the system's features, hardware specifications, or technical capabilities, please contact:</p>
+                            <p class="font-medium mt-1">Kunj Tapiawala</p>
+                            <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Modal -->
+    <div id="contact-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-xl font-bold text-gray-800">Contact Us</h2>
+                <button onclick="hideContact()" class="text-gray-500 hover:text-gray-700">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="text-gray-600 space-y-6">
+                <div>
+                    <h3 class="font-medium text-lg text-gray-800">Business & Sales Inquiries</h3>
+                    <p class="mt-2">For information about purchasing units or exploring customized monitoring solutions for your business, please contact:</p>
+                    <div class="mt-3">
+                        <p class="font-medium">Aarya Shah</p>
+                        <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="font-medium text-lg text-gray-800">Technical Support & Development</h3>
+                    <p class="mt-2">For questions about the system's features, hardware specifications, or technical capabilities, please contact:</p>
+                    <div class="mt-3">
+                        <p class="font-medium">Kunj Tapiawala</p>
+                        <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ Modal -->
+    <div id="faq-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
+                    <p class="text-sm text-gray-600 mt-1">Find answers to common questions about FreezeSense</p>
+                </div>
+                <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="relative mb-8">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <input 
+                    type="text" 
+                    id="faq-search" 
+                    class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Search frequently asked questions..."
+                    onkeyup="searchFAQ(this.value)"
+                >
+            </div>
+
+            <!-- FAQ Categories -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- General Questions -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            General Information
+                        </h3>
+                    </div>
+                    
+                    <!-- What is FreezeSense -->
+                    <div class="faq-item" data-category="general">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q1</span>
+                                    <span class="font-medium text-gray-800">What is FreezeSense?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-blue-800">FreezeSense is an advanced monitoring system for ice machines that:</p>
+                                <ul class="mt-2 space-y-2 text-blue-700">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Uses temperature sensors to track ice levels in real-time
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Monitors water flow to determine ice production status
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Sends alerts when potential issues are detected
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accuracy -->
+                    <div class="faq-item" data-category="general">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q2</span>
+                                    <span class="font-medium text-gray-800">How accurate is the monitoring?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-12 h-12 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center">
+                                        <span class="text-2xl font-bold text-blue-600">95%</span>
+                                    </div>
+                                    <p class="ml-4 text-blue-800">Accuracy rate in ice level detection</p>
+                                </div>
+                                <div class="space-y-3 text-blue-700">
+                                    <p>Our system achieves this high accuracy through:</p>
+                                    <ul class="space-y-2">
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Precise temperature sensor calibration
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Strategic sensor placement
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                            </svg>
+                                            Advanced temperature threshold algorithms
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add to General Questions section -->
+                    <div class="faq-item" data-category="general">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q6</span>
+                                    <span class="font-medium text-gray-800">Why is the subscription $5.99 per device?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-blue-800">The $5.99/month per device covers:</p>
+                                <ul class="mt-2 space-y-2 text-blue-700">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        24/7 cloud server operations
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Enterprise-grade database storage
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Continuous system improvements
+                                    </li>
+                                </ul>
+                                <div class="mt-4 p-3 bg-blue-100 rounded-lg">
+                                    <p class="text-sm text-blue-600">Coming Soon: Volume discounts for 3+ devices</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Alerts & Monitoring -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            </svg>
+                            Alerts & Monitoring
+                        </h3>
+                    </div>
+
+                    <!-- Alert Types -->
+                    <div class="faq-item" data-category="alerts">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-semibold text-sm">Q3</span>
+                                    <span class="font-medium text-gray-800">What types of alerts are provided?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <div class="grid grid-cols-1 gap-4">
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">Low Ice Level Alerts</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Triggered when ice drops below sensor level</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">No Water Flow Alerts</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Notifies when water flow stops</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">Temperature Threshold Alerts</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Alerts when temperature exceeds set threshold</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start space-x-3">
+                                        <div class="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                            <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-purple-900">Connection Status</h4>
+                                            <p class="text-sm text-purple-700 mt-1">Monitors device connectivity</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Categories -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                <!-- Maintenance -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                            Maintenance & Settings
+                        </h3>
+                    </div>
+
+                    <!-- Maintenance Schedule -->
+                    <div class="faq-item" data-category="maintenance">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-green-100 text-green-600 font-semibold text-sm">Q4</span>
+                                    <span class="font-medium text-gray-800">What is the recommended maintenance schedule?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-green-50 rounded-lg p-4">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                        <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <h4 class="font-medium text-green-900">Every 6 Months</h4>
+                                        <p class="text-sm text-green-700">Regular maintenance ensures optimal performance</p>
+                                    </div>
+                                </div>
+                                <div class="space-y-3">
+                                    <div class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        <div>
+                                            <h5 class="font-medium text-green-800">Maintenance Includes:</h5>
+                                            <ul class="mt-2 space-y-2 text-green-700 text-sm">
+                                                <li>• Cleaning and sanitizing</li>
+                                                <li>• Component inspection</li>
+                                                <li>• Sensor calibration check</li>
+                                                <li>• Performance testing</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Troubleshooting -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            Troubleshooting
+                        </h3>
+                    </div>
+
+                    <!-- Disconnection Issues -->
+                    <div class="faq-item" data-category="troubleshooting">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-red-100 text-red-600 font-semibold text-sm">Q5</span>
+                                    <span class="font-medium text-gray-800">What should I do if my device shows "Disconnected"?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-red-50 rounded-lg p-4">
+                                <div class="space-y-4">
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-red-600 font-semibold">1</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h5 class="font-medium text-red-800">Check Power Supply</h5>
+                                            <p class="text-sm text-red-700 mt-1">Verify the device is properly powered</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-red-600 font-semibold">2</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h5 class="font-medium text-red-800">Verify WiFi Connection</h5>
+                                            <p class="text-sm text-red-700 mt-1">Check network connectivity</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center">
+                                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                            <span class="text-red-600 font-semibold">3</span>
+                                        </div>
+                                        <div class="ml-3">
+                                            <h5 class="font-medium text-red-800">Restart Device</h5>
+                                            <p class="text-sm text-red-700 mt-1">Power cycle the device if needed</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                            Security
+                        </h3>
+                    </div>
+
+                    <!-- Add to Security section -->
+                    <div class="faq-item" data-category="security">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-purple-100 text-purple-600 font-semibold text-sm">Q7</span>
+                                    <span class="font-medium text-gray-800">How secure is my data?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-purple-50 rounded-lg p-4">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <h4 class="font-medium text-purple-900">Security Features</h4>
+                                        <p class="text-sm text-purple-700">Currently implemented protections:</p>
+                                    </div>
+                                </div>
+                                <ul class="space-y-3 text-purple-700">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        End-to-end encryption with Arduino Cloud API
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Unique device authentication tokens
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Regular security audits
+                                    </li>
+                                </ul>
+                                <div class="mt-4 p-3 bg-purple-100 rounded-lg">
+                                    <p class="text-sm text-purple-600">Coming Q4 2024: Optional password protection for device setup</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Device Differentiation -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Device Quality
+                        </h3>
+                    </div>
+
+                    <div class="faq-item" data-category="quality">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-semibold text-sm">Q8</span>
+                                    <span class="font-medium text-gray-800">How are your devices different from competitors?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-emerald-50 rounded-lg p-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div class="col-span-2 md:col-span-1">
+                                        <div class="flex items-center mb-3">
+                                            <div class="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                                                <span class="text-emerald-600 font-bold">✓</span>
+                                            </div>
+                                            <div class="ml-3">
+                                                <h5 class="font-medium text-emerald-900">Our Process</h5>
+                                                <p class="text-sm text-emerald-700">72-hour burn-in testing</p>
+                                            </div>
+                                        </div>
+                                        <ul class="space-y-2 text-emerald-700">
+                                            <li>• 3-stage calibration process</li>
+                                            <li>• Individual performance reports</li>
+                                            <li>• 100% manual inspection</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-span-2 md:col-span-1">
+                                        <div class="flex items-center mb-3">
+                                            <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                                                <span class="text-red-600 font-bold">✗</span>
+                                            </div>
+                                            <div class="ml-3">
+                                                <h5 class="font-medium text-emerald-900">Typical Competitors</h5>
+                                                <p class="text-sm text-emerald-700">Mass production issues</p>
+                                            </div>
+                                        </div>
+                                        <ul class="space-y-2 text-emerald-700">
+                                            <li>• Batch testing only</li>
+                                            <li>• No individual calibration</li>
+                                            <li>• Automated QC only</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dashboard Privacy -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                            </svg>
+                            Dashboard Privacy
+                        </h3>
+                    </div>
+
+                    <div class="faq-item" data-category="privacy">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-indigo-100 text-indigo-600 font-semibold text-sm">Q9</span>
+                                    <span class="font-medium text-gray-800">How private are my dashboards?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-indigo-50 rounded-lg p-4">
+                                <div class="flex items-center mb-3">
+                                    <div class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center">
+                                        <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="ml-4">
+                                        <h4 class="font-medium text-indigo-900">Unique Dashboard Security</h4>
+                                        <p class="text-sm text-indigo-700">Each client receives:</p>
+                                    </div>
+                                </div>
+                                <ul class="space-y-3 text-indigo-700">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Random 64-character dashboard URL
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        No sequential numbering
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        IP-based access logging
+                                    </li>
+                                </ul>
+                                <div class="mt-4 p-3 bg-indigo-100 rounded-lg">
+                                    <p class="text-sm text-indigo-600">Example dashboard URL: https://freezesense.com/d/59f8b...d41</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this modal HTML before the closing </body> tag -->
+    <div id="setup-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Device Setup Guide</h2>
+                    <p class="text-sm text-gray-600 mt-1">Step-by-step instructions for installing your FreezeSense device</p>
+                </div>
+                <button onclick="hideSetupGuide()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">1</span>
+                        Unboxing Contents
+                    </h3>
+                    <ul class="list-disc pl-6 space-y-2 text-gray-700">
+                        <li>FreezeSense monitoring unit</li>
+                        <li>Temperature sensor array</li>
+                        <li>Power adapter with 6ft cable</li>
+                        <li>Mounting brackets & hardware</li>
+                    </ul>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">2</span>
+                        Sensor Placement
+                    </h3>
+                    <img src="/setup-diagram.png" alt="Sensor placement diagram" class="w-full mb-4 rounded-lg border border-gray-200">
+                    <p class="text-gray-600 mb-4">Optimal sensor positions for accurate readings:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-green-500 mt-1 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium">Do:</p>
+                                <ul class="list-disc pl-4 mt-1 text-gray-600">
+                                    <li>Mount 2-3 inches above ice level</li>
+                                    <li>Keep sensors clean and dry</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="flex items-start">
+                            <svg class="w-5 h-5 text-red-500 mt-1 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium">Don't:</p>
+                                <ul class="list-disc pl-4 mt-1 text-gray-600">
+                                    <li>Place near heat sources</li>
+                                    <li>Submerge in water</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-50 p-6 rounded-lg">
+                    <h3 class="text-xl font-semibold mb-4 flex items-center">
+                        <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">3</span>
+                        Power & Connectivity
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="flex items-start">
+                            <svg class="w-6 h-6 text-blue-500 mr-3 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium">Connection Steps:</p>
+                                <ol class="list-decimal pl-4 mt-1 text-gray-600">
+                                    <li>Plug in power adapter</li>
+                                    <li>Wait for blue LED indicator</li>
+                                    <li>Connect to FreezeSense WiFi network</li>
+                                    <li>Follow in-app setup instructions</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+  
+
+    <script>
+        // Update this at the start of your script
+        const API_URL = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000'
+            : 'https://freezesense.up.railway.app';
+
+        const statusEl = document.getElementById('status');
+        const errorEl = document.getElementById('error');
+        const errorMessageEl = document.getElementById('error-message');
+        const devicesContainer = document.getElementById('devices');
+        const consoleOutput = document.getElementById('console-output');
+        const debugConsole = document.getElementById('debug-console');
+
+        // Debug Console Functions
+        function toggleConsole() {
+            debugConsole.classList.toggle('hidden');
+        }
+
+        function clearConsole() {
+            consoleOutput.innerHTML = '';
+        }
+
+        function logToConsole(data, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'text-red-400' : 
+                             type === 'warning' ? 'text-yellow-400' : 
+                             'text-green-400';
+            
+            const logEntry = document.createElement('div');
+            logEntry.className = colorClass;
+            logEntry.innerHTML = `[${timestamp}] ${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}`;
+            
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        }
+        function parseTsArray(arr) {
+  if (!Array.isArray(arr)) {
+    logToConsole('parseTsArray received non-array input:', 'warning');
+    logToConsole(arr, 'warning');
+    return { times: [], values: [] };
+  }
+
+  const result = {
+    times: arr.map(obj => obj.time || obj.timestamp),
+    values: arr.map(obj => obj.value)
+  };
+
+  logToConsole('parseTsArray result:', 'info');
+  logToConsole(`Times: ${result.times.length}, Values: ${result.values.length}`, 'info');
+
+  return result;
+}
+        function showLoading() {
+            statusEl.classList.remove('hidden');
+            errorEl.classList.add('hidden');
+            devicesContainer.innerHTML = '';
+        }
+
+        function showError(message) {
+            statusEl.classList.add('hidden');
+            errorEl.classList.remove('hidden');
+            errorMessageEl.textContent = message;
+            logToConsole(message, 'error');
+        }
+
+        function hideLoading() {
+            statusEl.classList.add('hidden');
+        }
+
+        async function checkServerHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (!response.ok) throw new Error('Server health check failed');
+                return true;
+            } catch (error) {
+                console.error('Server health check failed:', error);
+                logToConsole('Server health check failed: ' + error.message, 'error');
+                return false;
+            }
+        }
+
+        function updateLastUpdateTime() {
+            const now = new Date();
+            document.getElementById('lastUpdateTime').textContent = now.toLocaleTimeString();
+        }
+
+        async function fetchDevices() {
+            showLoading();
+            
+            try {
+                // First check if server is healthy
+                const isHealthy = await checkServerHealth();
+                if (!isHealthy) {
+                    throw new Error('Server is not responding. Please make sure the server is running.');
+                }
+
+                const response = await fetch(`${API_URL}/api/devices`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const devices = await response.json();
+                
+                if (devices.error) {
+                    throw new Error(devices.message || devices.error);
+                }
+                
+                // Sort devices by name
+                devices.sort((a, b) => {
+                    // Extract numbers from device names (assuming format like "001", "002", etc.)
+                    const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
+                    const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
+                    return aNum - bNum;
+                });
+                
+                // Store the sorted devices data for modal use
+                window.lastDevicesData = devices;
+                
+                // Update last update time
+                updateLastUpdateTime();
+                
+                // Log raw device data to console
+                logToConsole('Received device data (sorted):');
+                logToConsole(devices);
+                
+                displayDevices(devices);
+                hideLoading();
+            } catch (error) {
+                console.error('Error fetching devices:', error);
+                showError(error.message || 'Failed to fetch devices. Please try again later.');
+            }
+        }
+
+        function formatPropertyValue(property) {
+            if (property.last_value === undefined || property.last_value === null) {
+                return 'N/A';
+            }
+
+            switch(property.type) {
+                case 'BOOL':
+                    return property.last_value ? 'True' : 'False';
+                case 'FLOAT':
+                    if (property.name === 'sensorplacement') {
+                        const percentage = property.last_value * 100;
+                        return `${percentage}%`;
+                    }
+                    if (property.name.toLowerCase().includes('temp')) {
+                        const fahrenheit = celsiusToFahrenheit(property.last_value);
+                        return `${fahrenheit.toFixed(1)}°F`;
+                    }
+                    if (property.name.toLowerCase().includes('flow')) {
+                        return `${Number(property.last_value).toFixed(2)} L/min`;
+                    }
+                    return Number(property.last_value).toFixed(2);
+                case 'INT':
+                    return property.last_value.toString();
+                case 'STRING':
+                    return property.last_value;
+                default:
+                    return property.last_value;
+            }
         }
 
         function getPropertyInputType(property) {
@@ -3331,13 +4523,13 @@
             const device = window.lastDevicesData[deviceIndex];
             updateTimeRangeButtons('flow-time-range', selectedDay);
             
-            // Store current device index for toggle function
-            window.currentDeviceIndex = deviceIndex;
-
             // Get the stats container
             const statsContainer = document.getElementById('flowStats');
 
             // Hide or show stats based on number of selected days
+            const selectedDays = Array.from(document.querySelectorAll('#flow-time-range button.active'))
+                .map(btn => parseInt(btn.dataset.days));
+            
             if (selectedDays.length > 1) {
                 statsContainer.classList.add('opacity-50', 'pointer-events-none');
                 // Clear stats when multiple days are selected
@@ -3348,7 +4540,7 @@
             } else {
                 statsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
-
+            
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
                     logToConsole('No data returned from fetchTimeSeriesData', 'error');
@@ -3356,9 +4548,17 @@
                 }
 
                 // Destroy existing chart if it exists
-                const existingChart = Chart.getChart('flowChart');
+                const chartElement = document.getElementById('flowChart');
+                const existingChart = Chart.getChart(chartElement);
                 if (existingChart) {
                     existingChart.destroy();
+                }
+
+                // Remove any existing no-data message
+                const chartContainer = chartElement.parentElement;
+                const existingMessage = chartContainer.querySelector('.no-data-message');
+                if (existingMessage) {
+                    existingMessage.remove();
                 }
 
                 // Process flow data for each selected day
@@ -3382,10 +4582,8 @@
                     `${i.toString().padStart(2, '0')}:00`
                 );
 
-                // Get the canvas context
-                const ctx = document.getElementById('flowChart').getContext('2d');
-                
-                // Build the new chart with updated options
+                // Create the chart
+                const ctx = chartElement.getContext('2d');
                 new Chart(ctx, {
                     type: 'line',
                     data: {
@@ -3410,7 +4608,7 @@
                                     label: (context) => {
                                         const value = context.raw;
                                         if (value === null) return `${context.dataset.label}: No data`;
-                                        return `Flow Rate: ${value.toFixed(3)} L/min`;
+                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
                                     }
                                 },
                                 titleAlign: 'center',
@@ -3443,23 +4641,23 @@
                                 beginAtZero: true,
                                 title: {
                                     display: true,
-                                    text: 'Flow Rate (L/min)'
+                                    text: 'Flow Rate (L/min)',
+                                    font: { size: 12 }
                                 },
                                 grid: {
                                     display: true,
                                     drawOnChartArea: true
                                 },
                                 ticks: {
-                                    callback: value => `${value.toFixed(3)} L/min`
+                                    callback: value => `${value.toFixed(1)} L/min`
                                 }
                             }
                         }
                     }
                 });
 
-                // Show no data message if needed
+                // If there's no data for any selected day, show a message
                 if (!hasAnyData) {
-                    const chartContainer = document.getElementById('flowChart').parentElement;
                     const noDataMessage = document.createElement('div');
                     noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
                     noDataMessage.innerHTML = `
@@ -3470,6 +4668,8 @@
                     `;
                     chartContainer.appendChild(noDataMessage);
                 }
+            }).catch(error => {
+                logToConsole(`Error updating flow graph: ${error.message}`, 'error');
             });
         }
 
@@ -3480,7 +4680,7 @@
             logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
             const hourlyData = {};
-            const now = new Date();
+            const now = new Date('2025-02-10T23:59:59.999Z');  // Reference date
             const currentHour = now.getHours();
             
             const dayStart = new Date(now);
@@ -3520,6 +4720,37 @@
                 hourlyData[hour].flows.push(flow);
             }
 
+            // Update statistics if we have data
+            if (hasDataForDay) {
+                // Calculate daily range
+                const minFlow = Math.min(...allFlowsForDay);
+                const maxFlow = Math.max(...allFlowsForDay);
+                document.getElementById('flowRange').textContent = 
+                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
+
+                // Calculate total flow
+                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
+                document.getElementById('flowTotal').textContent = 
+                    `${totalFlow.toFixed(3)} L/min`;
+
+                // Calculate standard deviation
+                const stdDev = calculateStdDev(allFlowsForDay);
+                document.getElementById('flowStdDev').textContent = 
+                    `±${stdDev.toFixed(3)} L/min`;
+
+                // Update frequency
+                document.getElementById('flowFrequency').textContent = 
+                    `${allFlowsForDay.length} points`;
+
+                // Update time since last flow if it's today
+                if (selectedDay === 0 && allFlowsForDay.length > 0) {
+                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
+                    const timeSinceFlow = now - lastFlowTime;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
+                }
+            }
+
             // If no data for this day, return empty datasets
             if (!hasDataForDay) {
                 return {
@@ -3537,7 +4768,7 @@
                 }
             });
 
-            // Create dataset with matching style to temperature
+            // Create dataset
             const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
             const colors = [
                 { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
