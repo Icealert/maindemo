@@ -431,34 +431,60 @@ async function sendNotificationEmail(device, email) {
 
         // Send minimal HTML email with reduced memory footprint
         const htmlContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
-            <div style="background-color: #ff4444; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-                <h1 style="margin: 0;">🚨 Critical Alert</h1>
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 0; background-color: #f8f9fa;">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #ff4444 0%, #ff6b6b 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0;">
+                <h1 style="margin: 0; font-size: 28px; font-weight: 600;">🚨 Critical Alert</h1>
+                <p style="margin: 10px 0 0 0; opacity: 0.9; font-size: 16px;">Immediate Attention Required</p>
             </div>
             
-            <div style="background-color: white; padding: 20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                <h2 style="color: #333; margin-top: 0;">${deviceName}</h2>
-                <p style="color: #666; font-size: 16px;"><strong>Location:</strong> ${location}</p>
-                
-                <div style="background-color: #fff4f4; padding: 15px; border-radius: 4px; margin: 20px 0;">
-                    ${criticalReasons.join('<br>')}
+            <!-- Main Content -->
+            <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                <!-- Device Info -->
+                <div style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
+                    <h2 style="color: #333; margin: 0 0 10px 0; font-size: 24px;">${deviceName}</h2>
+                    <p style="color: #666; font-size: 16px; margin: 0;">
+                        <strong style="color: #444;">Location:</strong> 
+                        <span style="background: #f8f9fa; padding: 3px 8px; border-radius: 4px;">${location}</span>
+                    </p>
                 </div>
                 
-                <div style="margin-top: 30px; text-align: center;">
+                <!-- Alert Details -->
+                <div style="background: #fff4f4; padding: 20px; border-radius: 8px; border-left: 4px solid #ff4444; margin: 20px 0;">
+                    ${criticalReasons.map(reason => reason.replace(
+                        '<div class="alert">',
+                        '<div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">'
+                    )).join('')}
+                </div>
+                
+                <!-- Action Button -->
+                <div style="margin: 30px 0; text-align: center;">
                     <a href="https://freezesense.up.railway.app/" 
-                       style="background-color: #0066cc; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; display: inline-block;">
-                       View Dashboard
+                       style="display: inline-block; background: linear-gradient(135deg, #0066cc 0%, #0052a3 100%); 
+                              color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px;
+                              font-weight: 600; font-size: 16px; transition: all 0.3s ease;">
+                        View Dashboard
                     </a>
                 </div>
                 
-                <p style="color: #888; font-size: 12px; margin-top: 30px; text-align: center;">
-                    This is an automated alert from FreezeSense. Please verify all critical alerts through physical inspection.
-                </p>
+                <!-- Footer -->
+                <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; text-align: center;">
+                    <p style="color: #666; font-size: 14px; margin: 0;">
+                        This is an automated alert from <strong>FreezeSense</strong>.<br>
+                        Please verify all critical alerts through physical inspection.
+                    </p>
+                    <p style="color: #888; font-size: 12px; margin: 10px 0 0 0;">
+                        Alert generated at: ${new Date().toLocaleString()}
+                    </p>
+                </div>
             </div>
         </div>`;
         
         await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+            from: {
+                name: 'FreezeSense Alert System',
+                address: process.env.EMAIL_USER
+            },
             to: email,
             subject: `🚨 CRITICAL Alert: ${deviceName} at ${location}`,
             html: htmlContent
