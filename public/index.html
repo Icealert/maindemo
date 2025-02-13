@@ -4809,9 +4809,11 @@
             });
         }
 
-        function processFlowByHour(rawResponse) {
-            logToConsole('Processing flow data with raw response:', 'debug');
-            logToConsole(JSON.stringify(rawResponse, null, 2), 'debug');
+        function processFlowByHour(response) {
+            logToConsole('Processing flow data with response:', 'debug');
+            
+            // Get the raw response data from the nested structure
+            const rawResponse = response.rawResponse;
             
             // Get current time in local timezone
             const now = new Date();
@@ -4843,7 +4845,9 @@
                 };
             });
 
-            logToConsole('Converted timestamps:', 'debug');
+            logToConsole('Processing flow data points:', 'debug');
+            logToConsole(`Total data points: ${data.length}`, 'info');
+            logToConsole('Sample data points:', 'debug');
             logToConsole(data.slice(0, 5).map(d => ({
                 utc: d.timestamp.toISOString(),
                 local: d.timestamp.toLocaleString(),
@@ -4865,7 +4869,9 @@
             logToConsole({
                 total: data.length,
                 yesterday: yesterdayData.length,
-                today: todayData.length
+                today: todayData.length,
+                yesterdayRange: `${yesterday.toLocaleString()} - ${today.toLocaleString()}`,
+                todayRange: `${today.toLocaleString()} - ${now.toLocaleString()}`
             }, 'info');
 
             // Process data for the selected day
