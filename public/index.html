@@ -4133,7 +4133,7 @@
             return mode;
         }
 
-        async function fetchTimeSeriesData(deviceId, hours = 72) {
+        async function fetchTimeSeriesData(deviceId, hours) {
     try {
         const now = new Date();
         const from = new Date(now - hours * 60 * 60 * 1000);
@@ -4305,8 +4305,11 @@
             timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
             temperature: tempResult.values,
             timeSinceFlow: flowResult.values,
-            iceLevel: tempResult.values?.map(temp => calculateIceLevel(temp)),
-            flowTimestamps: flowResult.times  // Add this new line
+            iceLevel: tempResult.values?.map(celsius => {
+                if (celsius === null || celsius === undefined) return null;
+                const f = (celsius * 9) / 5 + 32;
+                return f <= 34 ? 100 : 0;
+            }) || []
         };
 
     } catch (error) {
@@ -4699,7 +4702,7 @@
                 let hasAnyData = false;
 
                 for (const day of selectedDays) {
-                    const { datasets, noData } = processFlowByHour(data.flowTimestamps, data.timeSinceFlow, day);
+                    const { datasets, noData } = processFlowByHour(data.timestamps, data.timeSinceFlow, day);
                     
                     if (noData) {
                         const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
