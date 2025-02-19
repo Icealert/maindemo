@@ -40,6 +40,10 @@ let tokenCache = {
     expiresAt: null
 };
 
+// Add cache for time series data
+const timeSeriesCache = new Map();
+const TIME_SERIES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 // Cleanup function for Maps and Cache
 function cleanupMemory() {
     // Clean up lastSentTimes map more aggressively
@@ -303,19 +307,28 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     }
 });
 
-// Time series data endpoint
+// Time series data endpoint with caching
 app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
     try {
-        const token = await getToken();
+        const { thingId, propertyId } = req.params;
+        const { aggregation, desc, from, to, interval } = req.query;
         
+        // Generate cache key based on request parameters
+        const cacheKey = `${thingId}-${propertyId}-${from}-${to}-${interval}`;
+        
+        // Check cache first
+        const cachedData = timeSeriesCache.get(cacheKey);
+        if (cachedData && cachedData.timestamp > Date.now() - TIME_SERIES_CACHE_TTL) {
+            return res.json(cachedData.data);
+        }
+
+        const token = await getToken();
         const ArduinoIotClient = require('@arduino/arduino-iot-client');
         const defaultClient = ArduinoIotClient.ApiClient.instance;
         const oauth2 = defaultClient.authentications['oauth2'];
         oauth2.accessToken = token;
 
         const propsApi = new ArduinoIotClient.PropertiesV2Api(defaultClient);
-        const { thingId, propertyId } = req.params;
-        const { aggregation, desc, from, to, interval } = req.query;
 
         let opts = {};
         if (aggregation) opts.aggregation = aggregation;
@@ -326,6 +339,21 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
         if (req.headers['x-organization']) opts['X-Organization'] = req.headers['x-organization'];
 
         const timeseriesData = await propsApi.propertiesV2Timeseries(thingId, propertyId, opts);
+        
+        // Cache the response
+        timeSeriesCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: timeseriesData
+        });
+
+        // Clean up old cache entries
+        const now = Date.now();
+        for (const [key, value] of timeSeriesCache.entries()) {
+            if (value.timestamp < now - TIME_SERIES_CACHE_TTL) {
+                timeSeriesCache.delete(key);
+            }
+        }
+
         res.json(timeseriesData);
 
     } catch (error) {
