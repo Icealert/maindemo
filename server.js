@@ -44,6 +44,13 @@ let tokenCache = {
 const timeSeriesCache = new Map();
 const TIME_SERIES_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Add monitoring and notification services
+const MONITORING_INTERVAL = 60 * 60 * 1000; // 1 hour in milliseconds
+const NOTIFICATION_COOLDOWN = 60 * 60 * 1000; // 1 hour in milliseconds
+
+// Track last notification times
+const lastNotificationTimes = new Map();
+
 // Cleanup function for Maps and Cache
 function cleanupMemory() {
     // Clean up lastSentTimes map more aggressively
@@ -595,6 +602,189 @@ app.post('/api/notifications/settings', async (req, res) => {
         });
     }
 });
+
+// Function to check device status and send notifications
+async function monitorDevicesAndNotify() {
+    try {
+        // Get OAuth token
+        const token = await getToken();
+        if (!token) {
+            console.error('Failed to get token for device monitoring');
+            return;
+        }
+
+        // Set up Arduino IoT client
+        const client = IotApi.ApiClient.instance;
+        client.authentications['oauth2'].accessToken = token;
+        const devicesApi = new IotApi.DevicesV2Api(client);
+
+        // Fetch all devices
+        const devices = await devicesApi.devicesV2List();
+        
+        // Process each device
+        for (const device of devices) {
+            try {
+                await checkDeviceStatus(device, devicesApi);
+            } catch (error) {
+                console.error(`Error checking device ${device.id}:`, error);
+            }
+        }
+    } catch (error) {
+        console.error('Error in device monitoring:', error);
+    }
+}
+
+// Function to check individual device status
+async function checkDeviceStatus(device, devicesApi) {
+    const status = await calculateDeviceStatus(device, devicesApi);
+    const deviceId = device.id;
+
+    // Get notification email
+    const emailProp = device.thing?.properties?.find(p => p.name === 'notificationEmail');
+    const notificationEmail = emailProp?.last_value;
+
+    if (!notificationEmail) {
+        console.log(`No notification email set for device ${deviceId}`);
+        return;
+    }
+
+    // Check if we should send a notification
+    const lastNotification = lastNotificationTimes.get(deviceId) || 0;
+    const timeSinceLastNotification = Date.now() - lastNotification;
+
+    if (timeSinceLastNotification < NOTIFICATION_COOLDOWN) {
+        console.log(`Skipping notification for device ${deviceId} - cooldown period not elapsed`);
+        return;
+    }
+
+    // Prepare notification if needed
+    if (status.needsNotification) {
+        const emailContent = generateEmailContent(device, status);
+        await sendNotificationEmail(device, notificationEmail, emailContent);
+        lastNotificationTimes.set(deviceId, Date.now());
+
+        // Update device status properties if needed
+        if (status.shouldUpdateWarning || status.shouldUpdateCritical) {
+            await updateDeviceStatus(device, status, devicesApi);
+        }
+    }
+}
+
+// Function to calculate device status
+async function calculateDeviceStatus(device, devicesApi) {
+    const properties = device.thing?.properties || [];
+    
+    // Get current warning and critical states
+    const warningProp = properties.find(p => p.name === 'warning');
+    const criticalProp = properties.find(p => p.name === 'critical');
+    const currentWarning = warningProp?.last_value === true;
+    const currentCritical = criticalProp?.last_value === true;
+
+    // Get temperature data
+    const cloudTemp = properties.find(p => p.name === 'cloudtemp')?.last_value;
+    const tempThresholdMax = properties.find(p => p.name === 'tempThresholdMax')?.last_value;
+
+    // Get flow data
+    const cloudFlowRate = properties.find(p => p.name === 'cloudflowrate');
+    const noFlowCriticalTime = properties.find(p => p.name === 'noFlowCriticalTime')?.last_value;
+    const flowLastUpdate = cloudFlowRate?.value_updated_at;
+    const timeSinceFlowHours = flowLastUpdate ? 
+        (Date.now() - new Date(flowLastUpdate).getTime()) / (1000 * 60 * 60) : null;
+
+    // Calculate status conditions
+    const isTemperatureBad = cloudTemp !== undefined && tempThresholdMax !== undefined && 
+        cloudTemp > tempThresholdMax;
+    const isFlowBad = timeSinceFlowHours !== null && !isNaN(noFlowCriticalTime) && 
+        timeSinceFlowHours >= noFlowCriticalTime;
+
+    // Determine new status
+    const shouldBeWarning = isTemperatureBad !== isFlowBad; // XOR - only one condition is bad
+    const shouldBeCritical = isTemperatureBad && isFlowBad; // Both conditions are bad
+
+    // Check if status has changed
+    const statusChanged = (shouldBeWarning !== currentWarning) || (shouldBeCritical !== currentCritical);
+    const needsNotification = statusChanged && (shouldBeWarning || shouldBeCritical);
+
+    return {
+        shouldBeWarning,
+        shouldBeCritical,
+        shouldUpdateWarning: shouldBeWarning !== currentWarning,
+        shouldUpdateCritical: shouldBeCritical !== currentCritical,
+        needsNotification,
+        isTemperatureBad,
+        isFlowBad,
+        cloudTemp,
+        tempThresholdMax,
+        timeSinceFlowHours,
+        noFlowCriticalTime
+    };
+}
+
+// Function to generate email content
+function generateEmailContent(device, status) {
+    const location = device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Unknown location';
+    const deviceName = device.name || device.id;
+    
+    let subject = `Alert: ${deviceName} at ${location} - `;
+    let issues = [];
+
+    if (status.isTemperatureBad) {
+        const tempF = (status.cloudTemp * 9/5) + 32;
+        const thresholdF = (status.tempThresholdMax * 9/5) + 32;
+        issues.push(`Temperature is high: ${tempF.toFixed(1)}°F (Threshold: ${thresholdF.toFixed(1)}°F)`);
+    }
+
+    if (status.isFlowBad) {
+        issues.push(`No water flow detected for ${status.timeSinceFlowHours.toFixed(1)} hours (Critical: ${status.noFlowCriticalTime} hours)`);
+    }
+
+    subject += status.shouldBeCritical ? 'CRITICAL STATUS' : 'Warning Status';
+
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: ${status.shouldBeCritical ? '#dc2626' : '#d97706'};">
+                ${status.shouldBeCritical ? 'Critical Alert' : 'Warning Alert'}
+            </h2>
+            <p><strong>Device:</strong> ${deviceName}</p>
+            <p><strong>Location:</strong> ${location}</p>
+            <div style="margin: 20px 0; padding: 15px; background-color: ${status.shouldBeCritical ? '#fee2e2' : '#fef3c7'}; border-radius: 8px;">
+                <h3 style="margin-top: 0;">Issues Detected:</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                    ${issues.map(issue => `<li style="margin: 10px 0;">${issue}</li>`).join('')}
+                </ul>
+            </div>
+            <p style="font-size: 0.9em; color: #666;">
+                This is an automated message from your FreezeSense monitoring system.
+                Please check your device dashboard for more details.
+            </p>
+        </div>
+    `;
+
+    return { subject, html };
+}
+
+// Function to update device status
+async function updateDeviceStatus(device, status, devicesApi) {
+    const thingId = device.thing.id;
+    
+    if (status.shouldUpdateWarning) {
+        await devicesApi.propertiesV2Publish(thingId, 'warning', {
+            value: status.shouldBeWarning
+        });
+    }
+    
+    if (status.shouldUpdateCritical) {
+        await devicesApi.propertiesV2Publish(thingId, 'critical', {
+            value: status.shouldBeCritical
+        });
+    }
+}
+
+// Start the monitoring service
+setInterval(monitorDevicesAndNotify, MONITORING_INTERVAL);
+
+// Run initial check when server starts
+monitorDevicesAndNotify();
 
 // Start the server
 app.listen(port, () => {
