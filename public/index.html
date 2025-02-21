@@ -3228,7 +3228,7 @@
             modal.classList.remove('flex');
         }
 
-        function handleUpdateButtonClick(event) {
+        async function handleUpdateButtonClick(event) {
             const button = event.target;
             const deviceId = button.dataset.deviceId;
             const input = button.previousElementSibling;
@@ -3244,14 +3244,45 @@
                     }
                 }
                 
+                // Show loading state
+                const originalText = button.innerHTML;
+                button.innerHTML = `
+                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                `;
+                button.disabled = true;
+                
+                // Update the property value
                 property.new_value = input.value;
+                await updatePropertyValue(deviceId, property);
                 
-                if (!deviceId) {
-                    throw new Error('Device ID is missing');
-                }
+                // Show success state
+                button.innerHTML = `
+                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    </svg>
+                `;
                 
-                updatePropertyValue(deviceId, property);
+                // Reset button after 2 seconds
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }, 2000);
+                
+                // Show success toast
+                showToast('Property updated successfully', 'success');
+                
+                // Refresh the devices list to show updated value
+                await fetchDevices();
+                
             } catch (error) {
+                // Reset button state
+                button.innerHTML = originalText;
+                button.disabled = false;
+                
+                // Show error
                 logToConsole(`Error handling update button click: ${error.message}`, 'error');
                 showError(`Failed to handle update: ${error.message}`);
             }
@@ -5162,13 +5193,101 @@
         // Add auto-commit call to relevant functions
         async function updatePropertyValue(deviceId, property) {
             try {
-                // ... existing updatePropertyValue code ...
+                logToConsole('Updating property:', {
+                    deviceId,
+                    propertyName: property.name,
+                    newValue: property.new_value,
+                    type: property.type
+                }, 'info');
 
-                // Add auto-commit after successful update
-                await autoCommitChanges();
-                
+                // Format the value based on type
+                let formattedValue;
+                switch(property.type) {
+                    case 'INT':
+                        formattedValue = parseInt(property.new_value);
+                        if (isNaN(formattedValue)) {
+                            throw new Error('Invalid integer value');
+                        }
+                        break;
+                    case 'FLOAT':
+                        // Convert Fahrenheit to Celsius if this is a temperature property
+                        if (property.name.toLowerCase().includes('temp')) {
+                            formattedValue = fahrenheitToCelsius(parseFloat(property.new_value));
+                        } else {
+                            formattedValue = parseFloat(property.new_value);
+                        }
+                        if (isNaN(formattedValue)) {
+                            throw new Error('Invalid float value');
+                        }
+                        break;
+                    case 'BOOL':
+                        formattedValue = property.new_value === true || property.new_value === 'true';
+                        break;
+                    case 'CHARSTRING':
+                    case 'STATUS':
+                        formattedValue = String(property.new_value).trim();
+                        if (!formattedValue) {
+                            throw new Error('Value cannot be empty');
+                        }
+                        break;
+                    default:
+                        formattedValue = property.new_value;
+                }
+
+                // Using V2 API endpoint format and structure
+                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
+
+                // Construct payload exactly as per Arduino V2 API docs
+                const requestBody = {
+                    propertiesValues: {
+                        input: true,
+                        properties: [{
+                            name: property.name,
+                            type: property.type,
+                            value: formattedValue
+                        }]
+                    }
+                };
+
+                logToConsole('Sending update request:', {
+                    url: apiUrl,
+                    body: requestBody
+                }, 'info');
+
+                const response = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Organization': property.organization_id || ''
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => null);
+                    throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                logToConsole('Update successful:', {
+                    deviceId: deviceId,
+                    propertyName: property.name,
+                    response: result
+                }, 'info');
+
+                // Auto-commit changes if enabled
+                if (window.autoCommitEnabled) {
+                    await autoCommitChanges();
+                }
+
             } catch (error) {
-                // ... existing error handling ...
+                logToConsole('Error updating property:', {
+                    error: error.message,
+                    deviceId: deviceId,
+                    propertyName: property?.name
+                }, 'error');
+                throw error; // Re-throw to handle in the calling function
             }
         }
 
