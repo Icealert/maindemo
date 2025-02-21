@@ -372,6 +372,58 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
     }
 });
 
+// Modify notification check interval to use streaming and batching
+async function* getDevicesStream(devicesApi) {
+    const BATCH_SIZE = 5;
+    let offset = 0;
+    
+    while (true) {
+        const devices = await devicesApi.devicesV2List();
+        if (!devices || devices.length === 0) break;
+        
+        for (let i = 0; i < devices.length; i += BATCH_SIZE) {
+            yield devices.slice(i, i + BATCH_SIZE);
+            // Small delay between batches to prevent memory spikes
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        offset += devices.length;
+        if (devices.length < BATCH_SIZE) break;
+    }
+}
+
+// Modify your notification check interval to use less memory
+setInterval(async () => {
+    try {
+        const client = IotApi.ApiClient.instance;
+        client.authentications['oauth2'].accessToken = await getToken();
+        const devicesApi = new IotApi.DevicesV2Api(client);
+        
+        // Process devices in smaller chunks using generator
+        for await (const deviceBatch of getDevicesStream(devicesApi)) {
+            for (const device of deviceBatch) {
+                const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+                const criticalProp = device.thing.properties.find(p => p.name === 'critical');
+                
+                if (!emailProp?.last_value) continue;
+                
+                const isCritical = String(criticalProp?.last_value).toLowerCase() === 'true';
+                const lastSent = lastSentTimes.get(device.id) || 0;
+                const cooldown = 60 * 60 * 1000;
+                
+                if (isCritical && Date.now() - lastSent >= cooldown) {
+                    await sendNotificationEmail(device, emailProp.last_value);
+                    lastSentTimes.set(device.id, Date.now());
+                } else if (!isCritical) {
+                    lastSentTimes.delete(device.id);
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Notification check failed:', error.message);
+    }
+}, 300000);
+
 // Optimize email sending to use less memory
 async function sendNotificationEmail(device, email) {
     try {
@@ -740,7 +792,6 @@ app.listen(port, () => {
     console.log('Press Ctrl+C to quit.');
 });
 
-// Modify handleCriticalUpdate to use the new monitoring system
 async function handleCriticalUpdate(deviceId, criticalValue) {
     try {
         const client = IotApi.ApiClient.instance;
@@ -748,9 +799,24 @@ async function handleCriticalUpdate(deviceId, criticalValue) {
         const devicesApi = new IotApi.DevicesV2Api(client);
         const device = await devicesApi.devicesV2Show(deviceId);
 
-        // Instead of sending notification directly, trigger a status check
-        await checkDeviceStatus(device, devicesApi);
+        const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
+        if (!emailProp?.last_value) return;
+
+        const isCritical = String(criticalValue).toLowerCase() === 'true';
+        const lastSent = lastSentTimes.get(deviceId) || 0;
+        const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
+
+        const timeSinceLast = Date.now() - lastSent;
+        
+        if (isCritical) {
+            if (!lastSent || timeSinceLast >= cooldown) {
+                await sendNotificationEmail(device, emailProp.last_value);
+                lastSentTimes.set(deviceId, Date.now());
+            }
+        } else {
+            if (lastSent) lastSentTimes.delete(deviceId);
+        }
     } catch (error) {
-        console.error('Critical update handling failed:', error);
+        console.error('Immediate notification failed:', error);
     }
 }
