@@ -1168,73 +1168,10 @@
             document.getElementById('lastUpdateTime').textContent = now.toLocaleTimeString();
         }
 
-        // Update polling interval to be more conservative
-        const POLLING_INTERVAL = 6 * 60 * 60 * 1000; // 6 hours in milliseconds
-        const GRAPH_UPDATE_INTERVAL = 5 * 60 * 1000;  // 5 minutes for graphs
-        
-        // Add local storage cache
-        function getFromCache(key) {
-            try {
-                const item = localStorage.getItem(key);
-                if (!item) return null;
-                
-                const { data, timestamp, ttl } = JSON.parse(item);
-                if (Date.now() - timestamp > ttl) {
-                    localStorage.removeItem(key);
-                    return null;
-                }
-                return data;
-            } catch (e) {
-                return null;
-            }
-        }
-
-        function setInCache(key, data, ttl) {
-            try {
-                localStorage.setItem(key, JSON.stringify({
-                    data,
-                    timestamp: Date.now(),
-                    ttl
-                }));
-            } catch (e) {
-                // Handle quota exceeded
-                if (e.name === 'QuotaExceededError') {
-                    clearOldCache();
-                }
-            }
-        }
-
-        function clearOldCache() {
-            try {
-                const keys = Object.keys(localStorage);
-                const now = Date.now();
-                
-                keys.forEach(key => {
-                    try {
-                        const item = JSON.parse(localStorage.getItem(key));
-                        if (now - item.timestamp > item.ttl) {
-                            localStorage.removeItem(key);
-                        }
-                    } catch (e) {}
-                });
-            } catch (e) {}
-        }
-
-        // Optimize fetchDevices function
-        async function fetchDevices(forceFetch = false) {
+        async function fetchDevices() {
             showLoading();
             
             try {
-                // Check cache first if not forced
-                if (!forceFetch) {
-                    const cachedData = getFromCache('devices');
-                    if (cachedData) {
-                        displayDevices(cachedData);
-                        hideLoading();
-                        return;
-                    }
-                }
-
                 // First check if server is healthy
                 const isHealthy = await checkServerHealth();
                 if (!isHealthy) {
@@ -1253,17 +1190,22 @@
                 
                 // Sort devices by name
                 devices.sort((a, b) => {
+                    // Extract numbers from device names (assuming format like "001", "002", etc.)
                     const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
                     const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
                     return aNum - bNum;
                 });
                 
-                // Cache the sorted devices data
+                // Store the sorted devices data for modal use
                 window.lastDevicesData = devices;
-                setInCache('devices', devices, POLLING_INTERVAL);
                 
                 // Update last update time
                 updateLastUpdateTime();
+                
+                // Log raw device data to console
+                logToConsole('Received device data (sorted):');
+                logToConsole(devices);
+                
                 displayDevices(devices);
                 hideLoading();
             } catch (error) {
@@ -4191,149 +4133,865 @@
             return mode;
         }
 
-        // Optimize fetchDevices function
-        async function fetchDevices(forceFetch = false) {
-            showLoading();
-            
-            try {
-                // Check cache first if not forced
-                if (!forceFetch) {
-                    const cachedData = getFromCache('devices');
-                    if (cachedData) {
-                        displayDevices(cachedData);
-                        hideLoading();
-                        return;
-                    }
-                }
+        // Cache for time series data
+        let timeSeriesDataCache = new Map();
 
-                // First check if server is healthy
-                const isHealthy = await checkServerHealth();
-                if (!isHealthy) {
-                    throw new Error('Server is not responding. Please make sure the server is running.');
-                }
-
-                const response = await fetch(`${API_URL}/api/devices`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const devices = await response.json();
-                
-                if (devices.error) {
-                    throw new Error(devices.message || devices.error);
-                }
-                
-                // Sort devices by name
-                devices.sort((a, b) => {
-                    const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
-                    const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
-                    return aNum - bNum;
-                });
-                
-                // Cache the sorted devices data
-                window.lastDevicesData = devices;
-                setInCache('devices', devices, POLLING_INTERVAL);
-                
-                // Update last update time
-                updateLastUpdateTime();
-                displayDevices(devices);
-                hideLoading();
-            } catch (error) {
-                console.error('Error fetching devices:', error);
-                showError(error.message || 'Failed to fetch devices. Please try again later.');
-            }
-        }
-
-        // Optimize time series data fetching
         async function fetchTimeSeriesData(deviceId, hours) {
-            try {
-                const cacheKey = `timeseries-${deviceId}-${hours}`;
-                const cachedData = getFromCache(cacheKey);
-                if (cachedData) {
-                    return cachedData;
-                }
+            // Check cache first
+            const cacheKey = `${deviceId}-${hours}`;
+            if (timeSeriesDataCache.has(cacheKey)) {
+                logToConsole('Using cached time series data', 'info');
+                return timeSeriesDataCache.get(cacheKey);
+            }
 
+            try {
                 const now = new Date();
                 const from = new Date(now - hours * 60 * 60 * 1000);
 
-                // Find the device & its properties
+                // 1) Identify the device & its properties
                 const device = window.lastDevicesData.find(d => d.id === deviceId);
                 if (!device?.thing?.id) {
                     throw new Error("Device or Thing not found");
                 }
+                const thingId = device.thing.id;
+                const properties = device.thing.properties || [];
 
-                // Make API calls and process data
-                const data = await fetchAndProcessTimeSeriesData(device, from, now);
-                
-                // Cache the result
-                setInCache(cacheKey, data, GRAPH_UPDATE_INTERVAL);
-                
-                return data;
+                // Find relevant properties
+                const tempProperty = properties.find(p => p.name === 'cloudtemp');
+                const flowProperty = properties.find(p => p.name === 'cloudflowrate');
+
+                // Log request details for debugging
+                logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
+                if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+                if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+
+                // Log property details for debugging
+                logToConsole('Property details:', {
+                    temperature: tempProperty ? {
+                        id: tempProperty.id,
+                        type: tempProperty.type,
+                        name: tempProperty.name,
+                        last_value: tempProperty.last_value
+                    } : null,
+                    flow: flowProperty ? {
+                        id: flowProperty.id,
+                        type: flowProperty.type,
+                        name: flowProperty.name,
+                        last_value: flowProperty.last_value
+                    } : null
+                }, 'info');
+
+                // 2) Compute interval to stay under 1000 points
+                const timeRangeSeconds = hours * 3600;
+                const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
+
+                // 3) Basic fetch options
+                const fetchOptions = {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                };
+
+                // 4) Build query string
+                const queryParams = new URLSearchParams({
+                    interval: interval.toString(),
+                    from: from.toISOString(),
+                    to: now.toISOString(),
+                    aggregation: 'AVG',
+                    desc: 'false'
+                }).toString();
+
+                // Log query details
+                logToConsole('Time series query parameters:', {
+                    interval,
+                    from: from.toLocaleString(),
+                    to: now.toLocaleString(),
+                    queryString: queryParams
+                }, 'info');
+
+                // 5) Make parallel fetch calls for temperature and flow
+                const [tempData, flowData] = await Promise.all([
+                    // Temperature fetch
+                    tempProperty
+                        ? fetch(
+                            `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
+                            fetchOptions
+                        ).then(async res => {
+                            if (!res.ok) {
+                                const errorText = await res.text();
+                                throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
+                            }
+                            return res.json();
+                        })
+                        : Promise.resolve({ data: [] }),
+
+                    // Flow Rate fetch
+                    flowProperty
+                        ? fetch(
+                            `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
+                            fetchOptions
+                        ).then(async res => {
+                            if (!res.ok) {
+                                const errorText = await res.text();
+                                throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
+                            }
+                            return res.json();
+                        })
+                        : Promise.resolve({ data: [] })
+                ]);
+
+                // Log raw response data
+                logToConsole('Raw temperature response:', 'info');
+                logToConsole(tempData, 'info');
+                logToConsole('Temperature data details:', 'info');
+                logToConsole({
+                    endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${queryParams}`,
+                    tempPropertyId: tempProperty?.id,
+                    responseStatus: tempData ? 'Success' : 'No data',
+                    dataPoints: tempData?.data?.length || 0,
+                    tempProperty: tempProperty,
+                    rawResponse: tempData
+                }, 'info');
+
+                // Add logging for flow rate data
+                logToConsole('Raw flow rate response:', 'info');
+                logToConsole(flowData, 'info');
+                logToConsole('Flow data details:', 'info');
+                logToConsole({
+                    endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${queryParams}`,
+                    flowPropertyId: flowProperty?.id,
+                    responseStatus: flowData ? 'Success' : 'No data',
+                    dataPoints: flowData?.data?.length || 0,
+                    flowProperty: flowProperty,
+                    rawResponse: flowData
+                }, 'info');
+
+                // 6) Process the responses
+                const tempResult = parseTsArray(tempData.data || []);
+                const flowResult = parseTsArray(flowData.data || []);
+
+                // Log the raw API responses with sample data
+                logToConsole('Raw API Response Data:', {
+                    temperature: {
+                        total: tempData.data?.length || 0,
+                        sample: tempData.data?.slice(0, 5)?.map(d => ({
+                            time: new Date(d.time).toLocaleString(),
+                            value: d.value !== null ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                        }))
+                    },
+                    flow: {
+                        total: flowData.data?.length || 0,
+                        sample: flowData.data?.slice(0, 5)?.map(d => ({
+                            time: new Date(d.time).toLocaleString(),
+                            value: d.value !== null ? `${d.value.toFixed(3)} L/min` : 'null'
+                        }))
+                    }
+                }, 'info');
+
+                // Log the processed results
+                logToConsole('Time series data fetched:', {
+                    temperaturePoints: tempResult.times.length,
+                    flowPoints: flowResult.times.length,
+                    processedData: {
+                        temperature: {
+                            sample: tempResult.values.slice(0, 5).map((v, i) => ({
+                                time: new Date(tempResult.times[i]).toLocaleString(),
+                                value: v !== null ? `${v.toFixed(2)}°C (${((v * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                            }))
+                        },
+                        flow: {
+                            sample: flowResult.values.slice(0, 5).map((v, i) => ({
+                                time: new Date(flowResult.times[i]).toLocaleString(),
+                                value: v !== null ? `${v.toFixed(3)} L/min` : 'null'
+                            }))
+                        }
+                    }
+                });
+
+                // 7) Return formatted data
+                const result = {
+                    timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
+                    temperature: tempResult.values,
+                    timeSinceFlow: flowResult.values,
+                    iceLevel: tempResult.values?.map(celsius => {
+                        if (celsius === null || celsius === undefined) return null;
+                        const f = (celsius * 9) / 5 + 32;
+                        return f <= 34 ? 100 : 0;
+                    }) || []
+                };
+
+                // Cache the result before returning
+                timeSeriesDataCache.set(cacheKey, result);
+
+                return result;
             } catch (error) {
                 logToConsole(`Error fetching time series: ${error.message}`, 'error');
                 return null;
             }
         }
 
-        // Helper function to fetch and process time series data
-        async function fetchAndProcessTimeSeriesData(device, from, to) {
-            const thingId = device.thing.id;
-            const tempProperty = device.thing.properties.find(p => p.name === 'cloudtemp');
-            const flowProperty = device.thing.properties.find(p => p.name === 'cloudflowrate');
+        function updateStatusGraph(deviceIndex, selectedDay) {
+            const device = window.lastDevicesData[deviceIndex];
+            updateTimeRangeButtons('status-time-range', selectedDay);
+            
+            logToConsole('Starting updateStatusGraph:', {
+                deviceIndex,
+                selectedDay,
+                deviceId: device.id
+            });
+            
+            fetchTimeSeriesData(device.id, 72).then(data => {
+                if (!data) {
+                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    return;
+                }
 
-            // Compute interval to stay under data point limit
-            const timeRangeSeconds = (to - from) / 1000;
-            const interval = Math.max(Math.ceil(timeRangeSeconds / 100), 60);
+                // Get the start and end of the selected day
+                const now = new Date();
+                const dayStart = new Date(now);
+                dayStart.setDate(dayStart.getDate() - selectedDay);
+                dayStart.setHours(0, 0, 0, 0);
+                
+                const dayEnd = new Date(dayStart);
+                dayEnd.setHours(23, 59, 59, 999);
 
-            const queryParams = new URLSearchParams({
-                interval: interval.toString(),
-                from: from.toISOString(),
-                to: to.toISOString(),
-                aggregation: 'AVG'
-            }).toString();
+                // For today, only show data up to current time
+                const currentTime = selectedDay === 0 ? now : dayEnd;
 
-            // Fetch data in parallel
-            const [tempData, flowData] = await Promise.all([
-                tempProperty ? 
-                    fetch(`${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`)
-                    .then(res => res.ok ? res.json() : Promise.reject(new Error(`Temperature fetch failed: ${res.status}`)))
-                    : Promise.resolve({ data: [] }),
+                // Process the data
+                const processedData = [];
+                const timestamps = data.timestamps || [];
+                const warningStatus = data.warningStatus || [];
+                const criticalStatus = data.criticalStatus || [];
+
+                // Log raw data for debugging
+                logToConsole('Raw status data:', {
+                    total: {
+                        timestamps: timestamps.length,
+                        warningStatus: warningStatus.length,
+                        criticalStatus: criticalStatus.length
+                    },
+                    sampleData: timestamps.slice(0, 5).map((t, i) => ({
+                        time: new Date(t).toLocaleString(),
+                        warning: warningStatus[i],
+                        critical: criticalStatus[i],
+                        status: warningStatus[i] ? 'Warning' : criticalStatus[i] ? 'Critical' : 'Great'
+                    }))
+                });
+
+                // Process each data point
+                for (let i = 0; i < timestamps.length; i++) {
+                    const timestamp = new Date(timestamps[i]);
+                    if (timestamp >= dayStart && timestamp <= currentTime) {
+                        const warning = warningStatus[i];
+                        const critical = criticalStatus[i];
+                        
+                        processedData.push({
+                            timestamp: timestamp,
+                            warning: warning,
+                            critical: critical,
+                            great: (!warning && !critical) ? 1 : 0
+                        });
+                    }
+                }
+
+                // Log processed data
+                logToConsole('Processed status data:', {
+                    totalPoints: processedData.length,
+                    samplePoints: processedData.slice(0, 3),
+                    timeRange: {
+                        start: dayStart.toLocaleString(),
+                        end: currentTime.toLocaleString()
+                    }
+                });
+
+                // Sort data by timestamp
+                processedData.sort((a, b) => a.timestamp - b.timestamp);
+
+                // Create datasets with improved styling
+                const datasets = [
+                    {
+                        label: 'Great',
+                        data: processedData.map(d => d.great),
+                        borderColor: 'rgb(16, 185, 129)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        stepped: 'before',
+                        pointStyle: 'circle',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        spanGaps: true,
+                        order: 3
+                    },
+                    {
+                        label: 'Warning',
+                        data: processedData.map(d => d.warning),
+                        borderColor: 'rgb(234, 179, 8)',
+                        backgroundColor: 'rgba(234, 179, 8, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        stepped: 'before',
+                        pointStyle: 'circle',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        spanGaps: true,
+                        order: 2
+                    },
+                    {
+                        label: 'Critical',
+                        data: processedData.map(d => d.critical),
+                        borderColor: 'rgb(239, 68, 68)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                        borderWidth: 2,
+                        tension: 0.1,
+                        fill: true,
+                        stepped: 'before',
+                        pointStyle: 'circle',
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                        spanGaps: true,
+                        order: 1
+                    }
+                ];
+
+                // Format timestamps for display
+                const labels = processedData.map(d => {
+                    return d.timestamp.toLocaleTimeString([], { 
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    });
+                });
+
+                // Destroy existing chart if it exists
+                const chartElement = document.getElementById('statusChart');
+                const existingChart = Chart.getChart(chartElement);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                // Create new chart
+                const ctx = chartElement.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'nearest',
+                            axis: 'x',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        return `Time: ${context[0].label}`;
+                                    },
+                                    label: (context) => {
+                                        const value = context.raw;
+                                        const status = context.dataset.label;
+                                        return `${status}: ${value === 1 ? 'Yes' : 'No'}`;
+                                    }
+                                },
+                                titleAlign: 'center',
+                                bodyAlign: 'left',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 }
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: { size: 12 }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Time',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    maxRotation: 45,
+                                    minRotation: 45,
+                                    font: { size: 11 }
+                                }
+                            },
+                            y: {
+                                min: -0.1,
+                                max: 1.1,
+                                title: {
+                                    display: true,
+                                    text: 'State',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true,
+                                    color: 'rgba(0, 0, 0, 0.1)'
+                                },
+                                ticks: {
+                                    callback: value => {
+                                        if (value <= 0) return 'No';
+                                        if (value >= 1) return 'Yes';
+                                        return '';
+                                    },
+                                    stepSize: 1,
+                                    font: { size: 11 }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // Calculate time in each state
+                const timeInStates = {
+                    great: 0,
+                    warning: 0,
+                    critical: 0
+                };
+
+                for (let i = 0; i < processedData.length - 1; i++) {
+                    const duration = processedData[i + 1].timestamp - processedData[i].timestamp;
+                    if (processedData[i].critical) {
+                        timeInStates.critical += duration;
+                    } else if (processedData[i].warning) {
+                        timeInStates.warning += duration;
+                    } else {
+                        timeInStates.great += duration;
+                    }
+                }
+
+                const totalTime = processedData.length > 0 ? 
+                    processedData[processedData.length - 1].timestamp - processedData[0].timestamp : 0;
+
+                // Add status summary below the graph
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'mt-4 grid grid-cols-3 gap-4';
+                summaryDiv.innerHTML = `
+                    <div class="p-3 bg-emerald-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-emerald-800">Great State</h5>
+                        <p class="text-xs text-emerald-600 mt-1">Duration: ${formatDuration(timeInStates.great)}</p>
+                        <p class="text-xs text-emerald-600">${totalTime ? Math.round((timeInStates.great / totalTime) * 100) : 0}% of time</p>
+                    </div>
+                    <div class="p-3 bg-yellow-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-yellow-800">Warning State</h5>
+                        <p class="text-xs text-yellow-600 mt-1">Duration: ${formatDuration(timeInStates.warning)}</p>
+                        <p class="text-xs text-yellow-600">${totalTime ? Math.round((timeInStates.warning / totalTime) * 100) : 0}% of time</p>
+                    </div>
+                    <div class="p-3 bg-red-50 rounded-lg">
+                        <h5 class="text-sm font-medium text-red-800">Critical State</h5>
+                        <p class="text-xs text-red-600 mt-1">Duration: ${formatDuration(timeInStates.critical)}</p>
+                        <p class="text-xs text-red-600">${totalTime ? Math.round((timeInStates.critical / totalTime) * 100) : 0}% of time</p>
+                    </div>
+                `;
+
+                // Update the summary on the page
+                const chartContainer = chartElement.parentElement;
+                const existingSummary = chartContainer.nextElementSibling;
+                if (existingSummary && existingSummary.classList.contains('mt-4')) {
+                    existingSummary.remove();
+                }
+                chartContainer.after(summaryDiv);
+
+                // Log time in states calculation
+                logToConsole('Time in states calculation:', {
+                    totalDuration: formatDuration(totalTime),
+                    breakdown: {
+                        great: {
+                            duration: formatDuration(timeInStates.great),
+                            percentage: totalTime ? Math.round((timeInStates.great / totalTime) * 100) : 0
+                        },
+                        warning: {
+                            duration: formatDuration(timeInStates.warning),
+                            percentage: totalTime ? Math.round((timeInStates.warning / totalTime) * 100) : 0
+                        },
+                        critical: {
+                            duration: formatDuration(timeInStates.critical),
+                            percentage: totalTime ? Math.round((timeInStates.critical / totalTime) * 100) : 0
+                        }
+                    }
+                });
+            }).catch(error => {
+                logToConsole(`Error updating status graph: ${error.message}`, 'error');
+            });
+        }
+
+        // Helper function to fetch property time series data
+        async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
+            try {
+                const endTime = new Date();
+                const startTime = new Date(endTime);
+                startTime.setHours(startTime.getHours() - hours);
+
+                // Find the property ID from the device's properties
+                const device = window.lastDevicesData.find(d => d.id === deviceId);
+                const property = device.thing?.properties?.find(p => p.name === propertyName);
+                
+                if (!property) {
+                    throw new Error(`Property ${propertyName} not found`);
+                }
+
+                // Use the property ID in the API call
+                const response = await fetch(`${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?from=${startTime.toISOString()}&to=${endTime.toISOString()}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                return {
+                    timestamps: data.timestamps || [],
+                    values: data.values || []
+                };
+            } catch (error) {
+                logToConsole(`Error fetching property timeseries: ${error.message}`, 'error');
+                return null;
+            }
+        }
+
+        function updateFlowGraph(deviceIndex, selectedDay) {
+            const device = window.lastDevicesData[deviceIndex];
+            updateTimeRangeButtons('flow-time-range', selectedDay);
+            
+            // Get the stats container
+            const statsContainer = document.getElementById('flowStats');
+
+            // Hide or show stats based on number of selected days
+            const selectedDays = Array.from(document.querySelectorAll('#flow-time-range button.active'))
+                .map(btn => parseInt(btn.dataset.days));
+            
+            if (selectedDays.length > 1) {
+                statsContainer.classList.add('opacity-50', 'pointer-events-none');
+                // Clear stats when multiple days are selected
+                document.getElementById('flowRange').textContent = '-';
+                document.getElementById('flowTotal').textContent = '-';
+                document.getElementById('flowStdDev').textContent = '-';
+                document.getElementById('flowFrequency').textContent = '-';
+            } else {
+                statsContainer.classList.remove('opacity-50', 'pointer-events-none');
+            }
+            
+            fetchTimeSeriesData(device.id, 72).then(data => {
+                if (!data) {
+                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    return;
+                }
+
+                // Destroy existing chart if it exists
+                const chartElement = document.getElementById('flowChart');
+                const existingChart = Chart.getChart(chartElement);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                // Remove any existing no-data message
+                const chartContainer = chartElement.parentElement;
+                const existingMessage = chartContainer.querySelector('.no-data-message');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+
+                // Process flow data for each selected day
+                const allDatasets = [];
+                let hasAnyData = false;
+
+                for (const day of selectedDays) {
+                    const { datasets, noData } = processFlowByHour(data.timestamps, data.timeSinceFlow, day);
                     
-                flowProperty ?
-                    fetch(`${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`)
-                    .then(res => res.ok ? res.json() : Promise.reject(new Error(`Flow rate fetch failed: ${res.status}`)))
-                    : Promise.resolve({ data: [] })
-            ]);
+                    if (noData) {
+                        const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+                        logToConsole(`No flow data available for ${dayLabel}`, 'warning');
+                    } else {
+                        hasAnyData = true;
+                        allDatasets.push(...datasets);
+                    }
+                }
 
-            const tempResult = parseTsArray(tempData.data || []);
-            const flowResult = parseTsArray(flowData.data || []);
+                // Create hour labels (00:00 to 23:00)
+                const hourLabels = Array.from({ length: 24 }, (_, i) => 
+                    `${i.toString().padStart(2, '0')}:00`
+                );
+
+                // Create the chart
+                const ctx = chartElement.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hourLabels,
+                        datasets: allDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        const hour = parseInt(context[0].label);
+                                        const nextHour = (hour + 1) % 24;
+                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
+                                    },
+                                    label: (context) => {
+                                        const value = context.raw;
+                                        if (value === null) return `${context.dataset.label}: No data`;
+                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
+                                    }
+                                },
+                                titleAlign: 'center',
+                                bodyAlign: 'left',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hour of Day'
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Flow Rate (L/min)',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                },
+                                ticks: {
+                                    callback: value => `${value.toFixed(1)} L/min`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // If there's no data for any selected day, show a message
+                if (!hasAnyData) {
+                    const noDataMessage = document.createElement('div');
+                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
+                    noDataMessage.innerHTML = `
+                        <div class="text-gray-500 text-center">
+                            <p class="text-lg font-medium">No flow rate data available</p>
+                            <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
+                        </div>
+                    `;
+                    chartContainer.appendChild(noDataMessage);
+                }
+            }).catch(error => {
+                logToConsole(`Error updating flow graph: ${error.message}`, 'error');
+            });
+        }
+
+        function processFlowByHour(timestamps, flowValues, selectedDay) {
+            logToConsole('Processing flow data:', 'info');
+            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
+            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
+
+            const hourlyData = {};
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            const dayStart = new Date(now);
+            dayStart.setDate(dayStart.getDate() - selectedDay);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
+
+            // Track if we have any data for this day
+            let hasDataForDay = false;
+            let allFlowsForDay = [];
+
+            // Process each flow reading
+            for (let i = 0; i < timestamps.length; i++) {
+                const timestamp = new Date(timestamps[i]);
+                const flow = flowValues[i];
+                
+                if (flow === null || flow === undefined) continue;
+                
+                if (timestamp < dayStart || timestamp > dayEnd) continue;
+                
+                const hour = timestamp.getHours();
+                if (selectedDay === 0 && hour > currentHour) continue;
+                
+                hasDataForDay = true;
+                allFlowsForDay.push(flow);
+
+                if (!hourlyData[hour]) {
+                    hourlyData[hour] = {
+                        flows: [],
+                        hour,
+                        date: new Date(timestamp)
+                    };
+                }
+                
+                hourlyData[hour].flows.push(flow);
+            }
+
+            // Update statistics if we have data
+            if (hasDataForDay) {
+                // Calculate daily range
+                const minFlow = Math.min(...allFlowsForDay);
+                const maxFlow = Math.max(...allFlowsForDay);
+                document.getElementById('flowRange').textContent = 
+                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
+
+                // Calculate total flow
+                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
+                document.getElementById('flowTotal').textContent = 
+                    `${totalFlow.toFixed(3)} L/min`;
+
+                // Calculate standard deviation
+                const stdDev = calculateStdDev(allFlowsForDay);
+                document.getElementById('flowStdDev').textContent = 
+                    `±${stdDev.toFixed(3)} L/min`;
+
+                // Update frequency
+                document.getElementById('flowFrequency').textContent = 
+                    `${allFlowsForDay.length} points`;
+
+                // Update time since last flow if it's today
+                if (selectedDay === 0 && allFlowsForDay.length > 0) {
+                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
+                    const timeSinceFlow = now - lastFlowTime;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
+                }
+            }
+
+            // If no data for this day, return empty datasets
+            if (!hasDataForDay) {
+                return {
+                    datasets: [],
+                    noData: true
+                };
+            }
+
+            // Create hourly averages
+            const hourlyAverages = Array(24).fill(null);
+            Object.values(hourlyData).forEach(hourData => {
+                if (hourData.flows.length > 0) {
+                    const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
+                    hourlyAverages[hourData.hour] = avgFlow;
+                }
+            });
+
+            // Create dataset
+            const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
+            const colors = [
+                { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
+                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
+                { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
+            ];
+
+            const datasets = [{
+                label: `Flow Rate (${dayLabels[selectedDay]})`,
+                data: hourlyAverages,
+                borderColor: colors[selectedDay].border,
+                backgroundColor: colors[selectedDay].background,
+                tension: 0.1,
+                fill: true,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }];
 
             return {
-                timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
-                temperature: tempResult.values,
-                timeSinceFlow: flowResult.values,
-                iceLevel: tempResult.values?.map(celsius => {
-                    if (celsius === null || celsius === undefined) return null;
-                    const f = (celsius * 9) / 5 + 32;
-                    return f <= 34 ? 100 : 0;
-                }) || []
+                datasets,
+                noData: false
             };
         }
 
-        // Initialize with immediate fetch and then poll
-        fetchDevices(true);
-        setInterval(() => fetchDevices(), POLLING_INTERVAL);
+        function updateTimeRangeButtons(containerId, selectedDay) {
+            const container = document.getElementById(containerId);
+            container.querySelectorAll('.time-range-button').forEach(button => {
+                const days = parseInt(button.dataset.days);
+                if (days === selectedDay) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            });
+        }
 
-        // Update graphs periodically
-        setInterval(() => {
-            if (window.lastDevicesData) {
-                window.lastDevicesData.forEach((device, index) => {
-                    if (document.getElementById(`device-${device.id}`)) {
-                        updateTemperatureGraph(index, 0);
-                        updateFlowGraph(index, 0);
-                    }
-                });
-            }
-        }, GRAPH_UPDATE_INTERVAL);
+        // Add refresh button to manually trigger data refresh
+        function addRefreshButton() {
+            const refreshButton = document.createElement('button');
+            refreshButton.innerHTML = `
+                <span class="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                    </svg>
+                    Refresh Data
+                </span>
+            `;
+            refreshButton.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-4';
+            refreshButton.onclick = function() {
+                // Clear the cache
+                timeSeriesDataCache.clear();
+                // Reload the page
+                window.location.reload();
+            };
+
+            // Add the button at the top of the page
+            const container = document.querySelector('#devices');
+            container.parentNode.insertBefore(refreshButton, container);
+        }
+
+        // Call this when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            addRefreshButton();
+        });
+
+        // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
+        fetchDevices();
+        const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
+
+        // Cleanup interval when page is unloaded
+        window.addEventListener('unload', () => {
+            clearInterval(interval);
+        });
 
         function showDisclaimer() {
             const modal = document.getElementById('disclaimer-modal');
