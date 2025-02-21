@@ -3265,17 +3265,14 @@
                     </svg>
                 `;
                 
-                // Reset button after 2 seconds
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.disabled = false;
-                }, 2000);
-                
                 // Show success toast
-                showToast('Property updated successfully', 'success');
+                showToast('Property updated successfully. Refreshing page...', 'success');
                 
-                // Refresh the devices list to show updated value
-                await fetchDevices();
+                // Wait for toast to be visible
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                // Refresh the page
+                window.location.reload();
                 
             } catch (error) {
                 // Reset button state
@@ -3285,6 +3282,30 @@
                 // Show error
                 logToConsole(`Error handling update button click: ${error.message}`, 'error');
                 showError(`Failed to handle update: ${error.message}`);
+            }
+        }
+
+        // Also update the handlePropertyUpdate function for Enter key updates
+        async function handlePropertyUpdate(event, deviceId, property) {
+            if (event.key === 'Enter') {
+                try {
+                    const newValue = event.target.value;
+                    property.new_value = newValue;
+                    await updatePropertyValue(deviceId, property);
+                    
+                    // Show success toast
+                    showToast('Property updated successfully. Refreshing page...', 'success');
+                    
+                    // Wait for toast to be visible
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    // Refresh the page
+                    window.location.reload();
+                    
+                } catch (error) {
+                    logToConsole(`Error handling property update: ${error.message}`, 'error');
+                    showError(`Failed to update property: ${error.message}`);
+                }
             }
         }
 
