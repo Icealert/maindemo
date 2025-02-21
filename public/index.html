@@ -3245,67 +3245,127 @@
                 }
                 
                 // Show loading state
-                const originalText = button.innerHTML;
-                button.innerHTML = `
-                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                `;
                 button.disabled = true;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
                 // Update the property value
                 property.new_value = input.value;
                 await updatePropertyValue(deviceId, property);
                 
-                // Show success state
-                button.innerHTML = `
-                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                `;
+                // Show success message
+                showToast('Update successful! Refreshing page...', 'success');
                 
-                // Show success toast
-                showToast('Property updated successfully. Refreshing page...', 'success');
-                
-                // Wait for toast to be visible
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                // Refresh the page
-                window.location.reload();
+                // Force a complete page reload
+                setTimeout(() => {
+                    location.href = location.href.split('#')[0];
+                    location.reload(true);
+                }, 1000);
                 
             } catch (error) {
-                // Reset button state
-                button.innerHTML = originalText;
                 button.disabled = false;
-                
-                // Show error
-                logToConsole(`Error handling update button click: ${error.message}`, 'error');
-                showError(`Failed to handle update: ${error.message}`);
+                button.innerHTML = originalText;
+                showError(`Update failed: ${error.message}`);
             }
         }
 
-        // Also update the handlePropertyUpdate function for Enter key updates
-        async function handlePropertyUpdate(event, deviceId, property) {
+        function handlePropertyInputKeydown(event) {
             if (event.key === 'Enter') {
+                event.preventDefault();
+                const button = event.target.nextElementSibling;
+                if (button) {
+                    handleUpdateButtonClick({ target: button });
+                }
+            }
+        }
+
+        // ... existing code ...
+
+        // Update the property update handler for Enter key
+        async function handlePropertyInputKeydown(event) {
+            if (event.key === 'Enter') {
+                const input = event.target;
+                const deviceId = input.dataset.deviceId;
+                
                 try {
-                    const newValue = event.target.value;
-                    property.new_value = newValue;
+                    const property = JSON.parse(input.dataset.property);
+                    
+                    // Add validation for Last_Maintenance property
+                    if (property.name === 'Last_Maintenance') {
+                        if (!isValidMaintenanceDate(input.value)) {
+                            showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
+                            return;
+                        }
+                    }
+                    
+                    // Disable input during update
+                    input.disabled = true;
+                    
+                    property.new_value = input.value;
                     await updatePropertyValue(deviceId, property);
                     
                     // Show success toast
-                    showToast('Property updated successfully. Refreshing page...', 'success');
+                    showToast('Property updated successfully. Refreshing...', 'success');
                     
-                    // Wait for toast to be visible
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    
-                    // Refresh the page
-                    window.location.reload();
+                    // Small delay to show success state
+                    setTimeout(() => {
+                        // Force reload from server, not cache
+                        window.location.href = window.location.href.split('#')[0];
+                        window.location.reload(true);
+                    }, 1000);
                     
                 } catch (error) {
-                    logToConsole(`Error handling property update: ${error.message}`, 'error');
-                    showError(`Failed to update property: ${error.message}`);
+                    // Re-enable input
+                    input.disabled = false;
+                    
+                    logToConsole(`Error handling property input: ${error.message}`, 'error');
+                    showError(`Failed to handle property input: ${error.message}`);
                 }
+            }
+        }
+
+        // Remove duplicate handlers
+        function handlePropertyUpdate(event, deviceId, property) {
+            return handlePropertyInputKeydown(event);
+        }
+
+        // Update showToast to ensure it's visible
+        function showToast(message, type = 'info') {
+            // Remove any existing toasts
+            const existingToasts = document.querySelectorAll('.toast-notification');
+            existingToasts.forEach(toast => toast.remove());
+            
+            const toast = document.createElement('div');
+            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
+                type === 'error' ? 'bg-red-500' : 
+                type === 'success' ? 'bg-green-500' : 
+                'bg-blue-500'
+            } shadow-lg z-50 toast-notification`;
+            
+            toast.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    ${type === 'success' ? `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    ` : type === 'error' ? `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    ` : `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    `}
+                    <span>${message}</span>
+                </div>
+            `;
+            
+            document.body.appendChild(toast);
+            
+            // Don't remove success toasts that indicate refresh
+            if (!message.includes('Refreshing')) {
+                setTimeout(() => toast.remove(), 3000);
             }
         }
 
