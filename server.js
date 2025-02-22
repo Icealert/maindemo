@@ -230,11 +230,19 @@ app.get('/api/devices', async (req, res) => {
                 // Get detailed device info including connection status
                 const detailedDevice = await devicesApi.devicesV2Show(device.id);
                 
+                // Calculate if device is actually connected based on last activity
+                const lastActivity = new Date(detailedDevice.last_activity_at);
+                const now = new Date();
+                const minutesSinceLastActivity = (now - lastActivity) / (1000 * 60);
+                
+                // Consider device connected if activity within last 5 minutes
+                const isRecentlyActive = minutesSinceLastActivity < 5;
+                
                 // Add connection status to the device object
                 return {
                     ...detailedDevice,
-                    connection_status: detailedDevice.connection?.status || 'DISCONNECTED',
-                    last_connection_time: detailedDevice.connection?.last_connection_time
+                    connection_status: isRecentlyActive ? 'CONNECTED' : 'DISCONNECTED',
+                    last_connection_time: detailedDevice.last_activity_at
                 };
             } catch (error) {
                 console.error(`Error fetching details for device ${device.id}:`, error);
