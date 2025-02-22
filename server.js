@@ -105,7 +105,16 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 
 // Enable compression for all responses
-app.use(compression());
+app.use(compression({
+    level: 6, // Balanced compression level
+    threshold: 1024, // Only compress responses above 1kb
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        return compression.filter(req, res);
+    }
+}));
 
 // Configure CORS with specific origins
 const allowedOrigins = [
@@ -133,6 +142,15 @@ app.use(express.static('public', {
     maxAge: '1h',
     etag: true
 }));
+
+// Add Cache-Control headers middleware
+app.use((req, res, next) => {
+    // Cache static assets for 1 day
+    if (req.url.match(/\.(css|js|img|font)/)) {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+    }
+    next();
+});
 
 // Configure email transporter
 const transporter = nodemailer.createTransport({
@@ -210,9 +228,17 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API endpoint to get devices data
+// Optimize devices endpoint
 app.get('/api/devices', async (req, res) => {
     try {
+        // Add ETag support
+        const etag = req.headers['if-none-match'];
+        const currentEtag = `W/"${Date.now()}"`;
+        
+        if (etag && etag === currentEtag) {
+            return res.status(304).send();
+        }
+
         console.log('Fetching devices...');
         var client = IotApi.ApiClient.instance;
         var oauth2 = client.authentications['oauth2'];
@@ -222,8 +248,25 @@ app.get('/api/devices', async (req, res) => {
         var devicesApi = new IotApi.DevicesV2Api(client);
         const devices = await devicesApi.devicesV2List();
         
+        // Only send necessary fields
+        const minimalDevices = devices.map(device => ({
+            id: device.id,
+            name: device.name,
+            thing: {
+                id: device.thing.id,
+                properties: device.thing.properties.map(prop => ({
+                    id: prop.id,
+                    name: prop.name,
+                    last_value: prop.last_value,
+                    permission: prop.permission
+                }))
+            }
+        }));
+
+        res.setHeader('ETag', currentEtag);
+        res.setHeader('Cache-Control', 'private, max-age=300'); // Cache for 5 minutes
         console.log(`Found ${devices.length} devices`);
-        res.json(devices);
+        res.json(minimalDevices);
     } catch (error) {
         console.error('Error fetching devices:', {
             status: error.statusCode,
@@ -320,11 +363,11 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     }
 });
 
-// Time series data endpoint with caching
+// Optimize time series endpoint with field filtering
 app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
     try {
         const { thingId, propertyId } = req.params;
-        const { aggregation, desc, from, to, interval } = req.query;
+        const { aggregation, desc, from, to, interval, fields } = req.query;
         
         // Generate cache key based on request parameters
         const cacheKey = `${thingId}-${propertyId}-${from}-${to}-${interval}`;
@@ -332,6 +375,7 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
         // Check cache first
         const cachedData = timeSeriesCache.get(cacheKey);
         if (cachedData && cachedData.timestamp > Date.now() - TIME_SERIES_CACHE_TTL) {
+            res.setHeader('X-Cache', 'HIT');
             return res.json(cachedData.data);
         }
 
@@ -353,21 +397,30 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
 
         const timeseriesData = await propsApi.propertiesV2Timeseries(thingId, propertyId, opts);
         
-        // Cache the response
-        timeSeriesCache.set(cacheKey, {
-            timestamp: Date.now(),
-            data: timeseriesData
-        });
-
-        // Clean up old cache entries
-        const now = Date.now();
-        for (const [key, value] of timeSeriesCache.entries()) {
-            if (value.timestamp < now - TIME_SERIES_CACHE_TTL) {
-                timeSeriesCache.delete(key);
-            }
+        // Filter fields if specified
+        let responseData = timeseriesData;
+        if (fields) {
+            const requestedFields = fields.split(',');
+            responseData = timeseriesData.map(item => {
+                const filtered = {};
+                requestedFields.forEach(field => {
+                    if (item[field] !== undefined) {
+                        filtered[field] = item[field];
+                    }
+                });
+                return filtered;
+            });
         }
 
-        res.json(timeseriesData);
+        // Cache the filtered response
+        timeSeriesCache.set(cacheKey, {
+            timestamp: Date.now(),
+            data: responseData
+        });
+
+        res.setHeader('X-Cache', 'MISS');
+        res.setHeader('Cache-Control', 'private, max-age=300'); // Cache for 5 minutes
+        res.json(responseData);
 
     } catch (error) {
         console.error('Time-series error:', error);
