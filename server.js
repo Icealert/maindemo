@@ -712,6 +712,12 @@ async function checkDeviceStatus(device, devicesApi) {
 async function calculateDeviceStatus(device, devicesApi) {
     const properties = device.thing?.properties || [];
     
+    // Check connection status based on last activity
+    const lastActivity = new Date(device.last_activity_at);
+    const now = new Date();
+    const minutesSinceLastActivity = (now - lastActivity) / (1000 * 60);
+    const isDisconnected = minutesSinceLastActivity >= 5;  // 5 minutes threshold
+
     // Get current warning and critical states
     const warningProp = properties.find(p => p.name === 'warning');
     const criticalProp = properties.find(p => p.name === 'critical');
@@ -737,11 +743,15 @@ async function calculateDeviceStatus(device, devicesApi) {
 
     // Determine new status
     const shouldBeWarning = isTemperatureBad !== isFlowBad; // XOR - only one condition is bad
-    const shouldBeCritical = isTemperatureBad && isFlowBad; // Both conditions are bad
+    const shouldBeCritical = isDisconnected || (isTemperatureBad && isFlowBad); // Critical if disconnected OR both conditions bad
 
     // Check if status has changed
     const statusChanged = (shouldBeWarning !== currentWarning) || (shouldBeCritical !== currentCritical);
-    const needsNotification = statusChanged && (shouldBeWarning || shouldBeCritical);
+    
+    // Need notification if:
+    // 1. Status changed to warning/critical OR
+    // 2. Device is disconnected (and cooldown elapsed)
+    const needsNotification = statusChanged || isDisconnected;
 
     return {
         shouldBeWarning,
@@ -751,10 +761,13 @@ async function calculateDeviceStatus(device, devicesApi) {
         needsNotification,
         isTemperatureBad,
         isFlowBad,
+        isDisconnected,
+        minutesSinceLastActivity,
         cloudTemp,
         tempThresholdMax,
         timeSinceFlowHours,
-        noFlowCriticalTime
+        noFlowCriticalTime,
+        lastActivity: device.last_activity_at
     };
 }
 
@@ -765,6 +778,11 @@ function generateEmailContent(device, status) {
     
     let subject = `Alert: ${deviceName} at ${location} - `;
     let issues = [];
+
+    // Add disconnection status to email
+    if (status.isDisconnected) {
+        issues.push(`Device has been disconnected for ${Math.floor(status.minutesSinceLastActivity)} minutes. Last seen: ${new Date(status.lastActivity).toLocaleString()}`);
+    }
 
     if (status.isTemperatureBad) {
         const tempF = (status.cloudTemp * 9/5) + 32;
