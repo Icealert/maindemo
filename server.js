@@ -803,7 +803,8 @@ async function handleCriticalUpdate(deviceId, criticalValue) {
         console.log('Handling critical update:', {
             deviceId,
             criticalValue,
-            timestamp: new Date().toISOString()
+            criticalValueType: typeof criticalValue,
+            rawValue: criticalValue
         });
 
         const client = IotApi.ApiClient.instance;
@@ -822,7 +823,19 @@ async function handleCriticalUpdate(deviceId, criticalValue) {
             return;
         }
 
-        const isCritical = String(criticalValue).toLowerCase() === 'true';
+        // Handle different types of boolean values from Arduino Cloud
+        const isCritical = (
+            criticalValue === true || 
+            criticalValue === 1 || 
+            String(criticalValue).toLowerCase() === 'true' ||
+            String(criticalValue) === '1'
+        );
+
+        console.log('Critical status evaluation:', {
+            rawValue: criticalValue,
+            isCritical: isCritical
+        });
+
         const lastSent = lastSentTimes.get(deviceId) || 0;
         const cooldown = 60 * 60 * 1000; // 1 hour
         const timeSinceLast = Date.now() - lastSent;
