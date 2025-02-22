@@ -240,8 +240,10 @@ app.get('/api/devices', async (req, res) => {
 // API endpoint to update device properties
 app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
-        console.log('Received update request for device:', req.params.id);
-        console.log('Original request body:', JSON.stringify(req.body, null, 2));
+        console.log('Property update received:', {
+            deviceId: req.params.id,
+            body: JSON.stringify(req.body, null, 2)
+        });
 
         // 1) Get token first
         const token = await getToken();
@@ -291,6 +293,10 @@ app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
         );
         
         if (criticalUpdate) {
+            console.log('Critical status update detected:', {
+                deviceId: req.params.id,
+                newValue: criticalUpdate.value
+            });
             await handleCriticalUpdate(deviceId, criticalUpdate.value);
         }
 
@@ -794,29 +800,59 @@ app.listen(port, () => {
 
 async function handleCriticalUpdate(deviceId, criticalValue) {
     try {
+        console.log('Handling critical update:', {
+            deviceId,
+            criticalValue,
+            timestamp: new Date().toISOString()
+        });
+
         const client = IotApi.ApiClient.instance;
         client.authentications['oauth2'].accessToken = await getToken();
         const devicesApi = new IotApi.DevicesV2Api(client);
         const device = await devicesApi.devicesV2Show(deviceId);
 
         const emailProp = device.thing.properties.find(p => p.name === 'notificationEmail');
-        if (!emailProp?.last_value) return;
+        console.log('Email property found:', {
+            hasEmail: !!emailProp,
+            emailValue: emailProp?.last_value
+        });
+
+        if (!emailProp?.last_value) {
+            console.log('No email configured for device:', deviceId);
+            return;
+        }
 
         const isCritical = String(criticalValue).toLowerCase() === 'true';
         const lastSent = lastSentTimes.get(deviceId) || 0;
-        const cooldown = 60 * 60 * 1000; // 1 hour in milliseconds
-
+        const cooldown = 60 * 60 * 1000; // 1 hour
         const timeSinceLast = Date.now() - lastSent;
         
+        console.log('Notification timing check:', {
+            deviceId,
+            isCritical,
+            lastSent: new Date(lastSent).toISOString(),
+            timeSinceLast: Math.floor(timeSinceLast / 1000 / 60) + ' minutes',
+            cooldownPeriod: Math.floor(cooldown / 1000 / 60) + ' minutes',
+            canSendNotification: !lastSent || timeSinceLast >= cooldown
+        });
+
         if (isCritical) {
             if (!lastSent || timeSinceLast >= cooldown) {
+                console.log('Sending notification email for device:', deviceId);
                 await sendNotificationEmail(device, emailProp.last_value);
                 lastSentTimes.set(deviceId, Date.now());
+                console.log('Notification sent and timestamp updated');
+            } else {
+                console.log('Skipping notification - cooldown period not elapsed');
             }
         } else {
-            if (lastSent) lastSentTimes.delete(deviceId);
+            if (lastSent) {
+                console.log('Device no longer critical, removing from tracking');
+                lastSentTimes.delete(deviceId);
+            }
         }
     } catch (error) {
-        console.error('Immediate notification failed:', error);
+        console.error('Critical update handling failed:', error);
+        throw error;
     }
 }
