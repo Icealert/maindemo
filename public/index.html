@@ -1643,10 +1643,10 @@
         }
 
         function calculateDeviceStatus(device) {
-            // Find the r_status event to determine connection status
-            const statusEvent = device.events?.find(event => event.name === 'r_status');
-            const isConnected = statusEvent?.value === 'CONNECTED';
-            const lastConnectedTime = statusEvent?.updated_at;
+            // Check connection status from Arduino Cloud
+            const statusEvent = device.connection_status;
+            const isConnected = statusEvent === 'CONNECTED';
+            const lastConnectedTime = device.last_connection_time;
 
             // Find key properties
             const properties = device.thing?.properties || [];
