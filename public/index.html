@@ -3281,8 +3281,8 @@
                 
                 // Force a complete page reload
                 setTimeout(() => {
-                    location.href = location.href.split('#')[0];
-                    location.reload(true);
+                    window.location.href = window.location.href.split('#')[0];
+                    window.location.reload(true);
                 }, 1000);
                 
             } catch (error) {
@@ -3295,9 +3295,11 @@
         function handlePropertyInputKeydown(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
-                const button = event.target.nextElementSibling;
+                const input = event.target;
+                const button = input.nextElementSibling;
                 if (button) {
-                    handleUpdateButtonClick({ target: button });
+                    const clickEvent = new Event('click');
+                    button.dispatchEvent(clickEvent);
                 }
             }
         }
