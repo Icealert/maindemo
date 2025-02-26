@@ -3023,17 +3023,17 @@
                                                     <div class="space-y-1">
                                                         <div class="flex items-center space-x-2">
                                                             <h4 class="${getPropertyTextColor(property.name)} font-semibold">${
-    property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' :
-    property.name === 'cloudtemp' ? 'Temperature' :
-    property.name === 'cloudflowrate' ? 'Flow Rate' :
-    property.name === 'Last_Maintenance' ? 'Last Maintenance' :
-    property.name === 'location' ? 'Ice Machine Location' :
-    property.name === 'sensorplacement' ? 'Sensor Placement' :
-    property.name === 'tempThresholdMax' ? 'Temperature Threshold' :
-    property.name === 'noFlowCriticalTime' ? 'No Flow Critical Time' :
-    property.name === 'notificationEmail' ? 'Notification Email Address' :
-    property.name
-}</h4>
+                                                                property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' :
+                                                                property.name === 'cloudtemp' ? 'Temperature' :
+                                                                property.name === 'cloudflowrate' ? 'Flow Rate' :
+                                                                property.name === 'Last_Maintenance' ? 'Last Maintenance' :
+                                                                property.name === 'location' ? 'Ice Machine Location' :
+                                                                property.name === 'sensorplacement' ? 'Sensor Placement' :
+                                                                property.name === 'tempThresholdMax' ? 'Temperature Threshold' :
+                                                                property.name === 'noFlowCriticalTime' ? 'No Flow Critical Time' :
+                                                                property.name === 'notificationEmail' ? 'Notification Email Address' :
+                                                                property.name
+                                                            }</h4>
                                                             <span class="px-2 py-0.5 text-xs font-medium rounded-full ${property.permission === 'READ_WRITE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
                                                                 ${property.permission === 'READ_WRITE' ? 'Editable' : 'Read Only'}
                                                             </span>
@@ -3047,199 +3047,45 @@
                                                             <svg class="w-4 h-4 text-rose-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
                                                             </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-rose-800 mb-1">What is Ice Machine PN/SN?</p>
-                                                                <p class="text-xs text-rose-600 leading-relaxed">This field helps track which ice machine this FreezeSense device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'notificationEmail' ? `
-                                                    <div class="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-orange-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-orange-800 mb-1">What is Notification Email Address?</p>
-                                                                <p class="text-xs text-orange-600 leading-relaxed">This email address will receive critical alerts about your ice machine's status. Make sure to enter a valid email address that is regularly monitored to ensure timely response to any issues.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'cloudtemp' ? `
-                                                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-blue-800 mb-1">What is Temperature?</p>
-                                                                <p class="text-xs text-blue-600 leading-relaxed">This is the real-time temperature reading from the sensor placed in your ice machine and helps determine the ice level in your machine.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'cloudflowrate' ? `
-                                                    <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-purple-800 mb-1">What is Flow Rate?</p>
-                                                                <p class="text-xs text-purple-600 leading-relaxed">This measures the real-time water flow rate in your ice machine. It helps monitor water usage and detect potential issues with water supply or ice production.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'Last_Maintenance' ? `
-                                                    <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-amber-800 mb-1">What is Last Maintenance?</p>
-                                                                <p class="text-xs text-amber-600 leading-relaxed">This tracks when your ice machine was last serviced. Regular maintenance every 6 months is recommended to ensure optimal performance, prevent issues, and extend the life of your machine.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'location' ? `
-                                                    <div class="mt-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-teal-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-teal-800 mb-1">What is Ice Machine Location?</p>
-                                                                <p class="text-xs text-teal-600 leading-relaxed">This field helps identify where the ice machine is physically located. Enter a descriptive location (e.g., "Kitchen - North Wall", "Bar Area", "Cafeteria Room 101") to easily locate and service the machine.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'sensorplacement' ? `
-                                                    <div class="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-indigo-800 mb-1">What is Sensor Placement?</p>
-                                                                <p class="text-xs text-indigo-600 leading-relaxed">This setting determines where the temperature sensor is placed in your ice machine, measured as a percentage from the bottom. This helps accurately track ice levels and ensures proper monitoring of your machine's performance.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'tempThresholdMax' ? `
-                                                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-blue-800 mb-1">What is Temperature Threshold Max?</p>
-                                                                <p class="text-xs text-blue-600 leading-relaxed">This setting determines the maximum temperature threshold for your ice machine. When the temperature rises above this threshold, it indicates that ice levels have dropped below the sensor level. Adjust this value to fine-tune ice level detection and alert sensitivity.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'noFlowCriticalTime' ? `
-                                                    <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-purple-800 mb-1">What is No Flow Critical Time?</p>
-                                                                <p class="text-xs text-purple-600 leading-relaxed">This setting determines how long (in hours) the system should wait without detecting water flow before triggering a critical alert. Adjust this value based on your ice machine's typical production cycles and usage patterns to avoid false alarms.</p>
-                                                            </div>
+                                                            <p class="text-xs text-rose-700">
+                                                                This field helps track which ice machine this FreezeSense device is currently installed in.
+                                                                Please enter both the Part Number and Serial Number in the format: <span class="font-mono">PN: xxxxx, SN: xxxxx</span>
+                                                            </p>
                                                         </div>
                                                     </div>
                                                 ` : ''}
 
-                                            ${property.permission === 'READ_WRITE' ? `
-                                                    <div class="mt-4">
-                                                    ${property.name === 'sensorplacement' ? 
-                                                        getSensorPlacementSelector(device.id, property)
-                                                    : property.name === 'Last_Maintenance' ? `
-                                                            <div class="flex space-x-3">
-                                                            <input 
-                                                                type="text"
-                                                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-                                                                value="${property.last_value || ''}"
-                                                                placeholder="MM/DD/YYYY"
-                                                                pattern="^(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/[0-9]{4}$"
-                                                                title="Please enter date in MM/DD/YYYY format"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-colors"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
-                                                        <p class="mt-2 text-xs text-amber-600">Enter the last maintenance date in MM/DD/YYYY format (e.g., 03/15/2024)</p>
-                                                    ` : `
-                                                            <div class="flex space-x-3">
-                                                            <input 
-                                                                type="${getPropertyInputType(property)}"
-                                                                    class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                                    value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
-                                                                placeholder="Enter new value"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                                step="${getPropertyStep(property)}"
-                                                                ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
-                                                    `}
-                                                </div>
-                                            ` : `
-                                                    <div class="mt-3">
-                                                        <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
-                                                            ${property.name.toLowerCase().includes('temp') ? 
-                                                                `${celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
-                                                                property.name === 'cloudflowrate' ?
-                                                                `${Number(property.last_value).toFixed(2)} L/min` :
-                                                                formatPropertyValue(property)}
-                                                        </p>
-                                                        ${property.name === 'cloudflowrate' ? '' : ''}
-                                                    </div>
-                                                `}
-                                                
-                                                <div class="mt-4 pt-3 border-t border-gray-100">
-                                                    <div class="flex items-center space-x-1 text-xs text-gray-500">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                        </svg>
-                                                        <span>Last Updated: ${new Date(device.last_activity_at).toLocaleString('en-US', {
-                                                            dateStyle: 'medium',
-                                                timeStyle: 'short'
-                                                        })}</span>
-                                                    </div>
+                                                <div class="mt-3 flex items-center space-x-2">
+                                                    <input
+                                                        type="text"
+                                                        class="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+                                                        value="${formatPropertyValue(property)}"
+                                                        placeholder="${property.name === 'Last_Maintenance' ? 'MM/DD/YYYY' : 'Enter value...'}"
+                                                        ${property.permission !== 'READ_WRITE' ? 'disabled' : ''}
+                                                        onkeydown="handlePropertyInputKeydown(event)"
+                                                        data-device-id="${device.id}"
+                                                        data-property='${JSON.stringify(property)}'
+                                                    >
+                                                    ${property.permission === 'READ_WRITE' ? `
+                                                        <button
+                                                            onclick="handleUpdateButtonClick(event)"
+                                                            class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors"
+                                                            data-device-id="${device.id}"
+                                                            data-property='${JSON.stringify(property)}'
+                                                        >
+                                                            Update
+                                                        </button>
+                                                    ` : ''}
                                                 </div>
                                             </div>
                                         </div>
-                                    `).join('') 
-                                    : '<p class="text-gray-500">No properties available</p>'
+                                    `).join('') : ''
                                 }
                             </div>
                         </div>
-                    ` : '<p class="text-gray-500">No thing data available</p>'}
+                    ` : ''}
                 </div>
             `;
-
-            // Initialize the graphs
-            initializeGraphs(deviceIndex);
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
