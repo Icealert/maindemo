@@ -3253,12 +3253,11 @@
 
         async function handleUpdateButtonClick(event) {
             const button = event.target;
-            const deviceId = button.dataset.deviceId;
             const input = button.previousElementSibling;
+            const deviceId = button.dataset.deviceId;
+            const property = JSON.parse(button.dataset.property);
             
             try {
-                const property = JSON.parse(button.dataset.property);
-                
                 // Add validation for Last_Maintenance property
                 if (property.name === 'Last_Maintenance') {
                     if (!isValidMaintenanceDate(input.value)) {
@@ -3278,11 +3277,10 @@
                 await updatePropertyValue(deviceId, property);
                 
                 // Show success message
-                showToast('Property updated successfully. Refreshing...', 'success');
+                showToast('Update successful! Refreshing page...', 'success');
                 
-                // Small delay to show success state
+                // Force a complete page reload
                 setTimeout(() => {
-                    // Force reload from server, not cache
                     window.location.href = window.location.href.split('#')[0];
                     window.location.reload(true);
                 }, 1000);
@@ -3291,8 +3289,7 @@
                 button.disabled = false;
                 input.disabled = false;
                 button.innerHTML = originalText;
-                logToConsole(`Error updating property: ${error.message}`, 'error');
-                showError(`Failed to update property: ${error.message}`);
+                showError(`Update failed: ${error.message}`);
             }
         }
 
@@ -3302,19 +3299,8 @@
                 const input = event.target;
                 const button = input.nextElementSibling;
                 if (button) {
-                    button.click();
-                }
-            }
-        }
-
-        // Remove duplicate handlers and use a single implementation
-        function handlePropertyUpdate(event, deviceId, property) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const input = event.target;
-                const button = input.nextElementSibling;
-                if (button) {
-                    button.click();
+                    const clickEvent = new Event('click');
+                    button.dispatchEvent(clickEvent);
                 }
             }
         }
