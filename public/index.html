@@ -5231,78 +5231,22 @@
             await updatePropertyValue(deviceId, property);
         }
 
-        // Add auto-commit function
-        async function autoCommitChanges() {
-            try {
-                const timestamp = new Date().toLocaleString().replace(/[/\\:]/g, '-');
-                const commitMessage = `Auto-commit: Changes made at ${timestamp}`;
-                
-                // Create a toast notification
-                const toast = document.createElement('div');
-                toast.className = 'fixed bottom-4 right-4 p-4 bg-gray-800 text-white rounded-lg shadow-lg z-50 flex items-center space-x-2';
-                toast.innerHTML = `
-                    <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>Committing changes to git...</span>
-                `;
-                document.body.appendChild(toast);
-
-                // Execute git commands
-                await fetch('/api/git/commit', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        file: 'public/index.html',
-                        message: commitMessage
-                    })
-                });
-
-                // Update toast to show success
-                toast.innerHTML = `
-                    <svg class="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    <span>Changes committed successfully!</span>
-                `;
-
-                // Remove toast after 3 seconds
-                setTimeout(() => {
-                    toast.remove();
-                }, 3000);
-
-            } catch (error) {
-                console.error('Auto-commit failed:', error);
-                
-                // Show error toast
-                const errorToast = document.createElement('div');
-                errorToast.className = 'fixed bottom-4 right-4 p-4 bg-red-600 text-white rounded-lg shadow-lg z-50 flex items-center space-x-2';
-                errorToast.innerHTML = `
-                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    <span>Failed to commit changes: ${error.message}</span>
-                `;
-                document.body.appendChild(errorToast);
-
-                // Remove error toast after 5 seconds
-                setTimeout(() => {
-                    errorToast.remove();
-                }, 5000);
-            }
-        }
-
-        // Add auto-commit call to relevant functions
+        // Remove auto-commit function
+        
         async function updatePropertyValue(deviceId, property) {
             try {
-                logToConsole('Updating property:', {
-                    deviceId,
+                if (!deviceId || !property) {
+                    throw new Error('Device ID and Property are required');
+                }
+
+                // Log the update attempt with all details
+                logToConsole({
+                    message: 'Attempting to update property',
+                    deviceId: deviceId,
                     propertyName: property.name,
+                    currentValue: property.last_value,
                     newValue: property.new_value,
-                    type: property.type
+                    propertyType: property.type
                 }, 'info');
 
                 // Format the value based on type
@@ -5326,6 +5270,7 @@
                         }
                         break;
                     case 'BOOL':
+                        // Convert to actual boolean instead of string
                         formattedValue = property.new_value === true || property.new_value === 'true';
                         break;
                     case 'CHARSTRING':
@@ -5349,12 +5294,13 @@
                         properties: [{
                             name: property.name,
                             type: property.type,
-                            value: formattedValue
+                            value: formattedValue // Send raw value without converting to string
                         }]
                     }
                 };
 
-                logToConsole('Sending update request:', {
+                logToConsole({
+                    message: 'Sending update request',
                     url: apiUrl,
                     body: requestBody
                 }, 'info');
@@ -5364,7 +5310,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                         'Accept': 'application/json',
-                        'X-Organization': property.organization_id || ''
+                        'X-Organization': property.organization_id || ''  // Add organization ID if available
                     },
                     body: JSON.stringify(requestBody)
                 });
@@ -5375,24 +5321,27 @@
                 }
 
                 const result = await response.json();
-                logToConsole('Update successful:', {
+                logToConsole({
+                    message: 'Update successful',
                     deviceId: deviceId,
                     propertyName: property.name,
                     response: result
                 }, 'info');
 
-                // Auto-commit changes if enabled
-                if (window.autoCommitEnabled) {
-                    await autoCommitChanges();
-                }
-
+                // Refresh the devices list to show the new value
+                await fetchDevices();
+                setTimeout(() => {
+                    location.reload(true);
+                }, 3000); // Wait 3 seconds before reloading
+                
             } catch (error) {
-                logToConsole('Error updating property:', {
+                logToConsole({
+                    message: 'Error updating property',
                     error: error.message,
                     deviceId: deviceId,
                     propertyName: property?.name
                 }, 'error');
-                throw error; // Re-throw to handle in the calling function
+                showError(`Failed to update property: ${error.message}`);
             }
         }
 
@@ -5401,7 +5350,6 @@
                 const newValue = event.target.value;
                 property.new_value = newValue;
                 await updatePropertyValue(deviceId, property);
-                await autoCommitChanges();
             }
         }
 
