@@ -3255,9 +3255,10 @@
             const button = event.target;
             const input = button.previousElementSibling;
             const deviceId = button.dataset.deviceId;
-            const property = JSON.parse(button.dataset.property);
             
             try {
+                const property = JSON.parse(button.dataset.property);
+                
                 // Add validation for Last_Maintenance property
                 if (property.name === 'Last_Maintenance') {
                     if (!isValidMaintenanceDate(input.value)) {
@@ -3266,30 +3267,33 @@
                     }
                 }
                 
-                // Show loading state
-                button.disabled = true;
+                // Disable input during update
                 input.disabled = true;
+                button.disabled = true;
                 const originalText = button.innerHTML;
                 button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
-                // Update the property value
                 property.new_value = input.value;
                 await updatePropertyValue(deviceId, property);
                 
-                // Show success message
-                showToast('Update successful! Refreshing page...', 'success');
+                // Show success toast
+                showToast('Property updated successfully. Refreshing...', 'success');
                 
-                // Force a complete page reload
+                // Small delay to show success state
                 setTimeout(() => {
+                    // Force reload from server, not cache
                     window.location.href = window.location.href.split('#')[0];
                     window.location.reload(true);
                 }, 1000);
                 
             } catch (error) {
-                button.disabled = false;
+                // Re-enable input and button
                 input.disabled = false;
+                button.disabled = false;
                 button.innerHTML = originalText;
-                showError(`Update failed: ${error.message}`);
+                
+                logToConsole(`Error handling property input: ${error.message}`, 'error');
+                showError(`Failed to handle property input: ${error.message}`);
             }
         }
 
