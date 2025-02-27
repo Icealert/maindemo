@@ -3251,7 +3251,7 @@
             modal.classList.remove('flex');
         }
 
-        async function handleUpdateButtonClick(event) {
+        function handleUpdateButtonClick(event) {
             const button = event.target;
             const input = button.previousElementSibling;
             const deviceId = button.dataset.deviceId;
@@ -3259,7 +3259,6 @@
             try {
                 const property = JSON.parse(button.dataset.property);
                 
-                // Add validation for Last_Maintenance property
                 if (property.name === 'Last_Maintenance') {
                     if (!isValidMaintenanceDate(input.value)) {
                         showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
@@ -3267,27 +3266,30 @@
                     }
                 }
                 
-                // Disable input during update
                 input.disabled = true;
                 button.disabled = true;
                 const originalText = button.innerHTML;
                 button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
                 property.new_value = input.value;
-                await updatePropertyValue(deviceId, property);
-                
-                // Show success toast
-                showToast('Property updated successfully. Refreshing...', 'success');
-                
-                // Small delay to show success state
-                setTimeout(() => {
-                    // Force reload from server, not cache
-                    window.location.href = window.location.href.split('#')[0];
-                    window.location.reload(true);
-                }, 1000);
+                updatePropertyValue(deviceId, property)
+                    .then(() => {
+                        showToast('Property updated successfully. Refreshing...', 'success');
+                        setTimeout(() => {
+                            window.location.href = window.location.href.split('#')[0];
+                            window.location.reload(true);
+                        }, 1000);
+                    })
+                    .catch((error) => {
+                        input.disabled = false;
+                        button.disabled = false;
+                        button.innerHTML = originalText;
+                        
+                        logToConsole(`Error handling property input: ${error.message}`, 'error');
+                        showError(`Failed to handle property input: ${error.message}`);
+                    });
                 
             } catch (error) {
-                // Re-enable input and button
                 input.disabled = false;
                 button.disabled = false;
                 button.innerHTML = originalText;
