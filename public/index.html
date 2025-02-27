@@ -3269,6 +3269,7 @@
                 
                 // Show loading state
                 button.disabled = true;
+                input.disabled = true;
                 const originalText = button.innerHTML;
                 button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
@@ -3277,18 +3278,21 @@
                 await updatePropertyValue(deviceId, property);
                 
                 // Show success message
-                showToast('Update successful! Refreshing page...', 'success');
+                showToast('Property updated successfully. Refreshing...', 'success');
                 
-                // Force a complete page reload
+                // Small delay to show success state
                 setTimeout(() => {
+                    // Force reload from server, not cache
                     window.location.href = window.location.href.split('#')[0];
                     window.location.reload(true);
                 }, 1000);
                 
             } catch (error) {
                 button.disabled = false;
+                input.disabled = false;
                 button.innerHTML = originalText;
-                showError(`Update failed: ${error.message}`);
+                logToConsole(`Error updating property: ${error.message}`, 'error');
+                showError(`Failed to update property: ${error.message}`);
             }
         }
 
@@ -3298,8 +3302,19 @@
                 const input = event.target;
                 const button = input.nextElementSibling;
                 if (button) {
-                    const clickEvent = new Event('click');
-                    button.dispatchEvent(clickEvent);
+                    button.click();
+                }
+            }
+        }
+
+        // Remove duplicate handlers and use a single implementation
+        function handlePropertyUpdate(event, deviceId, property) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const button = input.nextElementSibling;
+                if (button) {
+                    button.click();
                 }
             }
         }
