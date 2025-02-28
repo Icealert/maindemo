@@ -2264,7 +2264,7 @@
             const modalContent = document.getElementById('modal-content');
             const status = calculateDeviceStatus(device);
 
-            modalTitle.textContent = device.name || 'Device Details';
+            modalTitle.textContent = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Device Details';
             
             // Generate the detailed view with improved layout
             modalContent.innerHTML = `
@@ -2282,7 +2282,7 @@
                             <div class="space-y-3">
                                 <div>
                                     <p class="text-xs font-medium text-gray-500">Device Name</p>
-                                    <p class="text-sm font-semibold text-gray-900">Device ${device.name.replace(/[^0-9]/g, '')}</p>
+                                    <p class="text-sm font-semibold text-gray-900">${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || `Device ${device.name.replace(/[^0-9]/g, '')}`}</p>
                                 </div>
                                 <div>
                                     <p class="text-xs font-medium text-gray-500">Location</p>
@@ -3576,7 +3576,7 @@
                     return `
                         <div class="flex items-center justify-between p-3 bg-emerald-50 rounded-lg hover:bg-emerald-100">
                             <div>
-                                <h3 class="font-medium text-emerald-800">${device.name || 'Unnamed Device'}</h3>
+                                <h3 class="font-medium text-emerald-800">${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device'}</h3>
                                 <p class="text-sm text-emerald-600">
                                     Cloud Temp: ${formatTemperature(status.cloudTemp, status.tempThresholdMax)} (Max: ${formatTemperature(status.tempThresholdMax)})<br>
                                     Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
@@ -3613,7 +3613,7 @@
                     return `
                         <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg hover:bg-yellow-100">
                             <div>
-                                <h3 class="font-medium text-yellow-800">${device.name || 'Unnamed Device'}</h3>
+                                <h3 class="font-medium text-yellow-800">${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device'}</h3>
                                 <p class="text-sm text-yellow-600">
                                     Cloud Temp: ${formatTemperature(status.cloudTemp)} (${status.cloudTemp > 32 ? 'High' : 'Normal'})<br>
                                     Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
@@ -3650,7 +3650,7 @@
                     return `
                         <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg hover:bg-red-100">
                             <div>
-                                <h3 class="font-medium text-red-800">${device.name || 'Unnamed Device'}</h3>
+                                <h3 class="font-medium text-red-800">${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device'}</h3>
                                 ${!status.isConnected ? `
                                     <p class="text-sm text-red-600">
                                         Disconnected since: ${new Date(status.lastConnectedTime).toLocaleString()}
@@ -5474,7 +5474,7 @@
             const modalContent = document.getElementById('settings-modal-content');
             const modalTitle = document.getElementById('settings-modal-title');
             
-            modalTitle.textContent = `Settings - ${device.name}`;
+            modalTitle.textContent = `Settings - ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name}`;
             
             // Create properties section
             const propertiesSection = document.createElement('div');
