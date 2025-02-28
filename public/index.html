@@ -1420,7 +1420,13 @@
                 const originalText = button.innerHTML;
                 button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
-                property.new_value = input.value;
+                // For temperature properties, ensure we're getting the Fahrenheit value from the input
+                let newValue = input.value;
+                if (property.name.toLowerCase().includes('temp')) {
+                    newValue = input.value; // Input already shows Fahrenheit
+                }
+                
+                property.new_value = newValue;
                 await updatePropertyValue(deviceId, property);
                 
                 // Show success toast
@@ -5504,6 +5510,29 @@
 
         function hideDeviceSettings() {
             document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        // Function to automatically commit changes
+        async function autoCommitChanges() {
+            try {
+                const response = await fetch(`${API_URL}/api/iot/v2/commit`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                showToast('Changes committed successfully', 'success');
+                logToConsole('Auto-commit successful', 'info');
+            } catch (error) {
+                showError(`Failed to commit changes: ${error.message}`);
+                logToConsole(`Auto-commit failed: ${error.message}`, 'error');
+            }
         }
     </script>
 
