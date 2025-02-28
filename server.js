@@ -779,19 +779,53 @@ function generateEmailContent(device, status) {
     let subject = `Alert: ${deviceName} at ${location} - `;
     let issues = [];
 
-    // Add disconnection status to email
+    // Add disconnection status to email with more detail
     if (status.isDisconnected) {
-        issues.push(`Device has been disconnected for ${Math.floor(status.minutesSinceLastActivity)} minutes. Last seen: ${new Date(status.lastActivity).toLocaleString()}`);
+        const minutesSinceLastActivity = Math.floor(status.minutesSinceLastActivity);
+        const hours = Math.floor(minutesSinceLastActivity / 60);
+        const minutes = minutesSinceLastActivity % 60;
+        const timeString = hours > 0 ? 
+            `${hours} hour${hours > 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}` : 
+            `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+            
+        issues.push({
+            title: 'Device Disconnected',
+            detail: `Device has been offline for ${timeString}`,
+            timestamp: `Last seen: ${new Date(status.lastActivity).toLocaleString('en-US', {
+                timeZone: 'America/Chicago',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            })} CST`
+        });
     }
 
+    // Add temperature status with detailed comparison
     if (status.isTemperatureBad) {
         const tempF = (status.cloudTemp * 9/5) + 32;
         const thresholdF = (status.tempThresholdMax * 9/5) + 32;
-        issues.push(`Temperature is high: ${tempF.toFixed(1)}°F (Threshold: ${thresholdF.toFixed(1)}°F)`);
+        issues.push({
+            title: 'High Temperature Alert',
+            detail: `Current temperature (${tempF.toFixed(1)}°F) exceeds the maximum threshold (${thresholdF.toFixed(1)}°F)`,
+            comparison: `${(tempF - thresholdF).toFixed(1)}°F above threshold`
+        });
     }
 
+    // Add flow status with detailed time information
     if (status.isFlowBad) {
-        issues.push(`No water flow detected for ${status.timeSinceFlowHours.toFixed(1)} hours (Critical: ${status.noFlowCriticalTime} hours)`);
+        const currentFlowHours = status.timeSinceFlowHours;
+        const criticalHours = status.noFlowCriticalTime;
+        const hoursPastThreshold = currentFlowHours - criticalHours;
+        
+        issues.push({
+            title: 'No Water Flow Alert',
+            detail: `No water flow detected for ${currentFlowHours.toFixed(1)} hours`,
+            threshold: `Critical threshold: ${criticalHours} hours`,
+            exceedBy: hoursPastThreshold > 0 ? `Exceeded threshold by ${hoursPastThreshold.toFixed(1)} hours` : ''
+        });
     }
 
     subject += status.shouldBeCritical ? 'CRITICAL STATUS' : 'Warning Status';
@@ -804,14 +838,32 @@ function generateEmailContent(device, status) {
             <p><strong>Device:</strong> ${deviceName}</p>
             <p><strong>Location:</strong> ${location}</p>
             <div style="margin: 20px 0; padding: 15px; background-color: ${status.shouldBeCritical ? '#fee2e2' : '#fef3c7'}; border-radius: 8px;">
-                <h3 style="margin-top: 0;">Issues Detected:</h3>
-                <ul style="margin: 0; padding-left: 20px;">
-                    ${issues.map(issue => `<li style="margin: 10px 0;">${issue}</li>`).join('')}
-                </ul>
+                <h3 style="margin-top: 0;">Critical Issues Detected:</h3>
+                ${issues.map(issue => `
+                    <div style="margin: 15px 0; padding: 12px; background-color: white; border-radius: 6px; border-left: 4px solid ${status.shouldBeCritical ? '#dc2626' : '#d97706'}">
+                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">${issue.title}</h4>
+                        <p style="margin: 5px 0;">${issue.detail}</p>
+                        ${issue.threshold ? `<p style="margin: 5px 0; color: #666;">${issue.threshold}</p>` : ''}
+                        ${issue.comparison ? `<p style="margin: 5px 0; color: #991b1b;">${issue.comparison}</p>` : ''}
+                        ${issue.exceedBy ? `<p style="margin: 5px 0; color: #991b1b;">${issue.exceedBy}</p>` : ''}
+                        ${issue.timestamp ? `<p style="margin: 5px 0; color: #666; font-size: 0.9em;">${issue.timestamp}</p>` : ''}
+                    </div>
+                `).join('')}
             </div>
             <p style="font-size: 0.9em; color: #666;">
                 This is an automated message from your FreezeSense monitoring system.
                 Please check your device dashboard for more details.
+            </p>
+            <p style="font-size: 0.9em; color: #666;">
+                Alert generated at: ${new Date().toLocaleString('en-US', {
+                    timeZone: 'America/Chicago',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })} CST
             </p>
         </div>
     `;
