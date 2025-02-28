@@ -1396,13 +1396,89 @@
             }
         }
 
-        function handlePropertyUpdate(event, deviceId, property) {
-            if (event.key === 'Enter') {
-                const newValue = event.target.value;
-                property.new_value = newValue;
-                updatePropertyValue(deviceId, property);
+        // Single source of truth for property updates
+        async function handleUpdateButtonClick(event) {
+            event.preventDefault(); // Prevent any default button behavior
+            const button = event.target;
+            const input = button.previousElementSibling;
+            const deviceId = button.dataset.deviceId;
+            
+            try {
+                const property = JSON.parse(button.dataset.property);
+                
+                // Add validation for Last_Maintenance property
+                if (property.name === 'Last_Maintenance') {
+                    if (!isValidMaintenanceDate(input.value)) {
+                        showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
+                        return;
+                    }
+                }
+                
+                // Disable input and button during update
+                input.disabled = true;
+                button.disabled = true;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span class="animate-spin">⌛</span>';
+                
+                property.new_value = input.value;
+                await updatePropertyValue(deviceId, property);
+                
+                // Show success toast
+                showToast('Property updated successfully. Refreshing...', 'success');
+                
+                // Small delay to show success state
+                setTimeout(() => {
+                    // Force reload from server, not cache
+                    window.location.href = window.location.href.split('#')[0];
+                    window.location.reload(true);
+                }, 1000);
+                
+            } catch (error) {
+                // Re-enable input and button
+                input.disabled = false;
+                button.disabled = false;
+                button.innerHTML = originalText;
+                
+                logToConsole(`Error handling property input: ${error.message}`, 'error');
+                showError(`Failed to handle property input: ${error.message}`);
             }
         }
+
+        // Enter key handler - triggers the update button click
+        function handlePropertyInputKeydown(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const input = event.target;
+                const button = input.nextElementSibling;
+                if (button) {
+                    button.click();
+                }
+            }
+        }
+
+        // Remove all other handlers to avoid conflicts
+        function handlePropertyUpdate(event) {
+            if (event.key === 'Enter') {
+                handlePropertyInputKeydown(event);
+            }
+        }
+
+        function handlePropertyInputChange(event) {
+            const input = event.target;
+            if (input.type === 'checkbox') {
+                const button = input.nextElementSibling;
+                if (button) {
+                    button.click();
+                }
+            }
+        }
+
+        // Remove keyboard shortcut for auto-commit since it's no longer needed
+        document.removeEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+                autoCommitChanges();
+            }
+        });
 
         // Add date validation function
         function isValidMaintenanceDate(dateStr) {
@@ -3155,6 +3231,7 @@
                                                                 data-device-id="${device.id}"
                                                                 data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
                                                                 class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-colors"
+                                                                type="button"
                                                             >
                                                                 Update
                                                             </button>
@@ -3234,6 +3311,7 @@
 
         // Standardize all property update handlers
         async function handleUpdateButtonClick(event) {
+            event.preventDefault(); // Prevent any default button behavior
             const button = event.target;
             const input = button.previousElementSibling;
             const deviceId = button.dataset.deviceId;
@@ -3279,35 +3357,31 @@
             }
         }
 
-        // Update Enter key handler to use the same logic
+        // Enter key handler - triggers the update button click
         function handlePropertyInputKeydown(event) {
             if (event.key === 'Enter') {
                 event.preventDefault();
                 const input = event.target;
                 const button = input.nextElementSibling;
                 if (button) {
-                    button.click(); // Use native click instead of dispatching event
+                    button.click();
                 }
             }
         }
 
-        // Update property input change handler to use the same logic
-        function handlePropertyInputChange(event) {
-            const input = event.target;
-            const button = input.nextElementSibling;
-            if (button) {
-                const clickEvent = new Event('click');
-                button.dispatchEvent(clickEvent);
+        // Remove all other handlers to avoid conflicts
+        function handlePropertyUpdate(event) {
+            if (event.key === 'Enter') {
+                handlePropertyInputKeydown(event);
             }
         }
 
-        // Remove duplicate handlers
-        function handlePropertyUpdate(event, deviceId, property) {
-            if (event.key === 'Enter') {
-                const input = event.target;
+        function handlePropertyInputChange(event) {
+            const input = event.target;
+            if (input.type === 'checkbox') {
                 const button = input.nextElementSibling;
                 if (button) {
-                    button.click(); // Use native click instead of dispatching event
+                    button.click();
                 }
             }
         }
@@ -5434,3 +5508,4 @@
     </script>
 
     
+
