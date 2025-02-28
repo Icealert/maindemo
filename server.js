@@ -465,7 +465,7 @@ setInterval(async () => {
 // Optimize email sending to use less memory
 async function sendNotificationEmail(device, email) {
     try {
-        const deviceName = device.name || 'Unnamed Device';
+        const deviceName = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device';
         const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
         const criticalReasons = [];
 
@@ -593,7 +593,7 @@ async function sendNotificationEmail(device, email) {
             html: htmlContent
         });
 
-        logger.info(`Alert sent to ${email} for device ${device.id}`);
+        logger.info(`Alert sent to ${email} for device ${device.id} (${deviceName})`);
         
         // Clear references to help GC
         criticalReasons.length = 0;
@@ -774,7 +774,7 @@ async function calculateDeviceStatus(device, devicesApi) {
 // Function to generate email content
 function generateEmailContent(device, status) {
     const location = device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Unknown location';
-    const deviceName = device.name || device.id;
+    const deviceName = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || device.id;
     
     let subject = `Alert: ${deviceName} at ${location} - `;
     let issues = [];
