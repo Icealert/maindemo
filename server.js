@@ -469,6 +469,42 @@ async function sendNotificationEmail(device, email) {
         const location = device.thing.properties.find(p => p.name === 'location')?.last_value || 'Unknown location';
         const criticalReasons = [];
 
+        // Calculate connection status
+        const lastActivity = new Date(device.last_activity_at);
+        const now = new Date();
+        const minutesSinceLastActivity = (now - lastActivity) / (1000 * 60);
+        const isDisconnected = minutesSinceLastActivity >= 5; // 5 minutes threshold
+        
+        // Add connection status as first critical reason
+        const connectionStatus = isDisconnected ? 
+            `<div class="alert">
+                <strong>Device Disconnected</strong><br>
+                Last seen: ${lastActivity.toLocaleString('en-US', { 
+                    timeZone: 'America/Chicago',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })} CST<br>
+                Offline for: ${Math.floor(minutesSinceLastActivity)} minutes
+            </div>` :
+            `<div class="alert" style="background-color: #f0fdf4; border-left-color: #22c55e;">
+                <strong style="color: #16a34a;">Device Connected</strong><br>
+                Last activity: ${lastActivity.toLocaleString('en-US', { 
+                    timeZone: 'America/Chicago',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })} CST
+            </div>`;
+        
+        criticalReasons.push(connectionStatus);
+
         // Process properties one at a time and clean up references
         const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
         const tempThreshold = device.thing.properties.find(p => p.name === 'tempThresholdMax');
@@ -546,6 +582,15 @@ async function sendNotificationEmail(device, email) {
                         'Critical threshold:',
                         '<span style="color: #ff6b6b;">Critical threshold:</span>'
                     ).replace(
+                        'Last seen:',
+                        '<span style="color: #ff6b6b;">Last seen:</span>'
+                    ).replace(
+                        'Offline for:',
+                        '<span style="color: #ff6b6b;">Offline for:</span>'
+                    ).replace(
+                        'Last activity:',
+                        '<span style="color: #16a34a;">Last activity:</span>'
+                    ).replace(
                         '</div>',
                         '</div></div>'
                     )).join('')}
@@ -589,7 +634,7 @@ async function sendNotificationEmail(device, email) {
                 address: process.env.EMAIL_USER
             },
             to: email,
-            subject: `🚨 CRITICAL Alert: ${deviceName} at ${location}`,
+            subject: `🚨 CRITICAL Alert: ${deviceName} at ${location}${isDisconnected ? ' - DISCONNECTED' : ''}`,
             html: htmlContent
         });
 
@@ -779,53 +824,19 @@ function generateEmailContent(device, status) {
     let subject = `Alert: ${deviceName} at ${location} - `;
     let issues = [];
 
-    // Add disconnection status to email with more detail
+    // Add disconnection status to email
     if (status.isDisconnected) {
-        const minutesSinceLastActivity = Math.floor(status.minutesSinceLastActivity);
-        const hours = Math.floor(minutesSinceLastActivity / 60);
-        const minutes = minutesSinceLastActivity % 60;
-        const timeString = hours > 0 ? 
-            `${hours} hour${hours > 1 ? 's' : ''} and ${minutes} minute${minutes !== 1 ? 's' : ''}` : 
-            `${minutes} minute${minutes !== 1 ? 's' : ''}`;
-            
-        issues.push({
-            title: 'Device Disconnected',
-            detail: `Device has been offline for ${timeString}`,
-            timestamp: `Last seen: ${new Date(status.lastActivity).toLocaleString('en-US', {
-                timeZone: 'America/Chicago',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            })} CST`
-        });
+        issues.push(`Device has been disconnected for ${Math.floor(status.minutesSinceLastActivity)} minutes. Last seen: ${new Date(status.lastActivity).toLocaleString()}`);
     }
 
-    // Add temperature status with detailed comparison
     if (status.isTemperatureBad) {
         const tempF = (status.cloudTemp * 9/5) + 32;
         const thresholdF = (status.tempThresholdMax * 9/5) + 32;
-        issues.push({
-            title: 'High Temperature Alert',
-            detail: `Current temperature (${tempF.toFixed(1)}°F) exceeds the maximum threshold (${thresholdF.toFixed(1)}°F)`,
-            comparison: `${(tempF - thresholdF).toFixed(1)}°F above threshold`
-        });
+        issues.push(`Temperature is high: ${tempF.toFixed(1)}°F (Threshold: ${thresholdF.toFixed(1)}°F)`);
     }
 
-    // Add flow status with detailed time information
     if (status.isFlowBad) {
-        const currentFlowHours = status.timeSinceFlowHours;
-        const criticalHours = status.noFlowCriticalTime;
-        const hoursPastThreshold = currentFlowHours - criticalHours;
-        
-        issues.push({
-            title: 'No Water Flow Alert',
-            detail: `No water flow detected for ${currentFlowHours.toFixed(1)} hours`,
-            threshold: `Critical threshold: ${criticalHours} hours`,
-            exceedBy: hoursPastThreshold > 0 ? `Exceeded threshold by ${hoursPastThreshold.toFixed(1)} hours` : ''
-        });
+        issues.push(`No water flow detected for ${status.timeSinceFlowHours.toFixed(1)} hours (Critical: ${status.noFlowCriticalTime} hours)`);
     }
 
     subject += status.shouldBeCritical ? 'CRITICAL STATUS' : 'Warning Status';
@@ -838,32 +849,14 @@ function generateEmailContent(device, status) {
             <p><strong>Device:</strong> ${deviceName}</p>
             <p><strong>Location:</strong> ${location}</p>
             <div style="margin: 20px 0; padding: 15px; background-color: ${status.shouldBeCritical ? '#fee2e2' : '#fef3c7'}; border-radius: 8px;">
-                <h3 style="margin-top: 0;">Critical Issues Detected:</h3>
-                ${issues.map(issue => `
-                    <div style="margin: 15px 0; padding: 12px; background-color: white; border-radius: 6px; border-left: 4px solid ${status.shouldBeCritical ? '#dc2626' : '#d97706'}">
-                        <h4 style="margin: 0 0 10px 0; color: #dc2626;">${issue.title}</h4>
-                        <p style="margin: 5px 0;">${issue.detail}</p>
-                        ${issue.threshold ? `<p style="margin: 5px 0; color: #666;">${issue.threshold}</p>` : ''}
-                        ${issue.comparison ? `<p style="margin: 5px 0; color: #991b1b;">${issue.comparison}</p>` : ''}
-                        ${issue.exceedBy ? `<p style="margin: 5px 0; color: #991b1b;">${issue.exceedBy}</p>` : ''}
-                        ${issue.timestamp ? `<p style="margin: 5px 0; color: #666; font-size: 0.9em;">${issue.timestamp}</p>` : ''}
-                    </div>
-                `).join('')}
+                <h3 style="margin-top: 0;">Issues Detected:</h3>
+                <ul style="margin: 0; padding-left: 20px;">
+                    ${issues.map(issue => `<li style="margin: 10px 0;">${issue}</li>`).join('')}
+                </ul>
             </div>
             <p style="font-size: 0.9em; color: #666;">
                 This is an automated message from your FreezeSense monitoring system.
                 Please check your device dashboard for more details.
-            </p>
-            <p style="font-size: 0.9em; color: #666;">
-                Alert generated at: ${new Date().toLocaleString('en-US', {
-                    timeZone: 'America/Chicago',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                })} CST
             </p>
         </div>
     `;
