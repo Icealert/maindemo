@@ -1429,30 +1429,11 @@
         // Modify the property update handling
         function handlePropertyInputKeydown(event) {
             if (event.key === 'Enter') {
+                event.preventDefault();
                 const input = event.target;
-                const deviceId = input.dataset.deviceId;
-                
-                try {
-                    const property = JSON.parse(input.dataset.property);
-                    
-                    // Add validation for Last_Maintenance property
-                    if (property.name === 'Last_Maintenance') {
-                        if (!isValidMaintenanceDate(input.value)) {
-                            showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
-                            return;
-                        }
-                    }
-                    
-                    property.new_value = input.value;
-                    
-                    if (!deviceId) {
-                        throw new Error('Device ID is missing');
-                    }
-                    
-                    updatePropertyValue(deviceId, property);
-                } catch (error) {
-                    logToConsole(`Error handling property input: ${error.message}`, 'error');
-                    showError(`Failed to handle property input: ${error.message}`);
+                const button = input.nextElementSibling;
+                if (button) {
+                    button.click(); // Use native click instead of dispatching event
                 }
             }
         }
@@ -3253,11 +3234,12 @@
 
         // Standardize all property update handlers
         async function handleUpdateButtonClick(event) {
-            const input = event.target.previousElementSibling;
-            const deviceId = input.dataset.deviceId;
+            const button = event.target;
+            const input = button.previousElementSibling;
+            const deviceId = button.dataset.deviceId;
             
             try {
-                const property = JSON.parse(input.dataset.property);
+                const property = JSON.parse(button.dataset.property);
                 
                 // Add validation for Last_Maintenance property
                 if (property.name === 'Last_Maintenance') {
@@ -3267,8 +3249,11 @@
                     }
                 }
                 
-                // Disable input during update
+                // Disable input and button during update
                 input.disabled = true;
+                button.disabled = true;
+                const originalText = button.innerHTML;
+                button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
                 property.new_value = input.value;
                 await updatePropertyValue(deviceId, property);
@@ -3284,8 +3269,10 @@
                 }, 1000);
                 
             } catch (error) {
-                // Re-enable input
+                // Re-enable input and button
                 input.disabled = false;
+                button.disabled = false;
+                button.innerHTML = originalText;
                 
                 logToConsole(`Error handling property input: ${error.message}`, 'error');
                 showError(`Failed to handle property input: ${error.message}`);
@@ -3299,8 +3286,7 @@
                 const input = event.target;
                 const button = input.nextElementSibling;
                 if (button) {
-                    const clickEvent = new Event('click');
-                    button.dispatchEvent(clickEvent);
+                    button.click(); // Use native click instead of dispatching event
                 }
             }
         }
@@ -3321,8 +3307,7 @@
                 const input = event.target;
                 const button = input.nextElementSibling;
                 if (button) {
-                    const clickEvent = new Event('click');
-                    button.dispatchEvent(clickEvent);
+                    button.click(); // Use native click instead of dispatching event
                 }
             }
         }
