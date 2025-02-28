@@ -475,32 +475,25 @@ async function sendNotificationEmail(device, email) {
         const minutesSinceLastActivity = (now - lastActivity) / (1000 * 60);
         const isDisconnected = minutesSinceLastActivity >= 5; // 5 minutes threshold
         
+        // Format the last activity time to match main page
+        const lastActivityFormatted = lastActivity.toLocaleString('en-US', { 
+            timeZone: 'America/Chicago',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        
         // Add connection status as first critical reason
         const connectionStatus = isDisconnected ? 
             `<div class="alert">
                 <strong>Device Disconnected</strong><br>
-                Last seen: ${lastActivity.toLocaleString('en-US', { 
-                    timeZone: 'America/Chicago',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                })} CST<br>
-                Offline for: ${Math.floor(minutesSinceLastActivity)} minutes
+                Last Connected: ${lastActivityFormatted} CST
             </div>` :
             `<div class="alert" style="background-color: #f0fdf4; border-left-color: #22c55e;">
                 <strong style="color: #16a34a;">Device Connected</strong><br>
-                Last activity: ${lastActivity.toLocaleString('en-US', { 
-                    timeZone: 'America/Chicago',
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                })} CST
+                Last Activity: ${lastActivityFormatted} CST
             </div>`;
         
         criticalReasons.push(connectionStatus);
@@ -582,14 +575,11 @@ async function sendNotificationEmail(device, email) {
                         'Critical threshold:',
                         '<span style="color: #ff6b6b;">Critical threshold:</span>'
                     ).replace(
-                        'Last seen:',
-                        '<span style="color: #ff6b6b;">Last seen:</span>'
+                        'Last Connected:',
+                        '<span style="color: #ff6b6b;">Last Connected:</span>'
                     ).replace(
-                        'Offline for:',
-                        '<span style="color: #ff6b6b;">Offline for:</span>'
-                    ).replace(
-                        'Last activity:',
-                        '<span style="color: #16a34a;">Last activity:</span>'
+                        'Last Activity:',
+                        '<span style="color: #16a34a;">Last Activity:</span>'
                     ).replace(
                         '</div>',
                         '</div></div>'
@@ -615,12 +605,10 @@ async function sendNotificationEmail(device, email) {
                     <p style="color: #888; font-size: 14px; margin: 10px 0 0 0;">
                         Alert generated at: ${new Date().toLocaleString('en-US', { 
                             timeZone: 'America/Chicago',
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
+                            month: 'short',
+                            day: 'numeric',
+                            hour: 'numeric',
                             minute: '2-digit',
-                            second: '2-digit',
                             hour12: true
                         })} CST
                     </p>
