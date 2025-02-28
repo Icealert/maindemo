@@ -485,18 +485,14 @@ async function sendNotificationEmail(device, email) {
             hour12: true
         });
         
-        // Add connection status as first critical reason
-        const connectionStatus = isDisconnected ? 
-            `<div class="alert">
+        // Add connection status as first critical reason only if disconnected
+        if (isDisconnected) {
+            const connectionStatus = `<div class="alert">
                 <strong>Device Disconnected</strong><br>
                 Last Connected: ${lastActivityFormatted} CST
-            </div>` :
-            `<div class="alert" style="background-color: #f0fdf4; border-left-color: #22c55e;">
-                <strong style="color: #16a34a;">Device Connected</strong><br>
-                Last Activity: ${lastActivityFormatted} CST
             </div>`;
-        
-        criticalReasons.push(connectionStatus);
+            criticalReasons.push(connectionStatus);
+        }
 
         // Process properties one at a time and clean up references
         const tempProp = device.thing.properties.find(p => p.name === 'cloudtemp');
@@ -577,9 +573,6 @@ async function sendNotificationEmail(device, email) {
                     ).replace(
                         'Last Connected:',
                         '<span style="color: #ff6b6b;">Last Connected:</span>'
-                    ).replace(
-                        'Last Activity:',
-                        '<span style="color: #16a34a;">Last Activity:</span>'
                     ).replace(
                         '</div>',
                         '</div></div>'
