@@ -1420,13 +1420,7 @@
                 const originalText = button.innerHTML;
                 button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
-                // For temperature properties, ensure we're getting the Fahrenheit value from the input
-                let newValue = input.value;
-                if (property.name.toLowerCase().includes('temp')) {
-                    newValue = input.value; // Input already shows Fahrenheit
-                }
-                
-                property.new_value = newValue;
+                property.new_value = input.value;
                 
                 // Log the update attempt
                 logToConsole({
@@ -5455,7 +5449,7 @@
 
         async function handleUpdateButtonClick(event) {
             // ... existing handleUpdateButtonClick code ...
-            await autoCommitChanges();
+            // Remove the autoCommitChanges call
         }
 
         // Add keyboard shortcut for manual commit
