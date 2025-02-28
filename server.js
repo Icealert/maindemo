@@ -539,12 +539,14 @@ async function sendNotificationEmail(device, email) {
             <!-- Main Content -->
             <div style="background-color: white; padding: 30px; border-radius: 0 0 8px 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
                 <!-- Device Info -->
-                <div style="margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid #eee;">
-                    <h2 style="color: #333; margin: 0 0 10px 0; font-size: 28px;">${deviceName}</h2>
-                    <p style="color: #666; font-size: 18px; margin: 0;">
-                        <strong style="color: #444;">Location:</strong> 
-                        <span style="background: #f8f9fa; padding: 3px 8px; border-radius: 4px;">${location}</span>
-                    </p>
+                <div style="background: #fff4f4; padding: 25px; border-radius: 8px; border-left: 6px solid #ff4444; margin-bottom: 20px;">
+                    <div style="margin-bottom: 20px; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.08);">
+                        <strong style="font-size: 24px; color: #ff4444; display: block; margin-bottom: 10px;">Device Information</strong>
+                        <div style="font-size: 20px; color: #444; line-height: 1.5;">
+                            <span style="color: #ff6b6b;">Device Name:</span> ${deviceName}<br>
+                            <span style="color: #ff6b6b;">Location:</span> ${location}
+                        </div>
+                    </div>
                 </div>
                 
                 <!-- Alert Details -->
