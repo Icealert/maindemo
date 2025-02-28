@@ -1427,6 +1427,16 @@
                 }
                 
                 property.new_value = newValue;
+                
+                // Log the update attempt
+                logToConsole({
+                    message: 'Attempting to update property via button click',
+                    deviceId: deviceId,
+                    propertyName: property.name,
+                    currentValue: property.last_value,
+                    newValue: property.new_value
+                }, 'info');
+                
                 await updatePropertyValue(deviceId, property);
                 
                 // Show success toast
@@ -1446,7 +1456,7 @@
                 button.innerHTML = originalText;
                 
                 logToConsole(`Error handling property input: ${error.message}`, 'error');
-                showError(`Failed to handle property input: ${error.message}`);
+                showError(`Failed to update property: ${error.message}`);
             }
         }
 
@@ -1944,7 +1954,7 @@
                     <div class="flex justify-between items-start mb-3">
                         <div>
                             <h3 class="text-base font-bold text-gray-800 mb-0.5">
-                                Device ${device.name.replace(/[^0-9]/g, '')}
+                                ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || `Device ${device.name.replace(/[^0-9]/g, '')}`}
                             </h3>
                             <p class="text-xs text-gray-600 flex items-center">
                                 <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3247,8 +3257,8 @@
                                                             <div class="flex space-x-3">
                                                             <input 
                                                                 type="${getPropertyInputType(property)}"
-                                                                    class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                                    value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
+                                                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                                                value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
                                                                 placeholder="Enter new value"
                                                                 data-device-id="${device.id}"
                                                                 data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
@@ -3260,7 +3270,8 @@
                                                                 onclick="handleUpdateButtonClick(event)"
                                                                 data-device-id="${device.id}"
                                                                 data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                                                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                                                                type="button"
                                                             >
                                                                 Update
                                                             </button>
@@ -5510,29 +5521,6 @@
 
         function hideDeviceSettings() {
             document.getElementById('settings-modal').classList.add('hidden');
-        }
-
-        // Function to automatically commit changes
-        async function autoCommitChanges() {
-            try {
-                const response = await fetch(`${API_URL}/api/iot/v2/commit`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
-                showToast('Changes committed successfully', 'success');
-                logToConsole('Auto-commit successful', 'info');
-            } catch (error) {
-                showError(`Failed to commit changes: ${error.message}`);
-                logToConsole(`Auto-commit failed: ${error.message}`, 'error');
-            }
         }
     </script>
 
