@@ -205,6 +205,13 @@
                                 >
                                     Setup Guide
                                 </button>
+                                <span class="mx-2 text-gray-300">|</span>
+                                <button 
+                                    onclick="showKnownBugs()" 
+                                    class="text-xs text-blue-600 hover:text-blue-800 underline"
+                                >
+                                    Known Bugs
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -1040,6 +1047,101 @@
                 </button>
             </div>
             <div id="settings-modal-content"></div>
+        </div>
+    </div>
+
+    <!-- Known Bugs Modal -->
+    <div id="known-bugs-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 class="text-2xl font-bold text-gray-800">Known Bugs & Issues</h2>
+                    <p class="text-sm text-gray-600 mt-1">Current list of known issues and their status</p>
+                </div>
+                <button onclick="hideKnownBugs()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <!-- Active Issues -->
+                <div>
+                    <h3 class="text-lg font-semibold text-red-600 mb-4">Active Issues</h3>
+                    <div class="space-y-4">
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-red-800">Temperature Update Delay</h4>
+                                    <p class="mt-1 text-sm text-red-700">Temperature readings may occasionally show a delay of up to 5 minutes in updating.</p>
+                                    <p class="mt-2 text-xs text-red-600">Status: Under Investigation</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recently Fixed -->
+                <div>
+                    <h3 class="text-lg font-semibold text-green-600 mb-4">Recently Fixed</h3>
+                    <div class="space-y-4">
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-green-800">Email Notification Delay</h4>
+                                    <p class="mt-1 text-sm text-green-700">Fixed issue with delayed email notifications for critical alerts.</p>
+                                    <p class="mt-2 text-xs text-green-600">Fixed in: v1.0.2</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-green-800">Device Name Update</h4>
+                                    <p class="mt-1 text-sm text-green-700">Fixed issue with device names not updating immediately after changes.</p>
+                                    <p class="mt-2 text-xs text-green-600">Fixed in: v1.0.2</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Known Limitations -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-600 mb-4">Known Limitations</h3>
+                    <div class="space-y-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="flex items-start">
+                                <div class="flex-shrink-0">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h4 class="text-sm font-medium text-gray-800">Historical Data Limit</h4>
+                                    <p class="mt-1 text-sm text-gray-600">Historical data is currently limited to the last 30 days.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -5515,6 +5617,16 @@
 
         function hideDeviceSettings() {
             document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function showKnownBugs() {
+            document.getElementById('known-bugs-modal').classList.remove('hidden');
+            document.getElementById('known-bugs-modal').classList.add('flex');
+        }
+
+        function hideKnownBugs() {
+            document.getElementById('known-bugs-modal').classList.add('hidden');
+            document.getElementById('known-bugs-modal').classList.remove('flex');
         }
     </script>
 
