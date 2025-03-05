@@ -1508,63 +1508,7 @@
             }
         }
 
-        // Single source of truth for property updates
-        async function handleUpdateButtonClick(event) {
-            event.preventDefault(); // Prevent any default button behavior
-            const button = event.target;
-            const input = button.previousElementSibling;
-            const deviceId = button.dataset.deviceId;
-            
-            try {
-                const property = JSON.parse(button.dataset.property);
-                
-                // Add validation for Last_Maintenance property
-                if (property.name === 'Last_Maintenance') {
-                    if (!isValidMaintenanceDate(input.value)) {
-                        showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
-                        return;
-                    }
-                }
-                
-                // Disable input and button during update
-                input.disabled = true;
-                button.disabled = true;
-                const originalText = button.innerHTML;
-                button.innerHTML = '<span class="animate-spin">⌛</span>';
-                
-                property.new_value = input.value;
-                
-                // Log the update attempt
-                logToConsole({
-                    message: 'Attempting to update property via button click',
-                    deviceId: deviceId,
-                    propertyName: property.name,
-                    currentValue: property.last_value,
-                    newValue: property.new_value
-                }, 'info');
-                
-                await updatePropertyValue(deviceId, property);
-                
-                // Show success toast
-                showToast('Property updated successfully. Refreshing...', 'success');
-                
-                // Small delay to show success state
-                setTimeout(() => {
-                    // Force reload from server, not cache
-                    window.location.href = window.location.href.split('#')[0];
-                    window.location.reload(true);
-                }, 1000);
-                
-            } catch (error) {
-                // Re-enable input and button
-                input.disabled = false;
-                button.disabled = false;
-                button.innerHTML = originalText;
-                
-                logToConsole(`Error handling property input: ${error.message}`, 'error');
-                showError(`Failed to update property: ${error.message}`);
-            }
-        }
+       
 
         // Enter key handler - triggers the update button click
         function handlePropertyInputKeydown(event) {
@@ -3457,6 +3401,16 @@
                 button.innerHTML = '<span class="animate-spin">⌛</span>';
                 
                 property.new_value = input.value;
+                
+                // Log the update attempt
+                logToConsole({
+                    message: 'Attempting to update property via button click',
+                    deviceId: deviceId,
+                    propertyName: property.name,
+                    currentValue: property.last_value,
+                    newValue: property.new_value
+                }, 'info');
+                
                 await updatePropertyValue(deviceId, property);
                 
                 // Show success toast
@@ -3476,81 +3430,7 @@
                 button.innerHTML = originalText;
                 
                 logToConsole(`Error handling property input: ${error.message}`, 'error');
-                showError(`Failed to handle property input: ${error.message}`);
-            }
-        }
-
-        // Enter key handler - triggers the update button click
-        function handlePropertyInputKeydown(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const input = event.target;
-                const button = input.nextElementSibling;
-                if (button) {
-                    button.click();
-                }
-            }
-        }
-
-        // Remove all other handlers to avoid conflicts
-        function handlePropertyUpdate(event) {
-            if (event.key === 'Enter') {
-                handlePropertyInputKeydown(event);
-            }
-        }
-
-        function handlePropertyInputChange(event) {
-            const input = event.target;
-            if (input.type === 'checkbox') {
-                const button = input.nextElementSibling;
-                if (button) {
-                    button.click();
-                }
-            }
-        }
-
-        // ... existing code ...
-
-        // Update the property update handler for Enter key
-        async function handlePropertyInputKeydown(event) {
-            if (event.key === 'Enter') {
-                const input = event.target;
-                const deviceId = input.dataset.deviceId;
-                
-                try {
-                    const property = JSON.parse(input.dataset.property);
-                    
-                    // Add validation for Last_Maintenance property
-                    if (property.name === 'Last_Maintenance') {
-                        if (!isValidMaintenanceDate(input.value)) {
-                            showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
-                            return;
-                        }
-                    }
-                    
-                    // Disable input during update
-                    input.disabled = true;
-                    
-                    property.new_value = input.value;
-                    await updatePropertyValue(deviceId, property);
-                    
-                    // Show success toast
-                    showToast('Property updated successfully. Refreshing...', 'success');
-                    
-                    // Small delay to show success state
-                    setTimeout(() => {
-                        // Force reload from server, not cache
-                        window.location.href = window.location.href.split('#')[0];
-                        window.location.reload(true);
-                    }, 1000);
-                    
-                } catch (error) {
-                    // Re-enable input
-                    input.disabled = false;
-                    
-                    logToConsole(`Error handling property input: ${error.message}`, 'error');
-                    showError(`Failed to handle property input: ${error.message}`);
-                }
+                showError(`Failed to update property: ${error.message}`);
             }
         }
 
@@ -5551,19 +5431,7 @@
             }
         }
 
-        async function handlePropertyUpdate(event, deviceId, property) {
-            if (event.key === 'Enter') {
-                const newValue = event.target.value;
-                property.new_value = newValue;
-                await updatePropertyValue(deviceId, property);
-            }
-        }
-
-        async function handleUpdateButtonClick(event) {
-            // ... existing handleUpdateButtonClick code ...
-            // Remove the autoCommitChanges call
-        }
-
+      
         // Add keyboard shortcut for manual commit
         document.addEventListener('keydown', function(e) {
             // Ctrl/Cmd + Shift + C to trigger manual commit
