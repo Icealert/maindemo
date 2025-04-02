@@ -4160,7 +4160,7 @@
             document.getElementById('faq-modal').classList.add('flex');
             
             // Load FAQ content
-            fetch('/components/other.html')
+            fetch('/public/components/other.html')
                 .then(response => response.text())
                 .then(html => {
                     document.getElementById('faq-content').innerHTML = html;
