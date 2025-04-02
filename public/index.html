@@ -16,11 +16,11 @@
         <!-- Status and Error Messages -->
         <div id="status" class="fixed top-0 left-0 right-0 bg-blue-100 text-blue-700 px-4 py-3 text-center hidden">
             Loading...
-        </div>
+                </div>
         <div id="error" class="fixed top-0 left-0 right-0 bg-red-100 text-red-700 px-4 py-3 text-center hidden">
             <span id="error-message"></span>
         </div>
-
+        
         <!-- Main Content Area -->
         <div class="container mx-auto px-4 py-8">
             <!-- Device Grid Container -->
@@ -28,7 +28,7 @@
                 <!-- Devices will be dynamically inserted here -->
             </div>
         </div>
-
+        
         <div id="main-content"></div>
         <div id="modals"></div>
         <div id="other"></div>
@@ -37,11 +37,11 @@
         <div id="debug-console" class="fixed bottom-0 right-0 w-96 bg-gray-900 text-white p-4 hidden">
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-lg font-semibold">Debug Console</h3>
-                <div>
+                        <div>
                     <button onclick="clearConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded mr-2">Clear</button>
                     <button onclick="toggleConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded">Close</button>
-                </div>
-            </div>
+                        </div>
+                        </div>
             <div id="console-output" class="text-sm font-mono h-64 overflow-y-auto"></div>
         </div>
     </div>
@@ -4156,39 +4156,13 @@
 
         // Add these functions before the existing script content
         function showFAQ() {
-            document.getElementById('faq-modal').classList.remove('hidden');
-            document.getElementById('faq-modal').classList.add('flex');
+            document.getElementById('faqModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
         }
 
-        function hideFAQ() {
-            const modal = document.getElementById('faq-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function toggleFAQ(button) {
-            const content = button.nextElementSibling;
-            const icon = button.querySelector('svg');
-            
-            // Toggle the content visibility
-            content.classList.toggle('hidden');
-            
-            // Rotate the icon
-            if (content.classList.contains('hidden')) {
-                icon.style.transform = 'rotate(0deg)';
-            } else {
-                icon.style.transform = 'rotate(180deg)';
-            }
-        }
-
-        function showSetupGuide() {
-            document.getElementById('setup-modal').classList.remove('hidden');
-            document.getElementById('setup-modal').classList.add('flex');
-        }
-
-        function hideSetupGuide() {
-            document.getElementById('setup-modal').classList.add('hidden');
-            document.getElementById('setup-modal').classList.remove('flex');
+        function closeFAQ() {
+            document.getElementById('faqModal').classList.add('hidden');
+            document.body.style.overflow = 'auto';
         }
 
         // Add to script section
