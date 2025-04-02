@@ -4121,11 +4121,6 @@
             container.parentNode.insertBefore(refreshButton, container);
         }
 
-        // Call this when the page loads
-        document.addEventListener('DOMContentLoaded', function() {
-            addRefreshButton();
-        });
-
         // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
         fetchDevices();
         const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
@@ -4437,6 +4432,6 @@
             document.getElementById('known-bugs-modal').classList.remove('flex');
         }
     </script>
-
-    
+</body>
+</html>
 
