@@ -78,36 +78,78 @@
 
 <!-- FAQ Modal -->
 <div id="faq-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div class="flex justify-between items-start mb-8">
+    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-4">
             <div>
                 <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
-                <p class="text-sm text-gray-600 mt-1">Find answers to common questions about FreezeSense</p>
+                <p class="text-gray-600">Find answers to common questions about FreezeSense</p>
             </div>
-            <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700 transition-colors">
+            <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
                 </svg>
             </button>
         </div>
 
-        <!-- Search Bar -->
-        <div class="relative mb-8">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                </svg>
-            </div>
-            <input 
-                type="text" 
-                id="faq-search" 
-                class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Search frequently asked questions..."
-                onkeyup="searchFAQ(this.value)"
-            >
-        </div>
+        <!-- FAQ Content -->
+        <div id="faq-content">
+            <!-- FAQ Categories -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- General Questions -->
+                <div class="space-y-6">
+                    <div class="border-b border-gray-200 pb-2">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            General Information
+                        </h3>
+                    </div>
+                    
+                    <!-- What is FreezeSense -->
+                    <div class="faq-item" data-category="general">
+                        <button class="w-full text-left focus:outline-none group" onclick="toggleFAQ(this)">
+                            <div class="flex items-center justify-between p-3 rounded-lg hover:bg-gray-50 transition-colors">
+                                <div class="flex items-center space-x-3">
+                                    <span class="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 font-semibold text-sm">Q1</span>
+                                    <span class="font-medium text-gray-800">What is FreezeSense?</span>
+                                </div>
+                                <svg class="w-5 h-5 text-gray-400 transform transition-transform duration-200 group-data-[expanded=true]:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                </svg>
+                            </div>
+                        </button>
+                        <div class="hidden px-14 pb-5">
+                            <div class="bg-blue-50 rounded-lg p-4">
+                                <p class="text-blue-800">FreezeSense is an advanced monitoring system for ice machines that:</p>
+                                <ul class="mt-2 space-y-2 text-blue-700">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Uses temperature sensors to track ice levels in real-time
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Monitors water flow to determine ice production status
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                        </svg>
+                                        Sends alerts when potential issues are detected
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
 
-        <div id="faq-content"></div>
+                    <!-- ... Copy all other FAQ items from other.html ... -->
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
