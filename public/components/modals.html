@@ -1,0 +1,322 @@
+<!-- Disclaimer Modal -->
+<div id="disclaimer-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Beta Version Disclaimer</h2>
+            <button onclick="hideDisclaimer()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="text-gray-600 space-y-4">
+            <p>Welcome to the FreezeSense Beta version. Please be aware that:</p>
+            <ul class="list-disc pl-5 space-y-2">
+                <li>This is a beta release and features may be incomplete or subject to change</li>
+                <li>Data accuracy and system reliability are being continuously improved</li>
+                <li>The interface and functionality may be updated without prior notice</li>
+                <li>We recommend verifying critical alerts through physical inspection</li>
+                <li>Your feedback is valuable in helping us improve the system</li>
+            </ul>
+            <p class="text-sm mt-4">
+                By using this beta version, you acknowledge that the system is under development and 
+                should not be solely relied upon for critical ice machine monitoring without appropriate backup measures.
+            </p>
+            <hr class="my-4 border-gray-200" />
+            <div class="text-sm text-gray-500">
+                <p>This application is being developed for a specific undisclosed client.</p>
+                <div class="mt-4 space-y-3">
+                    <div>
+                        <p class="font-medium">Business & Sales Inquiries:</p>
+                        <p class="mt-1">For information about purchasing units or exploring customized monitoring solutions for your business, please contact:</p>
+                        <p class="font-medium mt-1">Aarya Shah</p>
+                        <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                    </div>
+                    <div>
+                        <p class="font-medium">Technical Support & Development:</p>
+                        <p class="mt-1">For questions about the system's features, hardware specifications, or technical capabilities, please contact:</p>
+                        <p class="font-medium mt-1">Kunj Tapiawala</p>
+                        <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Contact Modal -->
+<div id="contact-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-lg w-full">
+        <div class="flex justify-between items-start mb-4">
+            <h2 class="text-xl font-bold text-gray-800">Contact Us</h2>
+            <button onclick="hideContact()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div class="text-gray-600 space-y-6">
+            <div>
+                <h3 class="font-medium text-lg text-gray-800">Business & Sales Inquiries</h3>
+                <p class="mt-2">For information about purchasing units or exploring customized monitoring solutions for your business, please contact:</p>
+                <div class="mt-3">
+                    <p class="font-medium">Aarya Shah</p>
+                    <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                </div>
+            </div>
+            <div>
+                <h3 class="font-medium text-lg text-gray-800">Technical Support & Development</h3>
+                <p class="mt-2">For questions about the system's features, hardware specifications, or technical capabilities, please contact:</p>
+                <div class="mt-3">
+                    <p class="font-medium">Kunj Tapiawala</p>
+                    <a href="mailto:freezesensedevice@gmail.com" class="text-blue-600 hover:text-blue-800">freezesensedevice@gmail.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- FAQ Modal -->
+<div id="faq-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-8">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
+                <p class="text-sm text-gray-600 mt-1">Find answers to common questions about FreezeSense</p>
+            </div>
+            <button onclick="hideFAQ()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="relative mb-8">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                </svg>
+            </div>
+            <input 
+                type="text" 
+                id="faq-search" 
+                class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Search frequently asked questions..."
+                onkeyup="searchFAQ(this.value)"
+            >
+        </div>
+
+        <div id="faq-content"></div>
+    </div>
+</div>
+
+<!-- Setup Guide Modal -->
+<div id="setup-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-8">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Device Setup Guide</h2>
+                <p class="text-sm text-gray-600 mt-1">Step-by-step instructions for installing your FreezeSense device</p>
+            </div>
+            <button onclick="hideSetupGuide()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-gray-50 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">1</span>
+                    Unboxing Contents
+                </h3>
+                <ul class="list-disc pl-6 space-y-2 text-gray-700">
+                    <li>FreezeSense monitoring unit</li>
+                    <li>Temperature sensor array</li>
+                    <li>Power adapter with 6ft cable</li>
+                    <li>Mounting brackets & hardware</li>
+                </ul>
+            </div>
+
+            <div class="bg-gray-50 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">2</span>
+                    Sensor Placement
+                </h3>
+                <img src="/setup-diagram.png" alt="Sensor placement diagram" class="w-full mb-4 rounded-lg border border-gray-200">
+                <p class="text-gray-600 mb-4">Optimal sensor positions for accurate readings:</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-green-500 mt-1 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        <div>
+                            <p class="font-medium">Do:</p>
+                            <ul class="list-disc pl-4 mt-1 text-gray-600">
+                                <li>Mount 2-3 inches above ice level</li>
+                                <li>Keep sensors clean and dry</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-red-500 mt-1 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        <div>
+                            <p class="font-medium">Don't:</p>
+                            <ul class="list-disc pl-4 mt-1 text-gray-600">
+                                <li>Place near heat sources</li>
+                                <li>Submerge in water</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-50 p-6 rounded-lg">
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center mr-3">3</span>
+                    Power & Connectivity
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-start">
+                        <svg class="w-6 h-6 text-blue-500 mr-3 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <p class="font-medium">Connection Steps:</p>
+                            <ol class="list-decimal pl-4 mt-1 text-gray-600">
+                                <li>Plug in power adapter</li>
+                                <li>Wait for blue LED indicator</li>
+                                <li>Connect to FreezeSense WiFi network</li>
+                                <li>Follow in-app setup instructions</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div id="settings-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
+        <div class="flex justify-between items-start mb-4">
+            <h2 id="settings-modal-title" class="text-2xl font-bold text-gray-800"></h2>
+            <button onclick="hideDeviceSettings()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        <div id="settings-modal-content"></div>
+    </div>
+</div>
+
+<!-- Known Bugs Modal -->
+<div id="known-bugs-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-xl shadow-2xl p-8 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-8">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Known Bugs & Issues</h2>
+                <p class="text-sm text-gray-600 mt-1">Current list of known issues and their status</p>
+            </div>
+            <button onclick="hideKnownBugs()" class="text-gray-500 hover:text-gray-700 transition-colors">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="space-y-6">
+            <!-- Active Issues -->
+            <div>
+                <h3 class="text-lg font-semibold text-red-600 mb-4">Active Issues</h3>
+                <div class="space-y-4">
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-red-800">Settings Button Temporarily Disabled</h4>
+                                <p class="mt-1 text-sm text-red-700">The settings button is currently disabled as we migrate property settings to a dedicated settings page to improve the My Details page organization.</p>
+                                <p class="mt-1 text-sm text-red-700"><strong>Status:</strong> Planned migration in progress</p>
+                                <p class="mt-2 text-xs text-red-600">Expected Completion: March 10th, 2024</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-red-800">Time Series Graph Issues</h4>
+                                <p class="mt-1 text-sm text-red-700">Flow rate and device status graphs are not displaying data correctly.</p>
+                                <p class="mt-2 text-xs text-red-600">Estimated Fix Date: March 14th, 2024</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recently Fixed -->
+            <div class="bg-green-50 p-4 rounded-lg">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <h4 class="text-sm font-medium text-green-800">Property Update Button Issue (Fixed 03/05)</h4>
+                        <p class="mt-1 text-sm text-green-700">The update button in property settings may not respond to clicks.</p>
+                        <p class="mt-2 text-xs text-green-600">Fixed by consolidating duplicate code and fixing button click handler implementation.</p>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <h3 class="text-lg font-semibold text-green-600 mb-4">Recently Fixed</h3>
+                <div class="space-y-4">
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-green-800">Email Notification Delay</h4>
+                                <p class="mt-1 text-sm text-green-700">Fixed issue with delayed email notifications for critical alerts.</p>
+                                <p class="mt-2 text-xs text-green-600">Fixed in: v1.0.2</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3">
+                                <h4 class="text-sm font-medium text-green-800">Device Name Update</h4>
+                                <p class="mt-1 text-sm text-green-700">Fixed issue with device names not updating immediately after changes.</p>
+                                <p class="mt-2 text-xs text-green-600">Fixed in: v1.0.2</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div> 

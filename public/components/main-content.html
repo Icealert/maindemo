@@ -1,0 +1,38 @@
+<div class="container mx-auto px-4 py-6">
+    <!-- Debug Console -->
+    <div id="debug-console" class="mb-4 hidden">
+        <div class="bg-gray-900 text-green-400 p-4 rounded-lg shadow-lg font-mono text-sm overflow-auto border border-gray-700" style="max-height: 300px; backdrop-filter: blur(8px);">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-white font-bold">Debug Console</h3>
+                <button onclick="clearConsole()" class="text-gray-400 hover:text-white transition-colors">Clear</button>
+            </div>
+            <div id="console-output" class="whitespace-pre-wrap"></div>
+        </div>
+    </div>
+    
+    <!-- Loading and Error States -->
+    <div id="status" class="mb-4 text-center hidden">
+        <div class="inline-flex items-center px-4 py-2 bg-blue-50 rounded-lg">
+            <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+            <p class="text-sm font-medium text-blue-600">Loading devices...</p>
+        </div>
+    </div>
+    
+    <div id="error" class="mb-4 hidden">
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg" role="alert">
+            <div class="flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <p class="font-medium">Error</p>
+                    <p class="text-sm" id="error-message"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Devices will be populated here -->
+    </div>
+</div> 
