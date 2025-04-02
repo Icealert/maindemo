@@ -10,13 +10,72 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div id="navigation"></div>
-    <div id="main-content"></div>
-    <div id="modals"></div>
-    <div id="other"></div>
+    <div id="app" class="min-h-screen bg-gray-100">
+        <div id="navigation"></div>
+        
+        <!-- Status and Error Messages -->
+        <div id="status" class="fixed top-0 left-0 right-0 bg-blue-100 text-blue-700 px-4 py-3 text-center hidden">
+            Loading...
+        </div>
+        <div id="error" class="fixed top-0 left-0 right-0 bg-red-100 text-red-700 px-4 py-3 text-center hidden">
+            <span id="error-message"></span>
+        </div>
 
- 
+        <!-- Main Content Area -->
+        <div class="container mx-auto px-4 py-8">
+            <!-- Device Grid Container -->
+            <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Devices will be dynamically inserted here -->
+            </div>
+        </div>
+
+        <div id="main-content"></div>
+        <div id="modals"></div>
+        <div id="other"></div>
+
+        <!-- Debug Console -->
+        <div id="debug-console" class="fixed bottom-0 right-0 w-96 bg-gray-900 text-white p-4 hidden">
+            <div class="flex justify-between items-center mb-2">
+                <h3 class="text-lg font-semibold">Debug Console</h3>
+                <div>
+                    <button onclick="clearConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded mr-2">Clear</button>
+                    <button onclick="toggleConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded">Close</button>
+                </div>
+            </div>
+            <div id="console-output" class="text-sm font-mono h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
     <script>
+        // Wrap initialization code in DOMContentLoaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Load components first
+            Promise.all([
+                fetch('/components/navigation.html').then(response => response.text()),
+                fetch('/components/main-content.html').then(response => response.text()),
+                fetch('/components/modals.html').then(response => response.text())
+            ]).then(([navigation, mainContent, modals]) => {
+                document.getElementById('navigation').innerHTML = navigation;
+                document.getElementById('main-content').innerHTML = mainContent;
+                document.getElementById('modals').innerHTML = modals;
+                
+                // After components are loaded, initialize the app
+                addRefreshButton();
+                fetchDevices();
+                
+                // Set up the refresh interval
+                const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
+
+                // Cleanup interval when page is unloaded
+                window.addEventListener('unload', () => {
+                    clearInterval(interval);
+                });
+            }).catch(error => {
+                console.error('Error loading components:', error);
+                showError('Failed to load page components. Please refresh the page.');
+            });
+        });
+
         // Update this at the start of your script
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000'
