@@ -119,6 +119,38 @@
             });
         });
 
+        // Additional check after full page load to ensure modals are properly initialized
+        window.onload = function() {
+            setTimeout(() => {
+                const requiredModals = ['faq-modal', 'disclaimer-modal', 'contact-modal', 'setup-modal', 'known-bugs-modal'];
+                const missingModals = requiredModals.filter(id => !document.getElementById(id));
+                
+                if (missingModals.length > 0) {
+                    console.error('Missing modals after window load:', missingModals);
+                    
+                    // Try to fix the issue by directly injecting the missing modals
+                    missingModals.forEach(modalId => {
+                        if (modalId === 'faq-modal') {
+                            fetch('./components/modals.html')
+                                .then(response => response.text())
+                                .then(html => {
+                                    const tempDiv = document.createElement('div');
+                                    tempDiv.innerHTML = html;
+                                    const faqModal = tempDiv.querySelector('#faq-modal');
+                                    if (faqModal) {
+                                        document.getElementById('modals').appendChild(faqModal);
+                                        console.log('Successfully re-injected faq-modal');
+                                    }
+                                })
+                                .catch(err => console.error('Failed to re-inject modal:', err));
+                        }
+                    });
+                } else {
+                    console.log('All modals verified after window load');
+                }
+            }, 500);
+        };
+
         // Update this at the start of your script
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000'
@@ -4217,7 +4249,47 @@
                 document.body.style.overflow = 'hidden';
             } else {
                 console.error('FAQ modal element not found');
-                showError('FAQ modal not found. Please refresh the page.');
+                
+                // Debug info to help locate the issue
+                console.log('Modals container contents:', document.getElementById('modals')?.innerHTML);
+                console.log('All available modals:', {
+                    'faq-modal': document.getElementById('faq-modal'),
+                    'disclaimer-modal': document.getElementById('disclaimer-modal'),
+                    'contact-modal': document.getElementById('contact-modal'),
+                    'setup-modal': document.getElementById('setup-modal'),
+                    'known-bugs-modal': document.getElementById('known-bugs-modal')
+                });
+                
+                // Try to re-inject the FAQ modal
+                fetch('./components/modals.html')
+                    .then(response => response.text())
+                    .then(html => {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = html;
+                        const faqModal = tempDiv.querySelector('#faq-modal');
+                        
+                        if (faqModal) {
+                            if (!document.getElementById('modals')) {
+                                const modalsDiv = document.createElement('div');
+                                modalsDiv.id = 'modals';
+                                document.body.appendChild(modalsDiv);
+                            }
+                            
+                            document.getElementById('modals').appendChild(faqModal);
+                            console.log('Successfully injected faq-modal');
+                            
+                            // Now show it
+                            faqModal.classList.remove('hidden');
+                            faqModal.classList.add('flex');
+                            document.body.style.overflow = 'hidden';
+                        } else {
+                            showError('Could not find FAQ modal content. Please refresh the page.');
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Failed to load FAQ modal:', err);
+                        showError('Failed to load FAQ modal. Please refresh the page.');
+                    });
             }
         }
 
@@ -4227,6 +4299,8 @@
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
                 document.body.style.overflow = 'auto';
+            } else {
+                console.error('FAQ modal element not found when trying to close it');
             }
         }
 
