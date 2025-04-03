@@ -8,6 +8,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
+    <!-- Added JavaScript module files -->
+    <script src="js/utils.js"></script>
+    <script src="js/ui.js"></script>
 </head>
 <body>
     <div id="app" class="min-h-screen bg-gray-100">
@@ -38,8 +41,8 @@
             <div class="flex justify-between items-center mb-2">
                 <h3 class="text-lg font-semibold">Debug Console</h3>
                         <div>
-                    <button onclick="clearConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded mr-2">Clear</button>
-                    <button onclick="toggleConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded">Close</button>
+                    <button onclick="UI.clearConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded mr-2">Clear</button>
+                    <button onclick="UI.toggleConsole()" class="text-xs bg-gray-700 px-2 py-1 rounded">Close</button>
                         </div>
                         </div>
             <div id="console-output" class="text-sm font-mono h-64 overflow-y-auto"></div>
@@ -96,13 +99,13 @@
                     
                     if (missingModals.length > 0) {
                         console.error('Missing modals after loading:', missingModals);
-                        showError(`Failed to load modals: ${missingModals.join(', ')}. Please refresh the page.`);
+                        UI.showError(`Failed to load modals: ${missingModals.join(', ')}. Please refresh the page.`);
                     } else {
                         console.log('All modals loaded successfully');
                     }
                     
                     // After components are loaded, initialize the app
-                    addRefreshButton();
+                    UI.addRefreshButton();
                     fetchDevices();
                 }, 100);
                 
@@ -115,7 +118,7 @@
                 });
             }).catch(error => {
                 console.error('Error loading components:', error);
-                showError(`Failed to load page components: ${error.message}. Please refresh the page.`);
+                UI.showError(`Failed to load page components: ${error.message}. Please refresh the page.`);
             });
         });
 
@@ -156,46 +159,11 @@
             ? 'http://localhost:3000'
             : 'https://freezesense.up.railway.app';
 
-        const statusEl = document.getElementById('status');
-        const errorEl = document.getElementById('error');
-        const errorMessageEl = document.getElementById('error-message');
-        const devicesContainer = document.getElementById('devices');
-        const consoleOutput = document.getElementById('console-output');
-        const debugConsole = document.getElementById('debug-console');
-
-        // Debug Console Functions
-        function toggleConsole() {
-            debugConsole.classList.toggle('hidden');
-        }
-
-        function clearConsole() {
-            consoleOutput.innerHTML = '';
-        }
-
-        function logToConsole(data, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const colorClass = type === 'error' ? 'text-red-400' : 
-                             type === 'warning' ? 'text-yellow-400' : 
-                             'text-green-400';
-            
-            const logEntry = document.createElement('div');
-            logEntry.className = colorClass;
-            logEntry.innerHTML = `[${timestamp}] ${typeof data === 'object' ? JSON.stringify(data, null, 2) : data}`;
-            
-            consoleOutput.appendChild(logEntry);
-            consoleOutput.scrollTop = consoleOutput.scrollHeight;
-        }
-        function parseTsArray(arr) {
-            // Log the raw input for debugging
-            logToConsole('parseTsArray raw input:', {
-                isArray: Array.isArray(arr),
-                length: arr?.length || 0,
-                sample: arr?.slice(0, 3),
-                type: typeof arr
-            }, 'info');
-
+        async function checkServerHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
             if (!Array.isArray(arr)) {
-                logToConsole('parseTsArray received non-array input:', arr, 'warning');
+                UI.logToConsole('parseTsArray received non-array input:', arr, 'warning');
                 return { times: [], values: [] };
             }
 
@@ -205,7 +173,7 @@
                     // Try different possible timestamp properties
                     const timestamp = obj.time || obj.timestamp || obj.created_at || obj.date;
                     if (!timestamp) {
-                        logToConsole('Missing timestamp in object:', obj, 'warning');
+                        UI.logToConsole('Missing timestamp in object:', obj, 'warning');
                     }
                     return timestamp;
                 }),
@@ -216,7 +184,7 @@
                                  obj.hasOwnProperty('reading') ? obj.reading : null;
                     
                     if (value === undefined || value === null) {
-                        logToConsole('Missing value in object:', obj, 'warning');
+                        UI.logToConsole('Missing value in object:', obj, 'warning');
                     }
                     return value;
                 })
@@ -224,7 +192,7 @@
 
             // Validate array lengths match
             if (result.times.length !== result.values.length) {
-                logToConsole('Array length mismatch in parseTsArray:', {
+                UI.logToConsole('Array length mismatch in parseTsArray:', {
                     timesLength: result.times.length,
                     valuesLength: result.values.length,
                     sampleTimes: result.times.slice(0, 3),
@@ -243,7 +211,7 @@
             };
 
             // Log the final processed result
-            logToConsole('parseTsArray processed result:', {
+            UI.logToConsole('parseTsArray processed result:', {
                 originalLength: arr.length,
                 validLength: cleanResult.times.length,
                 sample: validIndices.slice(0, 3).map(i => ({
@@ -253,23 +221,8 @@
             }, 'info');
 
             return cleanResult;
-        }
-        function showLoading() {
-            statusEl.classList.remove('hidden');
-            errorEl.classList.add('hidden');
-            devicesContainer.innerHTML = '';
-        }
+        
 
-        function showError(message) {
-            statusEl.classList.add('hidden');
-            errorEl.classList.remove('hidden');
-            errorMessageEl.textContent = message;
-            logToConsole(message, 'error');
-        }
-
-        function hideLoading() {
-            statusEl.classList.add('hidden');
-        }
 
         async function checkServerHealth() {
             try {
@@ -278,18 +231,15 @@
                 return true;
             } catch (error) {
                 console.error('Server health check failed:', error);
-                logToConsole('Server health check failed: ' + error.message, 'error');
+                UI.logToConsole('Server health check failed: ' + error.message, 'error');
                 return false;
             }
         }
 
-        function updateLastUpdateTime() {
-            const now = new Date();
-            document.getElementById('lastUpdateTime').textContent = now.toLocaleTimeString();
-        }
+
 
         async function fetchDevices() {
-            showLoading();
+            UI.showLoading();
             
             try {
                 // First check if server is healthy
@@ -320,76 +270,22 @@
                 window.lastDevicesData = devices;
                 
                 // Update last update time
-                updateLastUpdateTime();
+                UI.updateLastUpdateTime();
                 
                 // Log raw device data to console
-                logToConsole('Received device data (sorted):');
-                logToConsole(devices);
+                UI.logToConsole('Received device data (sorted):');
+                UI.logToConsole(devices);
                 
                 displayDevices(devices);
-                hideLoading();
+                UI.hideLoading();
             } catch (error) {
                 console.error('Error fetching devices:', error);
-                showError(error.message || 'Failed to fetch devices. Please try again later.');
+                UI.showError(error.message || 'Failed to fetch devices. Please try again later.');
             }
         }
 
-        function formatPropertyValue(property) {
-            if (property.last_value === undefined || property.last_value === null) {
-                return 'N/A';
-            }
+       
 
-            switch(property.type) {
-                case 'BOOL':
-                    return property.last_value ? 'True' : 'False';
-                case 'FLOAT':
-                    if (property.name === 'sensorplacement') {
-                        const percentage = property.last_value * 100;
-                        return `${percentage}%`;
-                    }
-                    if (property.name.toLowerCase().includes('temp')) {
-                        const fahrenheit = celsiusToFahrenheit(property.last_value);
-                        return `${fahrenheit.toFixed(1)}°F`;
-                    }
-                    if (property.name.toLowerCase().includes('flow')) {
-                        return `${Number(property.last_value).toFixed(2)} L/min`;
-                    }
-                    return Number(property.last_value).toFixed(2);
-                case 'INT':
-                    return property.last_value.toString();
-                case 'STRING':
-                    return property.last_value;
-                default:
-                    return property.last_value;
-            }
-        }
-
-        function getPropertyInputType(property) {
-            switch(property.type) {
-                case 'BOOL':
-                    return 'checkbox';
-                case 'INT':
-                case 'FLOAT':
-                    return 'number';
-                default:
-                    return 'text';
-            }
-        }
-
-        function getPropertyStep(property) {
-            switch(property.type) {
-                case 'FLOAT':
-                    return '0.01';
-                case 'INT':
-                    return '1';
-                default:
-                    return 'any';
-            }
-        }
-
-        function fahrenheitToCelsius(fahrenheit) {
-            return (fahrenheit - 32) * 5/9;
-        }
 
         async function updatePropertyValue(deviceId, property) {
             try {
@@ -398,7 +294,7 @@
                 }
 
                 // Log the update attempt with all details
-                logToConsole({
+                UI.logToConsole({
                     message: 'Attempting to update property',
                     deviceId: deviceId,
                     propertyName: property.name,
@@ -419,7 +315,7 @@
                     case 'FLOAT':
                         // Convert Fahrenheit to Celsius if this is a temperature property
                         if (property.name.toLowerCase().includes('temp')) {
-                            formattedValue = fahrenheitToCelsius(parseFloat(property.new_value));
+                            formattedValue = Utils.fahrenheitToCelsius(parseFloat(property.new_value));
                         } else {
                             formattedValue = parseFloat(property.new_value);
                         }
@@ -457,7 +353,7 @@
                     }
                 };
 
-                logToConsole({
+                UI.logToConsole({
                     message: 'Sending update request',
                     url: apiUrl,
                     body: requestBody
@@ -479,7 +375,7 @@
                 }
 
                 const result = await response.json();
-                logToConsole({
+                UI.logToConsole({
                     message: 'Update successful',
                     deviceId: deviceId,
                     propertyName: property.name,
@@ -493,265 +389,30 @@
                 }, 3000); // Wait 3 seconds before reloading
                 
             } catch (error) {
-                logToConsole({
+                UI.logToConsole({
                     message: 'Error updating property',
                     error: error.message,
                     deviceId: deviceId,
                     propertyName: property?.name
                 }, 'error');
-                showError(`Failed to update property: ${error.message}`);
+                UI.showError(`Failed to update property: ${error.message}`);
             }
         }
 
        
-
-        // Enter key handler - triggers the update button click
-        function handlePropertyInputKeydown(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const input = event.target;
-                const button = input.nextElementSibling;
-                if (button) {
-                    button.click();
-                }
-            }
-        }
-
         // Remove all other handlers to avoid conflicts
         function handlePropertyUpdate(event) {
             if (event.key === 'Enter') {
-                handlePropertyInputKeydown(event);
+                UI.handlePropertyInputKeydown(event);
             }
         }
-
-        function handlePropertyInputChange(event) {
-            const input = event.target;
-            if (input.type === 'checkbox') {
-                const button = input.nextElementSibling;
-                if (button) {
-                    button.click();
-                }
-            }
-        }
-
+        
         // Remove keyboard shortcut for auto-commit since it's no longer needed
         document.removeEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
                 autoCommitChanges();
             }
         });
-
-        // Add date validation function
-        function isValidMaintenanceDate(dateStr) {
-            // Check if the format is correct (MM/DD/YYYY)
-            const regex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/[0-9]{4}$/;
-            if (!regex.test(dateStr)) return false;
-
-            // Parse the date
-            const [month, day, year] = dateStr.split('/').map(num => parseInt(num));
-            const date = new Date(year, month - 1, day); // month is 0-based in JS
-
-            // Check if the date is valid and not in the future
-            const now = new Date();
-            now.setHours(23, 59, 59, 999); // End of today
-            if (date > now) return false;
-
-            // Check if the parsed date matches the input
-            // This catches invalid dates like 02/31/2024
-            return date.getMonth() === month - 1 && 
-                   date.getDate() === day && 
-                   date.getFullYear() === year;
-        }
-
-        // Modify the property update handling
-        function handlePropertyInputKeydown(event) {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                const input = event.target;
-                const button = input.nextElementSibling;
-                if (button) {
-                    button.click(); // Use native click instead of dispatching event
-                }
-            }
-        }
-
-        function handlePropertyInputChange(event) {
-            const input = event.target;
-            const deviceId = input.dataset.deviceId;
-            
-            try {
-                const property = JSON.parse(input.dataset.property);
-                property.new_value = input.type === 'checkbox' ? input.checked : input.value;
-                
-                if (!deviceId) {
-                    throw new Error('Device ID is missing');
-                }
-                
-                updatePropertyValue(deviceId, property);
-            } catch (error) {
-                logToConsole(`Error handling property input: ${error.message}`, 'error');
-                showError(`Failed to handle property input: ${error.message}`);
-            }
-        }
-
-        function getPropertyBgColor(propertyName) {
-            const colorMap = {
-                'temp': 'bg-blue-50',
-                'temperature': 'bg-blue-50',
-                'humidity': 'bg-green-50',
-                'flow': 'bg-purple-50',
-                'pressure': 'bg-yellow-50',
-                'level': 'bg-indigo-50',
-                'status': 'bg-gray-50',
-                'Last_Maintenance': 'bg-amber-50',
-                'location': 'bg-teal-50',
-                'sensorplacement': 'bg-indigo-50'
-            };
-
-            for (const [key, color] of Object.entries(colorMap)) {
-                if (propertyName.toLowerCase().includes(key) || propertyName === key) {
-                    return color;
-                }
-            }
-            return 'bg-gray-50';
-        }
-
-        function getPropertyTextColor(propertyName) {
-            const colorMap = {
-                'temp': 'text-blue-800',
-                'temperature': 'text-blue-800',
-                'humidity': 'text-green-800',
-                'flow': 'text-purple-800',
-                'pressure': 'text-yellow-800',
-                'level': 'text-indigo-800',
-                'status': 'text-gray-800',
-                'Last_Maintenance': 'text-amber-800',
-                'location': 'text-teal-800',
-                'sensorplacement': 'text-indigo-800'
-            };
-
-            for (const [key, color] of Object.entries(colorMap)) {
-                if (propertyName.toLowerCase().includes(key) || propertyName === key) {
-                    return color;
-                }
-            }
-            return 'text-gray-800';
-        }
-
-        function celsiusToFahrenheit(celsius) {
-            if (celsius === undefined || celsius === null) return undefined;
-            return (celsius * 9/5) + 32;
-        }
-
-        function formatTemperature(celsius, maxThreshold = null) {
-            if (celsius === undefined || celsius === null) return 'N/A';
-            const fahrenheit = celsiusToFahrenheit(celsius);
-            const value = `${fahrenheit.toFixed(1)}°F`;
-            
-            if (maxThreshold !== null && celsius >= maxThreshold) {
-                return `<span class="temp-warning">${value}</span>`;
-            }
-            return value;
-        }
-
-        function getTemperatureCardClass(temp, maxThreshold) {
-            if (temp === undefined || temp === null || maxThreshold === undefined || maxThreshold === null) {
-                return 'bg-gradient-to-br from-blue-50 to-blue-100';
-            }
-            return temp >= maxThreshold ? 'temp-warning-box' : 'bg-gradient-to-br from-blue-50 to-blue-100';
-        }
-
-        function formatTimeDuration(milliseconds) {
-            if (!milliseconds) return 'N/A';
-            
-            const seconds = Math.floor(milliseconds / 1000);
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const remainingSeconds = seconds % 60;
-            
-            return `${hours}h ${minutes}m ${remainingSeconds}s`;
-        }
-
-        // Helper function to format durations for the status graph
-        function formatDuration(milliseconds) {
-            if (!milliseconds) return '0s';
-            
-            const seconds = Math.floor(milliseconds / 1000);
-            const hours = Math.floor(seconds / 3600);
-            const minutes = Math.floor((seconds % 3600) / 60);
-            const remainingSeconds = seconds % 60;
-            
-            let parts = [];
-            if (hours > 0) parts.push(`${hours}h`);
-            if (minutes > 0) parts.push(`${minutes}m`);
-            if (remainingSeconds > 0 || parts.length === 0) parts.push(`${remainingSeconds}s`);
-            
-            return parts.join(' ');
-        }
-
-        // Store timers for cleanup
-        let timeSinceFlowTimers = [];
-
-        function clearTimeSinceFlowTimers() {
-            timeSinceFlowTimers.forEach(timer => clearInterval(timer));
-            timeSinceFlowTimers = [];
-        }
-
-        function getFlowCardClass(timeSinceFlowHours, criticalTime) {
-            if (timeSinceFlowHours === null || criticalTime === undefined || criticalTime === null) {
-                return 'bg-gradient-to-br from-green-50 to-green-100';
-            }
-            console.log('Time comparison:', { timeSinceFlowHours, criticalTime, isWarning: timeSinceFlowHours >= criticalTime });
-            return parseFloat(timeSinceFlowHours) >= parseFloat(criticalTime) ? 'flow-warning-box' : 'bg-gradient-to-br from-green-50 to-green-100';
-        }
-
-        function updateTimeSinceFlow(element, startTime) {
-            if (!startTime) {
-                element.textContent = 'N/A';
-                return null;
-            }
-
-            const criticalTime = parseFloat(element.dataset.criticalTime);
-            const cardElement = element.closest('.property-card');
-            const deviceId = element.dataset.deviceId;
-
-            // Log initial state only once when timer starts
-            logToConsole(`Initializing flow timer for device ${deviceId}:`, {
-                startTime,
-                criticalTime,
-                currentTime: new Date().toISOString()
-            });
-
-            let lastCriticalState = false; // Track previous critical state
-
-            const update = () => {
-                const timeSinceFlowMs = new Date() - new Date(startTime);
-                const timeSinceFlowHours = timeSinceFlowMs / (1000 * 60 * 60);
-                element.textContent = formatTimeDuration(timeSinceFlowMs);
-                
-                // Update warning state
-                cardElement.className = `property-card ${getFlowCardClass(timeSinceFlowHours, criticalTime)} p-2 rounded-lg`;
-                
-                // Only log when critical state changes
-                const isCriticalNow = timeSinceFlowHours >= criticalTime;
-                if (isCriticalNow !== lastCriticalState) {
-                    lastCriticalState = isCriticalNow;
-                    if (isCriticalNow) {
-                        logToConsole(`Flow state changed to critical for device ${deviceId}:`, {
-                            timeSinceFlowHours,
-                            criticalTime,
-                            lastUpdate: startTime
-                        });
-                    }
-                }
-            };
-
-            update(); // Initial update
-            const timer = setInterval(update, 1000); // Update every second
-            timeSinceFlowTimers.push(timer);
-            return timer;
-        }
-
         // Add cooldown tracking for warning and critical updates
         const lastStatusUpdate = {
             warning: {},
@@ -770,7 +431,7 @@
 
         function updateLastStatusTime(deviceId, statusType) {
             lastStatusUpdate[statusType][deviceId] = Date.now();
-            logToConsole(`Updated ${statusType} status for device ${deviceId}. Next update allowed after ${new Date(Date.now() + COOLDOWN_TIME).toLocaleTimeString()}`);
+            UI.logToConsole(`Updated ${statusType} status for device ${deviceId}. Next update allowed after ${new Date(Date.now() + COOLDOWN_TIME).toLocaleTimeString()}`);
         }
 
         function calculateDeviceStatus(device) {
@@ -840,7 +501,7 @@
 
             // Debug logging
             if (shouldUpdateWarning || shouldUpdateCritical) {
-                logToConsole('Status update check:', {
+                UI.logToConsole('Status update check:', {
                     deviceId: device.id,
                     currentWarning,
                     isWarning,
@@ -857,12 +518,12 @@
 
             // Only update if the values are actually different and cooldown period has elapsed
             if (shouldUpdateWarning && canUpdateStatus(device.id, 'warning')) {
-                logToConsole(`Auto-updating warning status for device ${device.id} from ${currentWarning} to ${isWarning}`);
+                UI.logToConsole(`Auto-updating warning status for device ${device.id} from ${currentWarning} to ${isWarning}`);
                 handleManualStatusUpdate(device.id, 'warning', isWarning);
             }
 
             if (shouldUpdateCritical && canUpdateStatus(device.id, 'critical')) {
-                logToConsole(`Auto-updating critical status for device ${device.id} from ${currentCritical} to ${isCritical}`);
+                UI.logToConsole(`Auto-updating critical status for device ${device.id} from ${currentCritical} to ${isCritical}`);
                 handleManualStatusUpdate(device.id, 'critical', isCritical);
             }
 
@@ -872,7 +533,7 @@
             )?.last_value;
 
             // Calculate ice level based on temperature and sensor placement
-            const tempF = cloudTemp !== undefined ? celsiusToFahrenheit(cloudTemp) : undefined;
+            const tempF = cloudTemp !== undefined ? Utils.celsiusToFahrenheit(cloudTemp) : undefined;
             const isIceAboveSensor = tempF !== undefined && tempF <= 34;
 
             // If temperature is ≤ 34°F, ice is above the sensor placement
@@ -900,52 +561,11 @@
             };
         }
 
-        // Update the ice level display in the device card
-        function getIceLevelText(status) {
-            if (status.sensorPlacement === undefined || status.sensorPlacement === null) {
-                return 'Sensor placement not set';
-            }
-            
-            const placement = (status.sensorPlacement * 100).toFixed(0);
-            if (status.cloudTemp === undefined || status.tempThresholdMax === undefined) {
-                return 'Temperature data unavailable';
-            }
 
-            // Compare with threshold temperature
-            return status.cloudTemp <= status.tempThresholdMax ? 
-                `More than ${placement}% full` : 
-                `Less than ${placement}% full`;
-        }
-
-        // Add this sorting function before displayDevices
-        function sortProperties(properties) {
-            // Define priority properties
-            const priorityProps = ['cloudtemp', 'cloudflowrate'];
-            
-            return [...properties].sort((a, b) => {
-                // Get indices in priority array (-1 if not found)
-                const aIndex = priorityProps.indexOf(a.name);
-                const bIndex = priorityProps.indexOf(b.name);
-                
-                // If both are priority properties, sort by priority array order
-                if (aIndex !== -1 && bIndex !== -1) {
-                    return aIndex - bIndex;
-                }
-                
-                // If only a is priority property, it goes first
-                if (aIndex !== -1) return -1;
-                
-                // If only b is priority property, it goes first
-                if (bIndex !== -1) return 1;
-                
-                // For non-priority properties, maintain original order
-                return 0;
-            });
-        }
 
         function displayDevices(devices) {
             // Clear existing timers before updating display
-            clearTimeSinceFlowTimers();
+            UI.clearTimeSinceFlowTimers();
 
             // Update device counts
             const activeDevices = devices.length;
@@ -973,20 +593,20 @@
                         </div>
                     </div>
                 `;
-                logToConsole('No devices found', 'warning');
+                UI.logToConsole('No devices found', 'warning');
                 return;
             }
 
             // Log each device's data individually with more detail
             devices.forEach((device, idx) => {
-                logToConsole(`Device ${idx + 1} (${device.name || device.id}):`);
+                UI.logToConsole(`Device ${idx + 1} (${device.name || device.id}):`);
                 if (device.thing && device.thing.properties) {
-                    logToConsole('Properties found:');
+                    UI.logToConsole('Properties found:');
                     device.thing.properties.forEach(prop => {
-                        logToConsole(`- ${prop.name}: ${prop.last_value} (${prop.type})`);
+                        UI.logToConsole(`- ${prop.name}: ${prop.last_value} (${prop.type})`);
                     });
                 } else {
-                    logToConsole('No properties found for this device');
+                    UI.logToConsole('No properties found for this device');
                 }
             });
 
@@ -1032,29 +652,29 @@
                             <p class="text-indigo-800 font-medium text-xs">Ice Level</p>
                             </div>
                             <p class="text-sm font-bold text-indigo-900 leading-tight">
-                                ${getIceLevelText(status)}
+                                ${UI.getIceLevelText(status)}
                             </p>
                         </div>
                         
                         <!-- Temperature -->
-                        <div class="property-card ${getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax)} p-2.5 rounded-lg">
+                        <div class="property-card ${UI.getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax)} p-2.5 rounded-lg">
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Temperature</p>
                             </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight">${formatTemperature(status.cloudTemp)}</p>
+                            <p class="text-sm font-bold text-blue-900 leading-tight">${UI.formatTemperature(status.cloudTemp)}</p>
                             <p class="text-[10px] text-blue-600 mt-0.5 flex items-center">
                                 <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                                 </svg>
-                                Max: ${formatTemperature(status.tempThresholdMax)}
+                                Max: ${UI.formatTemperature(status.tempThresholdMax)}
                             </p>
                         </div>
                         
                         <!-- Time Since Flow -->
-                        <div class="property-card ${getFlowCardClass(status.timeSinceFlowHours, status.noFlowCriticalTime)} p-2.5 rounded-lg">
+                        <div class="property-card ${UI.getFlowCardClass(status.timeSinceFlowHours, status.noFlowCriticalTime)} p-2.5 rounded-lg">
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-green-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -1065,7 +685,7 @@
                                data-start-time="${status.flowLastUpdate || ''}" 
                                data-critical-time="${status.noFlowCriticalTime || ''}"
                                data-device-id="${device.id}">
-                                ${formatTimeDuration(status.timeSinceFlowMs)}
+                                ${UI.formatTimeDuration(status.timeSinceFlowMs)}
                             </p>
                             <div class="text-[10px] text-green-600 mt-0.5">
                                 <div class="flex items-center">
@@ -1165,9 +785,9 @@
             document.querySelectorAll('.time-since-flow').forEach(element => {
                 const startTime = element.dataset.startTime;
                 if (startTime) {
-                    logToConsole(`Starting flow timer for device ${element.dataset.deviceId} with start time ${startTime}`);
+                    UI.logToConsole(`Starting flow timer for device ${element.dataset.deviceId} with start time ${startTime}`);
                 }
-                updateTimeSinceFlow(element, startTime);
+                UI.updateTimeSinceFlow(element, startTime);
             });
 
             // Add the modal container if it doesn't exist
@@ -2132,15 +1752,15 @@
                             </div>
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 ${device.thing?.properties ? 
-                                    sortProperties(device.thing.properties).filter(property => 
+                                    Utils.sortProperties(device.thing.properties).filter(property => 
                                         !['warning', 'critical'].includes(property.name)
                                     ).map(property => `
-                                        <div class="property-card ${getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
+                                        <div class="property-card ${UI.getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                                             <div class="px-5 py-4">
                                                 <div class="flex justify-between items-start mb-3">
                                                     <div class="space-y-1">
                                                         <div class="flex items-center space-x-2">
-                                                            <h4 class="${getPropertyTextColor(property.name)} font-semibold">${
+                                                            <h4 class="${UI.getPropertyTextColor(property.name)} font-semibold">${
     property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' :
     property.name === 'cloudtemp' ? 'Temperature' :
     property.name === 'cloudflowrate' ? 'Flow Rate' :
@@ -2285,7 +1905,7 @@
                                                                 title="Please enter date in MM/DD/YYYY format"
                                                                 data-device-id="${device.id}"
                                                                 data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
+                                                                onkeydown="UI.handlePropertyInputKeydown(event)"
                                                             />
                                                             <button 
                                                                 onclick="handleUpdateButtonClick(event)"
@@ -2301,15 +1921,9 @@
                                                     ` : `
                                                             <div class="flex space-x-3">
                                                             <input 
-                                                                type="${getPropertyInputType(property)}"
-                                                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                                value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
-                                                                placeholder="Enter new value"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                                step="${getPropertyStep(property)}"
-                                                                ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
+                                                                type="${UI.getPropertyInputType(property)}"
+                                                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                value="${property.last_value || ''}"
                                                             />
                                                             <button 
                                                                 onclick="handleUpdateButtonClick(event)"
@@ -2325,12 +1939,12 @@
                                                 </div>
                                             ` : `
                                                     <div class="mt-3">
-                                                        <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
+                                                        <p class="text-2xl font-semibold ${UI.getPropertyTextColor(property.name)}">
                                                             ${property.name.toLowerCase().includes('temp') ? 
-                                                                `${celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
+                                                                `${Utils.celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
                                                                 property.name === 'cloudflowrate' ?
                                                                 `${Number(property.last_value).toFixed(2)} L/min` :
-                                                                formatPropertyValue(property)}
+                                                                UI.formatPropertyValue(property)}
                                                         </p>
                                                         ${property.name === 'cloudflowrate' ? '' : ''}
                                                     </div>
@@ -2383,8 +1997,8 @@
                 
                 // Add validation for Last_Maintenance property
                 if (property.name === 'Last_Maintenance') {
-                    if (!isValidMaintenanceDate(input.value)) {
-                        showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
+                    if (!Utils.isValidMaintenanceDate(input.value)) {
+                        UI.showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
                         return;
                     }
                 }
@@ -2398,7 +2012,7 @@
                 property.new_value = input.value;
                 
                 // Log the update attempt
-                logToConsole({
+                UI.logToConsole({
                     message: 'Attempting to update property via button click',
                     deviceId: deviceId,
                     propertyName: property.name,
@@ -2409,7 +2023,7 @@
                 await updatePropertyValue(deviceId, property);
                 
                 // Show success toast
-                showToast('Property updated successfully. Refreshing...', 'success');
+                UI.showToast('Property updated successfully. Refreshing...', 'success');
                 
                 // Small delay to show success state
                 setTimeout(() => {
@@ -2424,56 +2038,17 @@
                 button.disabled = false;
                 button.innerHTML = originalText;
                 
-                logToConsole(`Error handling property input: ${error.message}`, 'error');
-                showError(`Failed to update property: ${error.message}`);
+                UI.logToConsole(`Error handling property input: ${error.message}`, 'error');
+                UI.showError(`Failed to update property: ${error.message}`);
             }
         }
 
         // Remove duplicate handlers
         function handlePropertyUpdate(event, deviceId, property) {
-            return handlePropertyInputKeydown(event);
+            return UI.handlePropertyInputKeydown(event);
         }
 
-        // Update showToast to ensure it's visible
-        function showToast(message, type = 'info') {
-            // Remove any existing toasts
-            const existingToasts = document.querySelectorAll('.toast-notification');
-            existingToasts.forEach(toast => toast.remove());
-            
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
-                type === 'error' ? 'bg-red-500' : 
-                type === 'success' ? 'bg-green-500' : 
-                'bg-blue-500'
-            } shadow-lg z-50 toast-notification`;
-            
-            toast.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    ${type === 'success' ? `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                    ` : type === 'error' ? `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    ` : `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    `}
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            // Don't remove success toasts that indicate refresh
-            if (!message.includes('Refreshing')) {
-                setTimeout(() => toast.remove(), 3000);
-            }
-        }
-
+        
         function showActiveDevices() {
             const devices = window.lastDevicesData || [];
             const modal = document.getElementById('active-devices-modal');
@@ -2559,8 +2134,8 @@
                             <div>
                                 <h3 class="font-medium text-emerald-800">${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device'}</h3>
                                 <p class="text-sm text-emerald-600">
-                                    Cloud Temp: ${formatTemperature(status.cloudTemp, status.tempThresholdMax)} (Max: ${formatTemperature(status.tempThresholdMax)})<br>
-                                    Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
+                                    Cloud Temp: ${UI.formatTemperature(status.cloudTemp, status.tempThresholdMax)} (Max: ${UI.formatTemperature(status.tempThresholdMax)})<br>
+                                    Time Since Flow: ${UI.formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
                                 </p>
                             </div>
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
@@ -2596,8 +2171,8 @@
                             <div>
                                 <h3 class="font-medium text-yellow-800">${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device'}</h3>
                                 <p class="text-sm text-yellow-600">
-                                    Cloud Temp: ${formatTemperature(status.cloudTemp)} (${status.cloudTemp > 32 ? 'High' : 'Normal'})<br>
-                                    Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
+                                    Cloud Temp: ${UI.formatTemperature(status.cloudTemp)} (${status.cloudTemp > 32 ? 'High' : 'Normal'})<br>
+                                    Time Since Flow: ${UI.formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
                                 </p>
                             </div>
                             <span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">
@@ -2638,8 +2213,8 @@
                                     </p>
                                 ` : `
                                     <p class="text-sm text-red-600">
-                                        Cloud Temp: ${formatTemperature(status.cloudTemp)} (High)<br>
-                                        Time Since Flow: ${formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
+                                        Cloud Temp: ${UI.formatTemperature(status.cloudTemp)} (High)<br>
+                                        Time Since Flow: ${UI.formatTimeDuration(status.timeSinceFlowMs)} (Critical: ${status.noFlowCriticalTime}h)
                                     </p>
                                 `}
                             </div>
@@ -2694,7 +2269,7 @@
             const percentage = parseFloat(select.value);
             
             if (isNaN(percentage)) {
-                logToConsole('Please select a valid sensor placement percentage', 'error');
+                UI.logToConsole('Please select a valid sensor placement percentage', 'error');
                 return;
             }
             
@@ -2707,7 +2282,7 @@
                 }
 
                 // Log the update attempt
-                logToConsole(`Updating sensor placement for device ${deviceId} to ${percentage}% (${decimalValue})`);
+                UI.logToConsole(`Updating sensor placement for device ${deviceId} to ${percentage}% (${decimalValue})`);
 
                 // Use the same API endpoint and structure that works for other variables
                 const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
@@ -2733,29 +2308,29 @@
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    logToConsole(`Successfully updated sensor placement to ${percentage}%`);
+                    UI.logToConsole(`Successfully updated sensor placement to ${percentage}%`);
                     // Refresh devices to show updated value
                     fetchDevices();
                 })
                 .catch(error => {
-                    logToConsole(`Error updating sensor placement: ${error.message}`, 'error');
-                    showError(`Failed to update sensor placement: ${error.message}`);
+                    UI.logToConsole(`Error updating sensor placement: ${error.message}`, 'error');
+                    UI.showError(`Failed to update sensor placement: ${error.message}`);
                 });
             } catch (error) {
-                logToConsole(`Error handling sensor placement: ${error.message}`, 'error');
-                showError(`Failed to handle sensor placement: ${error.message}`);
+                UI.logToConsole(`Error handling sensor placement: ${error.message}`, 'error');
+                UI.showError(`Failed to handle sensor placement: ${error.message}`);
             }
         }
 
         function handleManualStatusUpdate(deviceId, statusType, value) {
             // Check cooldown before updating
             if (!canUpdateStatus(deviceId, statusType)) {
-                logToConsole(`Skipping ${statusType} update for device ${deviceId} - cooldown period not elapsed`);
+                UI.logToConsole(`Skipping ${statusType} update for device ${deviceId} - cooldown period not elapsed`);
                 return;
             }
 
             try {
-                logToConsole(`Attempting to update ${statusType} to ${value} for device ${deviceId}`);
+                UI.logToConsole(`Attempting to update ${statusType} to ${value} for device ${deviceId}`);
 
                 const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
                 
@@ -2781,17 +2356,17 @@
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     updateLastStatusTime(deviceId, statusType);
-                    logToConsole(`Successfully updated ${statusType} to ${value}`);
+                    UI.logToConsole(`Successfully updated ${statusType} to ${value}`);
                     // Refresh devices to show updated value after a short delay
                     setTimeout(fetchDevices, 1000);
                 })
                 .catch(error => {
-                    logToConsole(`Error updating ${statusType}: ${error.message}`, 'error');
-                    showError(`Failed to update ${statusType}: ${error.message}`);
+                    UI.logToConsole(`Error updating ${statusType}: ${error.message}`, 'error');
+                    UI.showError(`Failed to update ${statusType}: ${error.message}`);
                 });
             } catch (error) {
-                logToConsole(`Error handling ${statusType} update: ${error.message}`, 'error');
-                showError(`Failed to handle ${statusType} update: ${error.message}`);
+                UI.logToConsole(`Error handling ${statusType} update: ${error.message}`, 'error');
+                UI.showError(`Failed to handle ${statusType} update: ${error.message}`);
             }
         }
 
@@ -2907,7 +2482,7 @@
 
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
-                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    UI.logToConsole('No data returned from fetchTimeSeriesData', 'error');
                     return;
                 }
 
@@ -2923,12 +2498,12 @@
                 let hasAnyData = false;
 
                 for (const day of selectedDays) {
-                    const { datasets, thresholdF, noData } = processTemperatureByHour(data.timestamps, data.temperature, day);
+                    const { datasets, thresholdF, noData } = Utils.processTemperatureByHour(data.timestamps, data.temperature, day);
                     
                     if (noData) {
                         // Add a text annotation for this day
                         const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
-                        logToConsole(`No data available for ${dayLabel}`, 'warning');
+                        UI.logToConsole(`No data available for ${dayLabel}`, 'warning');
                     } else {
                         hasAnyData = true;
                         // Filter out datasets based on visibility toggles
@@ -3090,225 +2665,7 @@
             });
         }
 
-        function processTemperatureByHour(timestamps, temperatures, selectedDay) {
-            logToConsole('Processing temperature data:', 'info');
-            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Temperature values received: ${temperatures.length}`, 'info');
-            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
-
-            const hourlyData = {};
-            const now = new Date();
-            const currentHour = now.getHours();
-            
-            const dayStart = new Date(now);
-            dayStart.setDate(dayStart.getDate() - selectedDay);
-            dayStart.setHours(0, 0, 0, 0);
-            
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            // Get the device's temperature threshold
-            const device = window.lastDevicesData.find(d => d.thing?.properties?.some(p => p.name === 'cloudtemp'));
-            const tempThresholdMax = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-            const thresholdF = tempThresholdMax !== undefined ? (tempThresholdMax * 9/5 + 32) : 34;
-
-            // Track if we have any data for this day
-            let hasDataForDay = false;
-            let allTempsForDay = [];
-
-            // Process each temperature reading
-            for (let i = 0; i < timestamps.length; i++) {
-                const timestamp = new Date(timestamps[i]);
-                const temp = temperatures[i];
-                
-                if (temp === null || temp === undefined) continue;
-                
-                if (timestamp < dayStart || timestamp > dayEnd) continue;
-                
-                const hour = timestamp.getHours();
-                if (selectedDay === 0 && hour > currentHour) continue;
-                
-                hasDataForDay = true;
-                
-                // Convert Celsius to Fahrenheit for stats
-                const tempF = (temp * 9/5) + 32;
-                allTempsForDay.push(tempF);
-                
-                if (!hourlyData[hour]) {
-                    hourlyData[hour] = {
-                        temps: [],
-                        iceAboveSensor: [],
-                        hour,
-                        date: new Date(timestamp)
-                    };
-                }
-                
-                // If temperature is below threshold, ice is above sensor
-                const isIceAboveSensor = tempF <= thresholdF;
-                
-                hourlyData[hour].temps.push(tempF);
-                hourlyData[hour].iceAboveSensor.push(isIceAboveSensor);
-            }
-
-            // Update statistics if this is a single day view and we have data
-            if (hasDataForDay) {
-                // Calculate daily range
-                const minTemp = Math.min(...allTempsForDay);
-                const maxTemp = Math.max(...allTempsForDay);
-                document.getElementById('tempRange').innerHTML = 
-                    `${minTemp.toFixed(1)}°F - ${maxTemp.toFixed(1)}°F`;
-
-                // Calculate daily average
-                const avgTemp = allTempsForDay.reduce((a, b) => a + b, 0) / allTempsForDay.length;
-                document.getElementById('tempAvg').innerHTML = 
-                    formatTempValue(avgTemp.toFixed(1));
-
-                // Calculate standard deviation
-                const stdDev = calculateStdDev(allTempsForDay);
-                document.getElementById('tempStdDev').innerHTML = 
-                    `±${stdDev.toFixed(1)}°F`;
-
-                // Calculate mode
-                const mode = calculateMode(allTempsForDay);
-                document.getElementById('tempMode').innerHTML = 
-                    formatTempValue(mode.toFixed(1));
-            }
-
-            // If no data for this day, return null
-            if (!hasDataForDay) {
-                return {
-                    datasets: [],
-                    thresholdF,
-                    noData: true
-                };
-            }
-
-            // Helper function to calculate statistics
-            function calculateStats(values) {
-                if (!values || values.length === 0) return null;
-                
-                const sum = values.reduce((a, b) => a + b, 0);
-                const avg = sum / values.length;
-                
-                // Calculate standard deviation
-                const squareDiffs = values.map(value => {
-                    const diff = value - avg;
-                    return diff * diff;
-                });
-                const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
-                const stdDev = Math.sqrt(avgSquareDiff);
-                
-                // Calculate mode
-                const frequency = {};
-                let maxFreq = 0;
-                let mode = null;
-                values.forEach(value => {
-                    const rounded = Math.round(value * 10) / 10;
-                    frequency[rounded] = (frequency[rounded] || 0) + 1;
-                    if (frequency[rounded] > maxFreq) {
-                        maxFreq = frequency[rounded];
-                        mode = rounded;
-                    }
-                });
-
-                return { avg, stdDev, mode };
-            }
-
-            // Create dataset for temperature with dynamic coloring
-            const tempData = {
-                label: `${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'} (Temperature)`,
-                data: Array(24).fill(null),
-                yAxisID: 'y-temp',
-                borderColor: function(context) {
-                    const value = context.raw;
-                    return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
-                },
-                backgroundColor: function(context) {
-                    const value = context.raw;
-                    return value > thresholdF ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)';
-                },
-                tension: 0.1,
-                fill: true,
-                segment: {
-                    borderColor: ctx => {
-                        const value = ctx.p1.parsed.y;
-                        return value > thresholdF ? 'rgb(239, 68, 68)' : 'rgb(34, 197, 94)';
-                    }
-                },
-                order: 1
-            };
-
-            // Create dataset for ice level indicator
-            const iceLevelData = {
-                label: 'Ice Level',
-                data: Array(24).fill(null),
-                yAxisID: 'y-ice',
-                borderColor: function(context) {
-                    const value = context.raw;
-                    return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
-                },
-                backgroundColor: function(context) {
-                    const value = context.raw;
-                    return value === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(147, 197, 253, 0.2)';
-                },
-                tension: 0.1,
-                fill: true,
-                order: 2,
-                stepped: true,
-                segment: {
-                    borderColor: ctx => {
-                        const value = ctx.p1.parsed.y;
-                        return value === 0 ? 'rgb(239, 68, 68)' : 'rgba(147, 197, 253, 0.8)';
-                    }
-                }
-            };
-
-            const thresholdData = {
-                label: 'Temperature Threshold',
-                data: Array(24).fill(thresholdF),
-                yAxisID: 'y-temp',
-                borderColor: 'rgba(0, 0, 0, 0.5)',
-                borderDash: [5, 5],
-                tension: 0,
-                fill: false,
-                order: 0
-            };
-
-            // Fill in the data for each hour
-            let allTemps = [];
-
-            for (let hour = 0; hour < 24; hour++) {
-                if (selectedDay === 0 && hour > currentHour) continue;
-
-                const hourData = hourlyData[hour];
-                
-                if (hourData && hourData.temps.length > 0) {
-                    const tempStats = calculateStats(hourData.temps);
-                    
-                    if (tempStats) {
-                        tempData.data[hour] = tempStats.avg;
-                        allTemps = allTemps.concat(hourData.temps);
-                        
-                        // Calculate ice level based on average temperature
-                        iceLevelData.data[hour] = tempStats.avg <= thresholdF ? 1 : 0;
-                    }
-                }
-            }
-
-            // Update statistics display
-            const overallTempStats = calculateStats(allTemps);
-            if (overallTempStats) {
-                document.getElementById('tempStdDev').innerHTML = 
-                    `±${overallTempStats.stdDev.toFixed(1)}°F`;
-                document.getElementById('tempMode').innerHTML = 
-                    formatTempValue(overallTempStats.mode);
-            }
-
-            return {
-                datasets: [thresholdData, tempData, iceLevelData],
-                thresholdF
-            };
-        }
+        
 
         // Helper function to format temperature value with conditional red color
         function formatTempValue(value) {
@@ -3321,34 +2678,7 @@
                 `${value}°F`;
         }
 
-        // Helper function to calculate standard deviation
-        function calculateStdDev(values) {
-            const mean = values.reduce((a, b) => a + b, 0) / values.length;
-            const squareDiffs = values.map(value => {
-                const diff = value - mean;
-                return diff * diff;
-            });
-            const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / values.length;
-            return Math.sqrt(avgSquareDiff);
-        }
 
-        // Helper function to calculate mode
-        function calculateMode(values) {
-            const rounded = values.map(v => Math.round(v * 10) / 10);
-            const frequency = {};
-            let maxFreq = 0;
-            let mode = rounded[0];
-
-            rounded.forEach(value => {
-                frequency[value] = (frequency[value] || 0) + 1;
-                if (frequency[value] > maxFreq) {
-                    maxFreq = frequency[value];
-                    mode = value;
-                }
-            });
-
-            return mode;
-        }
 
         // Cache for time series data
         let timeSeriesDataCache = new Map();
@@ -3357,7 +2687,7 @@
             // Check cache first
             const cacheKey = `${deviceId}-${hours}`;
             if (timeSeriesDataCache.has(cacheKey)) {
-                logToConsole('Using cached time series data', 'info');
+                UI.logToConsole('Using cached time series data', 'info');
                 return timeSeriesDataCache.get(cacheKey);
             }
 
@@ -3378,12 +2708,12 @@
                 const flowProperty = properties.find(p => p.name === 'cloudflowrate');
 
                 // Log request details for debugging
-                logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
-                if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
-                if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+                UI.logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
+                if (tempProperty) UI.logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+                if (flowProperty) UI.logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
 
                 // Log property details for debugging
-                logToConsole('Property details:', {
+                UI.logToConsole('Property details:', {
                     temperature: tempProperty ? {
                         id: tempProperty.id,
                         type: tempProperty.type,
@@ -3421,7 +2751,7 @@
                 }).toString();
 
                 // Log query details
-                logToConsole('Time series query parameters:', {
+                UI.logToConsole('Time series query parameters:', {
                     interval,
                     from: from.toLocaleString(),
                     to: now.toLocaleString(),
@@ -3460,10 +2790,10 @@
                 ]);
 
                 // Log raw response data
-                logToConsole('Raw temperature response:', 'info');
-                logToConsole(tempData, 'info');
-                logToConsole('Temperature data details:', 'info');
-                logToConsole({
+                UI.logToConsole('Raw temperature response:', 'info');
+                UI.logToConsole(tempData, 'info');
+                UI.logToConsole('Temperature data details:', 'info');
+                UI.logToConsole({
                     endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${queryParams}`,
                     tempPropertyId: tempProperty?.id,
                     responseStatus: tempData ? 'Success' : 'No data',
@@ -3473,10 +2803,10 @@
                 }, 'info');
 
                 // Add logging for flow rate data
-                logToConsole('Raw flow rate response:', 'info');
-                logToConsole(flowData, 'info');
-                logToConsole('Flow data details:', 'info');
-                logToConsole({
+                UI.logToConsole('Raw flow rate response:', 'info');
+                UI.logToConsole(flowData, 'info');
+                UI.logToConsole('Flow data details:', 'info');
+                UI.logToConsole({
                     endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${queryParams}`,
                     flowPropertyId: flowProperty?.id,
                     responseStatus: flowData ? 'Success' : 'No data',
@@ -3486,11 +2816,11 @@
                 }, 'info');
 
                 // 6) Process the responses
-                const tempResult = parseTsArray(tempData.data || []);
-                const flowResult = parseTsArray(flowData.data || []);
+                const tempResult = Utils.parseTsArray(tempData.data || []);
+                const flowResult = Utils.parseTsArray(flowData.data || []);
 
                 // Log the raw API responses with sample data
-                logToConsole('Raw API Response Data:', {
+                UI.logToConsole('Raw API Response Data:', {
                     temperature: {
                         total: tempData.data?.length || 0,
                         sample: tempData.data?.slice(0, 5)?.map(d => ({
@@ -3508,7 +2838,7 @@
                 }, 'info');
 
                 // Log the processed results
-                logToConsole('Time series data fetched:', {
+                UI.logToConsole('Time series data fetched:', {
                     temperaturePoints: tempResult.times.length,
                     flowPoints: flowResult.times.length,
                     processedData: {
@@ -3544,7 +2874,7 @@
 
                 return result;
             } catch (error) {
-                logToConsole(`Error fetching time series: ${error.message}`, 'error');
+                UI.logToConsole(`Error fetching time series: ${error.message}`, 'error');
                 return null;
             }
         }
@@ -3553,7 +2883,7 @@
             const device = window.lastDevicesData[deviceIndex];
             updateTimeRangeButtons('status-time-range', selectedDay);
             
-            logToConsole('Starting updateStatusGraph:', {
+            UI.logToConsole('Starting updateStatusGraph:', {
                 deviceIndex,
                 selectedDay,
                 deviceId: device.id
@@ -3561,7 +2891,7 @@
             
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
-                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    UI.logToConsole('No data returned from fetchTimeSeriesData', 'error');
                     return;
                 }
 
@@ -3584,7 +2914,7 @@
                 const criticalStatus = data.criticalStatus || [];
 
                 // Log raw data for debugging
-                logToConsole('Raw status data:', {
+                UI.logToConsole('Raw status data:', {
                     total: {
                         timestamps: timestamps.length,
                         warningStatus: warningStatus.length,
@@ -3615,7 +2945,7 @@
                 }
 
                 // Log processed data
-                logToConsole('Processed status data:', {
+                UI.logToConsole('Processed status data:', {
                     totalPoints: processedData.length,
                     samplePoints: processedData.slice(0, 3),
                     timeRange: {
@@ -3831,7 +3161,7 @@
                 chartContainer.after(summaryDiv);
 
                 // Log time in states calculation
-                logToConsole('Time in states calculation:', {
+                UI.logToConsole('Time in states calculation:', {
                     totalDuration: formatDuration(totalTime),
                     breakdown: {
                         great: {
@@ -3849,7 +3179,7 @@
                     }
                 });
             }).catch(error => {
-                logToConsole(`Error updating status graph: ${error.message}`, 'error');
+                UI.logToConsole(`Error updating status graph: ${error.message}`, 'error');
             });
         }
 
@@ -3881,7 +3211,7 @@
                     values: data.values || []
                 };
             } catch (error) {
-                logToConsole(`Error fetching property timeseries: ${error.message}`, 'error');
+                UI.logToConsole(`Error fetching property timeseries: ${error.message}`, 'error');
                 return null;
             }
         }
@@ -3910,7 +3240,7 @@
             
             fetchTimeSeriesData(device.id, 72).then(data => {
                 if (!data) {
-                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    UI.logToConsole('No data returned from fetchTimeSeriesData', 'error');
                     return;
                 }
 
@@ -3933,11 +3263,11 @@
                 let hasAnyData = false;
 
                 for (const day of selectedDays) {
-                    const { datasets, noData } = processFlowByHour(data.timestamps, data.timeSinceFlow, day);
+                    const { datasets, noData } = Utils.processFlowByHour(data.timestamps, data.timeSinceFlow, day);
                     
                     if (noData) {
                         const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
-                        logToConsole(`No flow data available for ${dayLabel}`, 'warning');
+                        UI.logToConsole(`No flow data available for ${dayLabel}`, 'warning');
                     } else {
                         hasAnyData = true;
                         allDatasets.push(...datasets);
@@ -4036,129 +3366,11 @@
                     chartContainer.appendChild(noDataMessage);
                 }
             }).catch(error => {
-                logToConsole(`Error updating flow graph: ${error.message}`, 'error');
+                UI.logToConsole(`Error updating flow graph: ${error.message}`, 'error');
             });
         }
 
-        function processFlowByHour(timestamps, flowValues, selectedDay) {
-            logToConsole('Processing flow data:', 'info');
-            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
-            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
-            const hourlyData = {};
-            const now = new Date();
-            const currentHour = now.getHours();
-            
-            const dayStart = new Date(now);
-            dayStart.setDate(dayStart.getDate() - selectedDay);
-            dayStart.setHours(0, 0, 0, 0);
-            
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
-
-            // Track if we have any data for this day
-            let hasDataForDay = false;
-            let allFlowsForDay = [];
-
-            // Process each flow reading
-            for (let i = 0; i < timestamps.length; i++) {
-                const timestamp = new Date(timestamps[i]);
-                const flow = flowValues[i];
-                
-                if (flow === null || flow === undefined) continue;
-                
-                if (timestamp < dayStart || timestamp > dayEnd) continue;
-                
-                const hour = timestamp.getHours();
-                if (selectedDay === 0 && hour > currentHour) continue;
-                
-                hasDataForDay = true;
-                allFlowsForDay.push(flow);
-
-                if (!hourlyData[hour]) {
-                    hourlyData[hour] = {
-                        flows: [],
-                        hour,
-                        date: new Date(timestamp)
-                    };
-                }
-                
-                hourlyData[hour].flows.push(flow);
-            }
-
-            // Update statistics if we have data
-            if (hasDataForDay) {
-                // Calculate daily range
-                const minFlow = Math.min(...allFlowsForDay);
-                const maxFlow = Math.max(...allFlowsForDay);
-                document.getElementById('flowRange').textContent = 
-                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
-
-                // Calculate total flow
-                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
-                document.getElementById('flowTotal').textContent = 
-                    `${totalFlow.toFixed(3)} L/min`;
-
-                // Calculate standard deviation
-                const stdDev = calculateStdDev(allFlowsForDay);
-                document.getElementById('flowStdDev').textContent = 
-                    `±${stdDev.toFixed(3)} L/min`;
-
-                // Update frequency
-                document.getElementById('flowFrequency').textContent = 
-                    `${allFlowsForDay.length} points`;
-
-                // Update time since last flow if it's today
-                if (selectedDay === 0 && allFlowsForDay.length > 0) {
-                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
-                    const timeSinceFlow = now - lastFlowTime;
-                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
-                }
-            }
-
-            // If no data for this day, return empty datasets
-            if (!hasDataForDay) {
-                return {
-                    datasets: [],
-                    noData: true
-                };
-            }
-
-            // Create hourly averages
-            const hourlyAverages = Array(24).fill(null);
-            Object.values(hourlyData).forEach(hourData => {
-                if (hourData.flows.length > 0) {
-                    const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
-                    hourlyAverages[hourData.hour] = avgFlow;
-                }
-            });
-
-            // Create dataset
-            const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
-            const colors = [
-                { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
-                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
-                { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
-            ];
-
-            const datasets = [{
-                label: `Flow Rate (${dayLabels[selectedDay]})`,
-                data: hourlyAverages,
-                borderColor: colors[selectedDay].border,
-                backgroundColor: colors[selectedDay].background,
-                tension: 0.1,
-                fill: true,
-                pointRadius: 3,
-                pointHoverRadius: 5
-            }];
-
-            return {
-                datasets,
-                noData: false
-            };
-        }
 
         function updateTimeRangeButtons(containerId, selectedDay) {
             const container = document.getElementById(containerId);
@@ -4172,29 +3384,7 @@
             });
         }
 
-        // Add refresh button to manually trigger data refresh
-        function addRefreshButton() {
-            const refreshButton = document.createElement('button');
-            refreshButton.innerHTML = `
-                <span class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-                    </svg>
-                    Refresh Data
-                </span>
-            `;
-            refreshButton.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-4';
-            refreshButton.onclick = function() {
-                // Clear the cache
-                timeSeriesDataCache.clear();
-                // Reload the page
-                window.location.reload();
-            };
 
-            // Add the button at the top of the page
-            const container = document.querySelector('#devices');
-            container.parentNode.insertBefore(refreshButton, container);
-        }
 
         // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
         fetchDevices();
@@ -4283,12 +3473,12 @@
                             faqModal.classList.add('flex');
                             document.body.style.overflow = 'hidden';
                         } else {
-                            showError('Could not find FAQ modal content. Please refresh the page.');
+                            UI.showError('Could not find FAQ modal content. Please refresh the page.');
                         }
                     })
                     .catch(err => {
                         console.error('Failed to load FAQ modal:', err);
-                        showError('Failed to load FAQ modal. Please refresh the page.');
+                        UI.showError('Failed to load FAQ modal. Please refresh the page.');
                     });
             }
         }
@@ -4318,26 +3508,13 @@
 
                 if (!response.ok) throw new Error('Failed to save settings');
                 
-                showToast('Notification settings saved successfully', 'success');
+                UI.showToast('Notification settings saved successfully', 'success');
             } catch (error) {
-                showToast(`Error: ${error.message}`, 'error');
+                UI.showError(`Error: ${error.message}`, 'error');
             }
         }
 
-        function validateEmail(email) {
-            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        }
 
-        function showToast(message, type) {
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
-                type === 'error' ? 'bg-red-500' : 'bg-green-500'
-            }`;
-            toast.textContent = message;
-            document.body.appendChild(toast);
-            
-            setTimeout(() => toast.remove(), 3000);
-        }
 
         async function handleUpdate(event, deviceId, property) {
             event.preventDefault();
@@ -4353,7 +3530,7 @@
                 }
 
                 // Log the update attempt with all details
-                logToConsole({
+                    UI.logToConsole({
                     message: 'Attempting to update property',
                     deviceId: deviceId,
                     propertyName: property.name,
@@ -4374,7 +3551,7 @@
                     case 'FLOAT':
                         // Convert Fahrenheit to Celsius if this is a temperature property
                         if (property.name.toLowerCase().includes('temp')) {
-                            formattedValue = fahrenheitToCelsius(parseFloat(property.new_value));
+                            formattedValue = Utils.fahrenheitToCelsius(parseFloat(property.new_value));
                         } else {
                             formattedValue = parseFloat(property.new_value);
                         }
@@ -4412,7 +3589,7 @@
                     }
                 };
 
-                logToConsole({
+                UI.logToConsole({
                     message: 'Sending update request',
                     url: apiUrl,
                     body: requestBody
@@ -4434,7 +3611,7 @@
                 }
 
                 const result = await response.json();
-                logToConsole({
+                UI.logToConsole({
                     message: 'Update successful',
                     deviceId: deviceId,
                     propertyName: property.name,
@@ -4448,13 +3625,13 @@
                 }, 3000); // Wait 3 seconds before reloading
                 
             } catch (error) {
-                logToConsole({
+                UI.logToConsole({
                     message: 'Error updating property',
                     error: error.message,
                     deviceId: deviceId,
                     propertyName: property?.name
                 }, 'error');
-                showError(`Failed to update property: ${error.message}`);
+                UI.showError(`Failed to update property: ${error.message}`);
             }
         }
 
@@ -4497,7 +3674,7 @@
                             ${property.writable ? `
                             <div class="mt-3">
                                 <input 
-                                    type="${getPropertyInputType(property)}"
+                                    type="${UI.getPropertyInputType(property)}"
                                     value="${property.last_value}"
                                     ${property.type === 'BOOL' ? 'checked' : ''}
                                     class="w-full px-2 py-1 border rounded-md text-sm"
@@ -4505,7 +3682,7 @@
                                     data-property='${JSON.stringify(property)}'
                                     onkeydown="handlePropertyInputKeydown(event)"
                                     onchange="handlePropertyInputChange(event)"
-                                    step="${getPropertyStep(property)}"
+                                    step="${UI.getPropertyStep(property)}"
                                 >
                             </div>
                             ` : ''}
@@ -4557,7 +3734,34 @@
                 console.error('Setup Guide modal element not found');
             }
         }
+
+        function showNotificationToast(message, type = 'success') {
+            UI.showToast(message, type);
+        }
+
+        // Remove duplicate showToast function
+        function handleNotificationSettings(deviceId) {
+            // ... existing code ...
+        }
+
+        function handlePropertyInputChange(event) {
+            const input = event.target;
+            const deviceId = input.dataset.deviceId;
+            
+            try {
+                const property = JSON.parse(input.dataset.property);
+                property.new_value = input.type === 'checkbox' ? input.checked : input.value;
+                
+                if (!deviceId) {
+                    throw new Error('Device ID is missing');
+                }
+                
+                updatePropertyValue(deviceId, property);
+            } catch (error) {
+                UI.logToConsole(`Error handling property input: ${error.message}`, 'error');
+                UI.showError(`Failed to handle property input: ${error.message}`);
+            }
+        }
     </script>
 </body>
 </html>
-
