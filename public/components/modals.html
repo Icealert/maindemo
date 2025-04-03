@@ -77,310 +77,309 @@
 </div>
 
 <!-- FAQ Modal -->
-<div id="faqModal" class="fixed inset-0 z-50 overflow-y-auto hidden" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-    <div class="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-        <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-2xl font-bold text-gray-900">Frequently Asked Questions</h2>
-                    <button onclick="closeFAQ()" class="text-gray-400 hover:text-gray-500">
-                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+<div id="faq-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Frequently Asked Questions</h2>
+                <p class="text-gray-600">Find answers to common questions about FreezeSense</p>
+            </div>
+            <button onclick="closeFAQ()" class="text-gray-500 hover:text-gray-700">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- FAQ Content -->
+        <div class="space-y-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- General Information -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                    </button>
-                </div>
-                
-                <!-- FAQ Content -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <!-- General Information -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            General Information
-                        </h3>
-                        
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <h4 class="font-medium text-blue-900 mb-2">What is FreezeSense?</h4>
-                            <p class="text-blue-800">A smart monitoring system for ice machines that:</p>
-                            <ul class="mt-2 space-y-2 text-blue-700">
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Tracks ice levels using temperature sensors
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Monitors water flow
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Sends alerts for potential issues
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <h4 class="font-medium text-blue-900 mb-2">System Accuracy</h4>
-                            <div class="flex items-center mb-3">
-                                <div class="w-12 h-12 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center">
-                                    <span class="text-2xl font-bold text-blue-600">95%</span>
-                                </div>
-                                <p class="ml-4 text-blue-800">Accuracy in ice level detection</p>
-                            </div>
-                            <ul class="space-y-2 text-blue-700">
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Calibrated sensors
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Strategic placement
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Smart threshold algorithms
-                                </li>
-                            </ul>
-                        </div>
-
-                        <div class="bg-blue-50 rounded-lg p-4">
-                            <h4 class="font-medium text-blue-900 mb-2">Subscription Cost</h4>
-                            <p class="text-blue-800">$5.99/month per device includes:</p>
-                            <ul class="mt-2 space-y-2 text-blue-700">
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    24/7 cloud operations
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Secure storage
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    System updates
-                                </li>
-                            </ul>
-                            <p class="mt-3 text-sm text-blue-600">Volume discounts coming soon!</p>
-                        </div>
+                        General Information
+                    </h3>
+                    
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-2">What is FreezeSense?</h4>
+                        <p class="text-blue-800">A smart monitoring system for ice machines that:</p>
+                        <ul class="mt-2 space-y-2 text-blue-700">
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Tracks ice levels using temperature sensors
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Monitors water flow
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Sends alerts for potential issues
+                            </li>
+                        </ul>
                     </div>
 
-                    <!-- Alerts & Security -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                            </svg>
-                            Alerts & Security
-                        </h3>
-
-                        <div class="bg-purple-50 rounded-lg p-4">
-                            <h4 class="font-medium text-purple-900 mb-2">Alert Types</h4>
-                            <div class="grid grid-cols-1 gap-3">
-                                <div class="flex items-start">
-                                    <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ml-3">
-                                        <h5 class="font-medium text-purple-900">Low Ice Level</h5>
-                                        <p class="text-sm text-purple-700">Alerts when ice drops below threshold</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-start">
-                                    <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ml-3">
-                                        <h5 class="font-medium text-purple-900">No Water Flow</h5>
-                                        <p class="text-sm text-purple-700">Monitors water flow interruptions</p>
-                                    </div>
-                                </div>
-                                <div class="flex items-start">
-                                    <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
-                                        <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                                        </svg>
-                                    </div>
-                                    <div class="ml-3">
-                                        <h5 class="font-medium text-purple-900">Temperature Threshold</h5>
-                                        <p class="text-sm text-purple-700">Alerts for temperature anomalies</p>
-                                    </div>
-                                </div>
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-2">System Accuracy</h4>
+                        <div class="flex items-center mb-3">
+                            <div class="w-12 h-12 flex-shrink-0 bg-blue-100 rounded-full flex items-center justify-center">
+                                <span class="text-2xl font-bold text-blue-600">95%</span>
                             </div>
+                            <p class="ml-4 text-blue-800">Accuracy in ice level detection</p>
                         </div>
+                        <ul class="space-y-2 text-blue-700">
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Calibrated sensors
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Strategic placement
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Smart threshold algorithms
+                            </li>
+                        </ul>
+                    </div>
 
-                        <div class="bg-purple-50 rounded-lg p-4">
-                            <h4 class="font-medium text-purple-900 mb-2">Security Features</h4>
-                            <ul class="space-y-3 text-purple-700">
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    End-to-end encryption
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Device-specific tokens
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Regular security audits
-                                </li>
-                            </ul>
-                            <p class="mt-3 text-sm text-purple-600">Coming soon: Password protection for device setup</p>
-                        </div>
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-2">Subscription Cost</h4>
+                        <p class="text-blue-800">$5.99/month per device includes:</p>
+                        <ul class="mt-2 space-y-2 text-blue-700">
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                24/7 cloud operations
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Secure storage
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                System updates
+                            </li>
+                        </ul>
+                        <p class="mt-3 text-sm text-blue-600">Volume discounts coming soon!</p>
                     </div>
                 </div>
 
-                <!-- Maintenance & Quality -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            Maintenance
-                        </h3>
-
-                        <div class="bg-green-50 rounded-lg p-4">
-                            <div class="flex items-center mb-3">
-                                <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                </div>
-                                <div class="ml-4">
-                                    <h4 class="font-medium text-green-900">Every 6 Months</h4>
-                                    <p class="text-sm text-green-700">Regular maintenance schedule</p>
-                                </div>
-                            </div>
-                            <ul class="space-y-2 text-green-700">
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Cleaning and sanitizing
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Component inspection
-                                </li>
-                                <li class="flex items-start">
-                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                    </svg>
-                                    Calibration check
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold text-gray-800 flex items-center">
-                            <svg class="w-5 h-5 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            Device Quality
-                        </h3>
-
-                        <div class="bg-emerald-50 rounded-lg p-4">
-                            <div class="space-y-4">
-                                <div>
-                                    <h4 class="font-medium text-emerald-900 mb-2">Our Process</h4>
-                                    <ul class="space-y-2 text-emerald-700">
-                                        <li class="flex items-start">
-                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                            </svg>
-                                            72-hour burn-in testing
-                                        </li>
-                                        <li class="flex items-start">
-                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                            </svg>
-                                            3-stage calibration
-                                        </li>
-                                        <li class="flex items-start">
-                                            <svg class="w-5 h-5 mr-2 mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
-                                            </svg>
-                                            100% manual inspection
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Dashboard Privacy -->
-                <div class="mt-8">
-                    <h3 class="text-lg font-semibold text-gray-800 flex items-center mb-4">
-                        <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                <!-- Alerts & Security -->
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                         </svg>
-                        Dashboard Privacy
+                        Alerts & Security
                     </h3>
 
-                    <div class="bg-indigo-50 rounded-lg p-4">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <h4 class="font-medium text-purple-900 mb-2">Alert Types</h4>
+                        <div class="grid grid-cols-1 gap-3">
+                            <div class="flex items-start">
+                                <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="font-medium text-purple-900">Low Ice Level</h5>
+                                    <p class="text-sm text-purple-700">Alerts when ice drops below threshold</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="font-medium text-purple-900">No Water Flow</h5>
+                                    <p class="text-sm text-purple-700">Monitors water flow interruptions</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                    </svg>
+                                </div>
+                                <div class="ml-3">
+                                    <h5 class="font-medium text-purple-900">Temperature Threshold</h5>
+                                    <p class="text-sm text-purple-700">Alerts for temperature anomalies</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-purple-50 rounded-lg p-4">
+                        <h4 class="font-medium text-purple-900 mb-2">Security Features</h4>
+                        <ul class="space-y-3 text-purple-700">
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                End-to-end encryption
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Device-specific tokens
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Regular security audits
+                            </li>
+                        </ul>
+                        <p class="mt-3 text-sm text-purple-600">Coming soon: Password protection for device setup</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Maintenance & Quality -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        Maintenance
+                    </h3>
+
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <div class="flex items-center mb-3">
+                            <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <div class="ml-4">
+                                <h4 class="font-medium text-green-900">Every 6 Months</h4>
+                                <p class="text-sm text-green-700">Regular maintenance schedule</p>
+                            </div>
+                        </div>
+                        <ul class="space-y-2 text-green-700">
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Cleaning and sanitizing
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Component inspection
+                            </li>
+                            <li class="flex items-start">
+                                <svg class="w-5 h-5 mr-2 mt-0.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                </svg>
+                                Calibration check
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        Device Quality
+                    </h3>
+
+                    <div class="bg-emerald-50 rounded-lg p-4">
+                        <div class="space-y-4">
                             <div>
-                                <h4 class="font-medium text-indigo-900 mb-2">Privacy Features</h4>
-                                <ul class="space-y-2 text-indigo-700">
+                                <h4 class="font-medium text-emerald-900 mb-2">Our Process</h4>
+                                <ul class="space-y-2 text-emerald-700">
                                     <li class="flex items-start">
-                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
                                         </svg>
-                                        64-character unique URLs
+                                        72-hour burn-in testing
                                     </li>
                                     <li class="flex items-start">
-                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
                                         </svg>
-                                        No sequential IDs
+                                        3-stage calibration
                                     </li>
                                     <li class="flex items-start">
-                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-5 h-5 mr-2 mt-0.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
                                         </svg>
-                                        IP-based access logging
+                                        100% manual inspection
                                     </li>
                                 </ul>
                             </div>
-                            <div class="bg-indigo-100 rounded-lg p-3">
-                                <p class="text-sm text-indigo-600">Example URL: https://freezesense.com/d/59f8b...d41</p>
-                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Dashboard Privacy -->
+            <div class="mt-8">
+                <h3 class="text-lg font-semibold text-gray-800 flex items-center mb-4">
+                    <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                    </svg>
+                    Dashboard Privacy
+                </h3>
+
+                <div class="bg-indigo-50 rounded-lg p-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <h4 class="font-medium text-indigo-900 mb-2">Privacy Features</h4>
+                            <ul class="space-y-2 text-indigo-700">
+                                <li class="flex items-start">
+                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                    </svg>
+                                    64-character unique URLs
+                                </li>
+                                <li class="flex items-start">
+                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                    </svg>
+                                    No sequential IDs
+                                </li>
+                                <li class="flex items-start">
+                                    <svg class="w-5 h-5 mr-2 mt-0.5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"/>
+                                    </svg>
+                                    IP-based access logging
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="bg-indigo-100 rounded-lg p-3">
+                            <p class="text-sm text-indigo-600">Example URL: https://freezesense.com/d/59f8b...d41</p>
                         </div>
                     </div>
                 </div>
