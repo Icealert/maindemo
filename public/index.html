@@ -1987,7 +1987,7 @@
 
         // Standardize all property update handlers
         async function handleUpdateButtonClick(event) {
-            event.preventDefault(); // Prevent any default button behavior
+            event.preventDefault();
             const button = event.target;
             const input = button.previousElementSibling;
             const deviceId = button.dataset.deviceId;
@@ -2020,7 +2020,7 @@
                     newValue: property.new_value
                 }, 'info');
                 
-                await updatePropertyValue(deviceId, property);
+                await UI.updatePropertyValue(deviceId, property);
                 
                 // Show success toast
                 UI.showToast('Property updated successfully. Refreshing...', 'success');

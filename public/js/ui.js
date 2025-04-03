@@ -375,5 +375,6 @@ window.UI = {
     getPropertyInputType,
     getPropertyStep,
     getIceLevelText,
-    addRefreshButton
+    addRefreshButton,
+    updatePropertyValue
 }; 
