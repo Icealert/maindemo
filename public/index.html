@@ -4205,10 +4205,10 @@
         }
 
         function showFAQ() {
-            const faqModal = document.getElementById('faq-modal');
-            if (faqModal) {
-                faqModal.classList.remove('hidden');
-                faqModal.classList.add('flex');
+            const modal = document.getElementById('faq-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
                 document.body.style.overflow = 'hidden';
             } else {
                 console.error('FAQ modal element not found');
@@ -4217,11 +4217,11 @@
         }
 
         function closeFAQ() {
-            const faqModal = document.getElementById('faq-modal');
-            if (faqModal) {
-                faqModal.classList.add('hidden');
-                faqModal.classList.remove('flex');
-                document.body.style.overflow = '';
+            const modal = document.getElementById('faq-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = 'auto';
             }
         }
 
