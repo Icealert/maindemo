@@ -51,13 +51,42 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Load components first
             Promise.all([
-                fetch('/components/navigation.html').then(response => response.text()),
-                fetch('/components/main-content.html').then(response => response.text()),
-                fetch('/components/modals.html').then(response => response.text())
+                fetch('/components/navigation.html')
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to load navigation.html: ${response.status}`);
+                        return response.text();
+                    }),
+                fetch('/components/main-content.html')
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to load main-content.html: ${response.status}`);
+                        return response.text();
+                    }),
+                fetch('/components/modals.html')
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to load modals.html: ${response.status}`);
+                        return response.text();
+                    })
             ]).then(([navigation, mainContent, modals]) => {
+                // Log the content lengths to verify we got the data
+                console.log('Component sizes:', {
+                    navigation: navigation.length,
+                    mainContent: mainContent.length,
+                    modals: modals.length
+                });
+
+                // Insert the components
                 document.getElementById('navigation').innerHTML = navigation;
                 document.getElementById('main-content').innerHTML = mainContent;
                 document.getElementById('modals').innerHTML = modals;
+
+                // Verify the FAQ modal was loaded
+                const faqModal = document.getElementById('faq-modal');
+                if (!faqModal) {
+                    console.error('FAQ modal not found after loading modals.html');
+                    showError('Failed to load FAQ modal. Please refresh the page.');
+                } else {
+                    console.log('FAQ modal loaded successfully');
+                }
                 
                 // After components are loaded, initialize the app
                 addRefreshButton();
@@ -72,7 +101,7 @@
                 });
             }).catch(error => {
                 console.error('Error loading components:', error);
-                showError('Failed to load page components. Please refresh the page.');
+                showError(`Failed to load page components: ${error.message}. Please refresh the page.`);
             });
         });
 

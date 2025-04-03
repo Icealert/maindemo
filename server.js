@@ -129,7 +129,15 @@ app.use(cors({
 
 // Parse JSON with size limits
 app.use(express.json({ limit: '1mb' }));
+
+// Serve static files from public directory
 app.use(express.static('public', {
+    maxAge: '1h',
+    etag: true
+}));
+
+// Explicitly serve files from components directory
+app.use('/components', express.static('public/components', {
     maxAge: '1h',
     etag: true
 }));
