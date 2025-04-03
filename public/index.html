@@ -51,19 +51,28 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Load components first
             Promise.all([
-                fetch('/components/navigation.html')
+                fetch('./components/navigation.html')
                     .then(response => {
-                        if (!response.ok) throw new Error(`Failed to load navigation.html: ${response.status}`);
+                        if (!response.ok) {
+                            console.error('Failed to load navigation.html:', response.status, response.statusText);
+                            throw new Error(`Failed to load navigation.html: ${response.status}`);
+                        }
                         return response.text();
                     }),
-                fetch('/components/main-content.html')
+                fetch('./components/main-content.html')
                     .then(response => {
-                        if (!response.ok) throw new Error(`Failed to load main-content.html: ${response.status}`);
+                        if (!response.ok) {
+                            console.error('Failed to load main-content.html:', response.status, response.statusText);
+                            throw new Error(`Failed to load main-content.html: ${response.status}`);
+                        }
                         return response.text();
                     }),
-                fetch('/components/modals.html')
+                fetch('./components/modals.html')
                     .then(response => {
-                        if (!response.ok) throw new Error(`Failed to load modals.html: ${response.status}`);
+                        if (!response.ok) {
+                            console.error('Failed to load modals.html:', response.status, response.statusText);
+                            throw new Error(`Failed to load modals.html: ${response.status}`);
+                        }
                         return response.text();
                     })
             ]).then(([navigation, mainContent, modals]) => {
