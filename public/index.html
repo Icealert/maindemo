@@ -88,18 +88,23 @@
                 document.getElementById('main-content').innerHTML = mainContent;
                 document.getElementById('modals').innerHTML = modals;
 
-                // Verify the FAQ modal was loaded
-                const faqModal = document.getElementById('faq-modal');
-                if (!faqModal) {
-                    console.error('FAQ modal not found after loading modals.html');
-                    showError('Failed to load FAQ modal. Please refresh the page.');
-                } else {
-                    console.log('FAQ modal loaded successfully');
-                }
-                
-                // After components are loaded, initialize the app
-                addRefreshButton();
-                fetchDevices();
+                // Give the browser a moment to process the DOM updates
+                setTimeout(() => {
+                    // Verify all modals were loaded
+                    const requiredModals = ['faq-modal', 'disclaimer-modal', 'contact-modal', 'setup-modal', 'known-bugs-modal'];
+                    const missingModals = requiredModals.filter(id => !document.getElementById(id));
+                    
+                    if (missingModals.length > 0) {
+                        console.error('Missing modals after loading:', missingModals);
+                        showError(`Failed to load modals: ${missingModals.join(', ')}. Please refresh the page.`);
+                    } else {
+                        console.log('All modals loaded successfully');
+                    }
+                    
+                    // After components are loaded, initialize the app
+                    addRefreshButton();
+                    fetchDevices();
+                }, 100);
                 
                 // Set up the refresh interval
                 const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
