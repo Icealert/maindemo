@@ -4408,6 +4408,30 @@
             document.getElementById('known-bugs-modal').classList.add('hidden');
             document.getElementById('known-bugs-modal').classList.remove('flex');
         }
+
+        function showSetupGuide() {
+            const modal = document.getElementById('setup-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.style.overflow = 'hidden';
+                console.log('Setup Guide modal opened');
+            } else {
+                console.error('Setup Guide modal element not found');
+            }
+        }
+
+        function hideSetupGuide() {
+            const modal = document.getElementById('setup-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.style.overflow = 'auto';
+                console.log('Setup Guide modal closed');
+            } else {
+                console.error('Setup Guide modal element not found');
+            }
+        }
     </script>
 </body>
 </html>
