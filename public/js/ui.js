@@ -4,19 +4,29 @@
  */
 
 // UI Element references
-const statusEl = document.getElementById('status');
-const errorEl = document.getElementById('error');
-const errorMessageEl = document.getElementById('error-message');
-const devicesContainer = document.getElementById('devices');
-const consoleOutput = document.getElementById('console-output');
-const debugConsole = document.getElementById('debug-console');
+let statusEl, errorEl, errorMessageEl, devicesContainer, consoleOutput, debugConsole;
+
+// Initialize UI elements
+function initializeUIElements() {
+    statusEl = document.getElementById('status');
+    errorEl = document.getElementById('error');
+    errorMessageEl = document.getElementById('error-message');
+    devicesContainer = document.getElementById('devices');
+    consoleOutput = document.getElementById('console-output');
+    debugConsole = document.getElementById('debug-console');
+}
+
+// Call initializeUIElements when DOM is ready
+document.addEventListener('DOMContentLoaded', initializeUIElements);
 
 // Debug Console Functions
 function toggleConsole() {
+    if (!debugConsole) return;
     debugConsole.classList.toggle('hidden');
 }
 
 function clearConsole() {
+    if (!consoleOutput) return;
     consoleOutput.innerHTML = '';
 }
 
@@ -246,7 +256,7 @@ function handlePropertyInputChange(event) {
             throw new Error('Device ID is missing');
         }
         
-        updatePropertyValue(deviceId, property);
+        UI.updatePropertyValue(deviceId, property);
     } catch (error) {
         logToConsole(`Error handling property input: ${error.message}`, 'error');
         showError(`Failed to handle property input: ${error.message}`);

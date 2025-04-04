@@ -12,15 +12,16 @@
     <!-- Load styles -->
     <link rel="stylesheet" href="styles.css">
     <!-- Load utility functions first -->
-    <script src="js/utils.js" defer></script>
+    <script src="js/utils.js"></script>
     <!-- Load UI functions after utils -->
-    <script src="js/ui.js" defer></script>
+    <script src="js/ui.js"></script>
     <!-- Load main script after all dependencies -->
-    <script defer>
-        // Wait for both UI and Utils modules to load
-        window.addEventListener('load', function() {
+    <script>
+        // Initialize app only after DOM content is loaded and scripts are ready
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if UI and Utils are loaded
             if (!window.UI || !window.Utils) {
-                console.error('UI or Utils not loaded:', { UI: !!window.UI, Utils: !!window.Utils });
+                console.error('Required modules not loaded:', { UI: !!window.UI, Utils: !!window.Utils });
                 document.body.innerHTML = `
                     <div class="p-4 bg-red-100 text-red-700">
                         <h2 class="font-bold">Missing Required Scripts</h2>
@@ -31,10 +32,56 @@
                 `;
                 return;
             }
-            console.log('Scripts loaded successfully');
-            // Initialize the app only after scripts are loaded
-            initializeApp();
+
+            // Load components first
+            Promise.all([
+                fetch('./components/navigation.html')
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to load navigation.html: ${response.status}`);
+                        return response.text();
+                    }),
+                fetch('./components/main-content.html')
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to load main-content.html: ${response.status}`);
+                        return response.text();
+                    }),
+                fetch('./components/modals.html')
+                    .then(response => {
+                        if (!response.ok) throw new Error(`Failed to load modals.html: ${response.status}`);
+                        return response.text();
+                    })
+            ]).then(([navigation, mainContent, modals]) => {
+                // Insert the components
+                document.getElementById('navigation').innerHTML = navigation;
+                document.getElementById('main-content').innerHTML = mainContent;
+                document.getElementById('modals').innerHTML = modals;
+
+                // Initialize the app after components are loaded
+                UI.addRefreshButton();
+                fetchDevices();
+
+                // Set up the refresh interval
+                const interval = setInterval(fetchDevices, 21600000);  // 6 hours
+                window.addEventListener('unload', () => clearInterval(interval));
+            }).catch(error => {
+                console.error('Error loading components:', error);
+                UI.showError(`Failed to load page components: ${error.message}. Please refresh the page.`);
+            });
         });
+
+        // Error handling for script loading
+        window.addEventListener('error', function(e) {
+            console.error('Script loading error:', e.error);
+            if (!document.querySelector('.error-message')) {
+                document.body.innerHTML = `
+                    <div class="p-4 bg-red-100 text-red-700 error-message">
+                        <h2 class="font-bold">Error Loading Scripts</h2>
+                        <p>${e.error?.message || 'Unknown error'}</p>
+                        <pre class="mt-2 text-sm">${e.error?.stack || ''}</pre>
+                    </div>
+                `;
+            }
+        }, true);
     </script>
 </head>
 <body>
