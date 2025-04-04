@@ -12,9 +12,30 @@
     <!-- Load styles -->
     <link rel="stylesheet" href="styles.css">
     <!-- Load utility functions first -->
-    <script src="/js/utils.js"></script>
+    <script src="js/utils.js" defer></script>
     <!-- Load UI functions after utils -->
-    <script src="/js/ui.js"></script>
+    <script src="js/ui.js" defer></script>
+    <!-- Load main script after all dependencies -->
+    <script defer>
+        // Wait for both UI and Utils modules to load
+        window.addEventListener('load', function() {
+            if (!window.UI || !window.Utils) {
+                console.error('UI or Utils not loaded:', { UI: !!window.UI, Utils: !!window.Utils });
+                document.body.innerHTML = `
+                    <div class="p-4 bg-red-100 text-red-700">
+                        <h2 class="font-bold">Missing Required Scripts</h2>
+                        <p>UI Module: ${window.UI ? 'Loaded' : 'Missing'}</p>
+                        <p>Utils Module: ${window.Utils ? 'Loaded' : 'Missing'}</p>
+                        <p class="mt-2">Please check the console for more details.</p>
+                    </div>
+                `;
+                return;
+            }
+            console.log('Scripts loaded successfully');
+            // Initialize the app only after scripts are loaded
+            initializeApp();
+        });
+    </script>
 </head>
 <body>
     <div id="app" class="min-h-screen bg-gray-100">
@@ -260,117 +281,6 @@
        
 
 
-        async function updatePropertyValue(deviceId, property) {
-            try {
-                if (!deviceId || !property) {
-                    throw new Error('Device ID and Property are required');
-                }
-
-                // Log the update attempt with all details
-                UI.logToConsole({
-                    message: 'Attempting to update property',
-                    deviceId: deviceId,
-                    propertyName: property.name,
-                    currentValue: property.last_value,
-                    newValue: property.new_value,
-                    propertyType: property.type
-                }, 'info');
-
-                // Format the value based on type
-                let formattedValue;
-                switch(property.type) {
-                    case 'INT':
-                        formattedValue = parseInt(property.new_value);
-                        if (isNaN(formattedValue)) {
-                            throw new Error('Invalid integer value');
-                        }
-                        break;
-                    case 'FLOAT':
-                        // Convert Fahrenheit to Celsius if this is a temperature property
-                        if (property.name.toLowerCase().includes('temp')) {
-                            formattedValue = Utils.fahrenheitToCelsius(parseFloat(property.new_value));
-                        } else {
-                            formattedValue = parseFloat(property.new_value);
-                        }
-                        if (isNaN(formattedValue)) {
-                            throw new Error('Invalid float value');
-                        }
-                        break;
-                    case 'BOOL':
-                        // Convert to actual boolean instead of string
-                        formattedValue = property.new_value === true || property.new_value === 'true';
-                        break;
-                    case 'CHARSTRING':
-                    case 'STATUS':
-                        formattedValue = String(property.new_value).trim();
-                        if (!formattedValue) {
-                            throw new Error('Value cannot be empty');
-                        }
-                        break;
-                    default:
-                        formattedValue = property.new_value;
-                }
-
-                // Using V2 API endpoint format and structure
-                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
-
-                // Construct payload exactly as per Arduino V2 API docs
-                const requestBody = {
-                    propertiesValues: {
-                        input: true,
-                        properties: [{
-                            name: property.name,
-                            type: property.type,
-                            value: formattedValue // Send raw value without converting to string
-                        }]
-                    }
-                };
-
-                UI.logToConsole({
-                    message: 'Sending update request',
-                    url: apiUrl,
-                    body: requestBody
-                }, 'info');
-
-                const response = await fetch(apiUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Organization': property.organization_id || ''  // Add organization ID if available
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                UI.logToConsole({
-                    message: 'Update successful',
-                    deviceId: deviceId,
-                    propertyName: property.name,
-                    response: result
-                }, 'info');
-
-                // Refresh the devices list to show the new value
-                await fetchDevices();
-                setTimeout(() => {
-                    location.reload(true);
-                }, 3000); // Wait 3 seconds before reloading
-                
-            } catch (error) {
-                UI.logToConsole({
-                    message: 'Error updating property',
-                    error: error.message,
-                    deviceId: deviceId,
-                    propertyName: property?.name
-                }, 'error');
-                UI.showError(`Failed to update property: ${error.message}`);
-            }
-        }
 
        
         // Remove all other handlers to avoid conflicts
@@ -3491,122 +3401,11 @@
 
         async function handleUpdate(event, deviceId, property) {
             event.preventDefault();
-            await updatePropertyValue(deviceId, property);
+            await UI.updatePropertyValue(deviceId, property);
         }
 
         // Remove auto-commit function
         
-        async function updatePropertyValue(deviceId, property) {
-            try {
-                if (!deviceId || !property) {
-                    throw new Error('Device ID and Property are required');
-                }
-
-                // Log the update attempt with all details
-                    UI.logToConsole({
-                    message: 'Attempting to update property',
-                    deviceId: deviceId,
-                    propertyName: property.name,
-                    currentValue: property.last_value,
-                    newValue: property.new_value,
-                    propertyType: property.type
-                }, 'info');
-
-                // Format the value based on type
-                let formattedValue;
-                switch(property.type) {
-                    case 'INT':
-                        formattedValue = parseInt(property.new_value);
-                        if (isNaN(formattedValue)) {
-                            throw new Error('Invalid integer value');
-                        }
-                        break;
-                    case 'FLOAT':
-                        // Convert Fahrenheit to Celsius if this is a temperature property
-                        if (property.name.toLowerCase().includes('temp')) {
-                            formattedValue = Utils.fahrenheitToCelsius(parseFloat(property.new_value));
-                        } else {
-                            formattedValue = parseFloat(property.new_value);
-                        }
-                        if (isNaN(formattedValue)) {
-                            throw new Error('Invalid float value');
-                        }
-                        break;
-                    case 'BOOL':
-                        // Convert to actual boolean instead of string
-                        formattedValue = property.new_value === true || property.new_value === 'true';
-                        break;
-                    case 'CHARSTRING':
-                    case 'STATUS':
-                        formattedValue = String(property.new_value).trim();
-                        if (!formattedValue) {
-                            throw new Error('Value cannot be empty');
-                        }
-                        break;
-                    default:
-                        formattedValue = property.new_value;
-                }
-
-                // Using V2 API endpoint format and structure
-                const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
-
-                // Construct payload exactly as per Arduino V2 API docs
-                const requestBody = {
-                    propertiesValues: {
-                        input: true,
-                        properties: [{
-                            name: property.name,
-                            type: property.type,
-                            value: formattedValue // Send raw value without converting to string
-                        }]
-                    }
-                };
-
-                UI.logToConsole({
-                    message: 'Sending update request',
-                    url: apiUrl,
-                    body: requestBody
-                }, 'info');
-
-                const response = await fetch(apiUrl, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-Organization': property.organization_id || ''  // Add organization ID if available
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => null);
-                    throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
-                }
-
-                const result = await response.json();
-                UI.logToConsole({
-                    message: 'Update successful',
-                    deviceId: deviceId,
-                    propertyName: property.name,
-                    response: result
-                }, 'info');
-
-                // Refresh the devices list to show the new value
-                await fetchDevices();
-                setTimeout(() => {
-                    location.reload(true);
-                }, 3000); // Wait 3 seconds before reloading
-                
-            } catch (error) {
-                UI.logToConsole({
-                    message: 'Error updating property',
-                    error: error.message,
-                    deviceId: deviceId,
-                    propertyName: property?.name
-                }, 'error');
-                UI.showError(`Failed to update property: ${error.message}`);
-            }
-        }
 
       
         // Add keyboard shortcut for manual commit
@@ -3729,7 +3528,7 @@
                     throw new Error('Device ID is missing');
                 }
                 
-                updatePropertyValue(deviceId, property);
+                UI.updatePropertyValue(deviceId, property);
             } catch (error) {
                 UI.logToConsole(`Error handling property input: ${error.message}`, 'error');
                 UI.showError(`Failed to handle property input: ${error.message}`);

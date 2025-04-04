@@ -350,6 +350,117 @@ function addRefreshButton() {
     document.body.appendChild(refreshButton);
 }
 
+// Add updatePropertyValue function before the exports
+async function updatePropertyValue(deviceId, property) {
+    try {
+        if (!deviceId || !property) {
+            throw new Error('Device ID and Property are required');
+        }
+
+        // Log the update attempt with all details
+        logToConsole({
+            message: 'Attempting to update property',
+            deviceId: deviceId,
+            propertyName: property.name,
+            currentValue: property.last_value,
+            newValue: property.new_value,
+            propertyType: property.type
+        }, 'info');
+
+        // Format the value based on type
+        let formattedValue;
+        switch(property.type) {
+            case 'INT':
+                formattedValue = parseInt(property.new_value);
+                if (isNaN(formattedValue)) {
+                    throw new Error('Invalid integer value');
+                }
+                break;
+            case 'FLOAT':
+                // Convert Fahrenheit to Celsius if this is a temperature property
+                if (property.name.toLowerCase().includes('temp')) {
+                    formattedValue = Utils.fahrenheitToCelsius(parseFloat(property.new_value));
+                } else {
+                    formattedValue = parseFloat(property.new_value);
+                }
+                if (isNaN(formattedValue)) {
+                    throw new Error('Invalid float value');
+                }
+                break;
+            case 'BOOL':
+                // Convert to actual boolean instead of string
+                formattedValue = property.new_value === true || property.new_value === 'true';
+                break;
+            case 'CHARSTRING':
+            case 'STATUS':
+                formattedValue = String(property.new_value).trim();
+                if (!formattedValue) {
+                    throw new Error('Value cannot be empty');
+                }
+                break;
+            default:
+                formattedValue = property.new_value;
+        }
+
+        // Using V2 API endpoint format and structure
+        const apiUrl = `${API_URL}/api/iot/v2/devices/${deviceId}/properties`;
+
+        // Construct payload exactly as per Arduino V2 API docs
+        const requestBody = {
+            propertiesValues: {
+                input: true,
+                properties: [{
+                    name: property.name,
+                    type: property.type,
+                    value: formattedValue // Send raw value without converting to string
+                }]
+            }
+        };
+
+        logToConsole({
+            message: 'Sending update request',
+            url: apiUrl,
+            body: requestBody
+        }, 'info');
+
+        const response = await fetch(apiUrl, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Organization': property.organization_id || ''  // Add organization ID if available
+            },
+            body: JSON.stringify(requestBody)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            throw new Error(errorData?.error || `HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        logToConsole({
+            message: 'Update successful',
+            deviceId: deviceId,
+            propertyName: property.name,
+            response: result
+        }, 'info');
+
+        // Show success message
+        showToast('Property updated successfully', 'success');
+        
+    } catch (error) {
+        logToConsole({
+            message: 'Error updating property',
+            error: error.message,
+            deviceId: deviceId,
+            propertyName: property?.name
+        }, 'error');
+        showError(`Failed to update property: ${error.message}`);
+        throw error;
+    }
+}
+
 // Export UI functions
 window.UI = {
     toggleConsole,
