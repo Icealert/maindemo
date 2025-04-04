@@ -493,6 +493,75 @@ function addRefreshButton() {
     document.body.appendChild(refreshButton);
 }
 
+function createDeviceCard(device) {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-lg shadow-md p-4 hover:shadow-lg transition-shadow';
+    card.id = `device-${device.id}`;
+
+    // Get device status
+    const criticalProp = device.thing?.properties?.find(p => p.name === 'critical')?.last_value;
+    const warningProp = device.thing?.properties?.find(p => p.name === 'warning')?.last_value;
+    
+    // Add status indicator class
+    if (criticalProp) {
+        card.classList.add('border-l-4', 'border-red-500');
+    } else if (warningProp) {
+        card.classList.add('border-l-4', 'border-yellow-500');
+    } else {
+        card.classList.add('border-l-4', 'border-green-500');
+    }
+
+    // Sort properties to show important ones first
+    const sortedProperties = Utils.sortProperties(device.thing?.properties || []);
+
+    // Create card content
+    card.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+            <div>
+                <h3 class="text-lg font-semibold text-gray-900">${device.name || 'Unnamed Device'}</h3>
+                <p class="text-sm text-gray-500">${device.id}</p>
+            </div>
+            <span class="px-2 py-1 text-sm rounded-full ${
+                device.connection_status === 'CONNECTED' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-red-100 text-red-800'
+            }">
+                ${device.connection_status || 'UNKNOWN'}
+            </span>
+        </div>
+        <div class="space-y-4">
+            ${sortedProperties.map(property => `
+                <div class="property-card ${UI.getPropertyBgColor(property.name)} p-2 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <label class="text-sm font-medium ${UI.getPropertyTextColor(property.name)}">
+                            ${property.name}
+                        </label>
+                        <div class="flex items-center space-x-2">
+                            ${property.permission === 'READ_WRITE' ? `
+                                <input
+                                    type="${UI.getPropertyInputType(property)}"
+                                    class="form-input text-sm border-gray-300 rounded"
+                                    value="${property.last_value || ''}"
+                                    data-device-id="${device.id}"
+                                    data-property='${JSON.stringify(property)}'
+                                    onkeydown="UI.handlePropertyInputKeydown(event)"
+                                    onchange="UI.handlePropertyInputChange(event)"
+                                />
+                            ` : `
+                                <span class="text-sm ${UI.getPropertyTextColor(property.name)}">
+                                    ${UI.formatPropertyValue(property)}
+                                </span>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+
+    return card;
+}
+
 // Update UI object with all functions
 Object.assign(window.UI, {
     toggleConsole,
@@ -520,5 +589,6 @@ Object.assign(window.UI, {
     getIceLevelText,
     addRefreshButton,
     updatePropertyValue,
-    initializeUIElements
+    initializeUIElements,
+    createDeviceCard
 }); 
