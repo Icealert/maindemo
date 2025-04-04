@@ -30,6 +30,9 @@ function initializeUIElements() {
     }
 }
 
+// Create UI object first
+window.UI = {};
+
 // Property update function
 async function updatePropertyValue(deviceId, property) {
     try {
@@ -38,7 +41,7 @@ async function updatePropertyValue(deviceId, property) {
         }
 
         // Log the update attempt with all details
-        logToConsole({
+        UI.logToConsole({
             message: 'Attempting to update property',
             deviceId: deviceId,
             propertyName: property.name,
@@ -97,7 +100,7 @@ async function updatePropertyValue(deviceId, property) {
             }
         };
 
-        logToConsole({
+        UI.logToConsole({
             message: 'Sending update request',
             url: apiUrl,
             body: requestBody
@@ -119,7 +122,7 @@ async function updatePropertyValue(deviceId, property) {
         }
 
         const result = await response.json();
-        logToConsole({
+        UI.logToConsole({
             message: 'Update successful',
             deviceId: deviceId,
             propertyName: property.name,
@@ -127,16 +130,16 @@ async function updatePropertyValue(deviceId, property) {
         }, 'info');
 
         // Show success message
-        showToast('Property updated successfully', 'success');
+        UI.showToast('Property updated successfully', 'success');
         
     } catch (error) {
-        logToConsole({
+        UI.logToConsole({
             message: 'Error updating property',
             error: error.message,
             deviceId: deviceId,
             propertyName: property?.name
         }, 'error');
-        showError(`Failed to update property: ${error.message}`);
+        UI.showError(`Failed to update property: ${error.message}`);
         throw error;
     }
 }
@@ -490,8 +493,8 @@ function addRefreshButton() {
     document.body.appendChild(refreshButton);
 }
 
-// Export UI functions
-window.UI = {
+// Update UI object with all functions
+Object.assign(window.UI, {
     toggleConsole,
     clearConsole,
     logToConsole,
@@ -518,4 +521,4 @@ window.UI = {
     addRefreshButton,
     updatePropertyValue,
     initializeUIElements
-}; 
+}); 
