@@ -5,12 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FreezeSense - Commercial & Residential Ice Machine Monitoring</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230ea5e9'/%3E%3Cpath d='M50 20 L30 35 L50 50 L70 35 Z' fill='white'/%3E%3Cpath d='M50 40 L30 55 L50 70 L70 55 Z' fill='%23e0f2fe'/%3E%3Cpath d='M50 60 L30 75 L50 90 L70 75 Z' fill='white'/%3E%3C/svg%3E" />
+    <!-- Load TailwindCSS first -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Load styles -->
     <link rel="stylesheet" href="styles.css">
-    <!-- Added JavaScript module files -->
-    <script src="js/utils.js"></script>
-    <script src="js/ui.js"></script>
+    <!-- Load utility functions first -->
+    <script src="/js/utils.js"></script>
+    <!-- Load UI functions after utils -->
+    <script src="/js/ui.js"></script>
 </head>
 <body>
     <div id="app" class="min-h-screen bg-gray-100">
@@ -50,8 +54,38 @@
     </div>
 
     <script>
+        // Add error handling for script loading
+        window.addEventListener('error', function(e) {
+            console.error('Script loading error:', e.error);
+            document.body.innerHTML = `
+                <div class="p-4 bg-red-100 text-red-700">
+                    <h2 class="font-bold">Error Loading Scripts</h2>
+                    <p>${e.error?.message || 'Unknown error'}</p>
+                    <pre class="mt-2 text-sm">${e.error?.stack || ''}</pre>
+                </div>
+            `;
+        }, true);
+
+        // Check if UI and Utils are loaded
+        window.addEventListener('load', function() {
+            if (!window.UI || !window.Utils) {
+                console.error('UI or Utils not loaded:', { UI: !!window.UI, Utils: !!window.Utils });
+                document.body.innerHTML = `
+                    <div class="p-4 bg-red-100 text-red-700">
+                        <h2 class="font-bold">Missing Required Scripts</h2>
+                        <p>UI Module: ${window.UI ? 'Loaded' : 'Missing'}</p>
+                        <p>Utils Module: ${window.Utils ? 'Loaded' : 'Missing'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            console.log('Scripts loaded successfully');
+        });
+
         // Wrap initialization code in DOMContentLoaded
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM Content Loaded');
             // Load components first
             Promise.all([
                 fetch('./components/navigation.html')
@@ -155,88 +189,27 @@
         };
 
         // Update this at the start of your script
-        const API_URL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3000'
+        const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? 'http://localhost:8080'
             : 'https://freezesense.up.railway.app';
 
+        console.log('Using API URL:', API_URL);
+
+        // Add API health check
         async function checkServerHealth() {
             try {
                 const response = await fetch(`${API_URL}/health`);
-            if (!Array.isArray(arr)) {
-                UI.logToConsole('parseTsArray received non-array input:', arr, 'warning');
-                return { times: [], values: [] };
-            }
-
-            // Map the data, handling different possible property names
-            const result = {
-                times: arr.map(obj => {
-                    // Try different possible timestamp properties
-                    const timestamp = obj.time || obj.timestamp || obj.created_at || obj.date;
-                    if (!timestamp) {
-                        UI.logToConsole('Missing timestamp in object:', obj, 'warning');
-                    }
-                    return timestamp;
-                }),
-                values: arr.map(obj => {
-                    // Try to get value, handling different possible structures
-                    const value = obj.hasOwnProperty('value') ? obj.value :
-                                 obj.hasOwnProperty('data') ? obj.data :
-                                 obj.hasOwnProperty('reading') ? obj.reading : null;
-                    
-                    if (value === undefined || value === null) {
-                        UI.logToConsole('Missing value in object:', obj, 'warning');
-                    }
-                    return value;
-                })
-            };
-
-            // Validate array lengths match
-            if (result.times.length !== result.values.length) {
-                UI.logToConsole('Array length mismatch in parseTsArray:', {
-                    timesLength: result.times.length,
-                    valuesLength: result.values.length,
-                    sampleTimes: result.times.slice(0, 3),
-                    sampleValues: result.values.slice(0, 3)
-                }, 'error');
-            }
-
-            // Remove any entries where either time or value is null/undefined
-            const validIndices = result.times.map((time, i) => 
-                time && result.values[i] !== undefined && result.values[i] !== null ? i : -1
-            ).filter(i => i !== -1);
-
-            const cleanResult = {
-                times: validIndices.map(i => result.times[i]),
-                values: validIndices.map(i => result.values[i])
-            };
-
-            // Log the final processed result
-            UI.logToConsole('parseTsArray processed result:', {
-                originalLength: arr.length,
-                validLength: cleanResult.times.length,
-                sample: validIndices.slice(0, 3).map(i => ({
-                    time: new Date(cleanResult.times[i]).toLocaleString(),
-                    value: cleanResult.values[i]
-                }))
-            }, 'info');
-
-            return cleanResult;
-        
-
-
-        async function checkServerHealth() {
-            try {
-                const response = await fetch(`${API_URL}/health`);
-                if (!response.ok) throw new Error('Server health check failed');
+                if (!response.ok) throw new Error(`Server health check failed: ${response.status}`);
+                const data = await response.json();
+                console.log('Server health check:', data);
                 return true;
             } catch (error) {
                 console.error('Server health check failed:', error);
                 UI.logToConsole('Server health check failed: ' + error.message, 'error');
+                UI.showError('Server is not responding. Please make sure the server is running.');
                 return false;
             }
         }
-
-
 
         async function fetchDevices() {
             UI.showLoading();
