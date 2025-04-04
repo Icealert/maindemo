@@ -3,7 +3,34 @@
  * Contains functions for UI management, display and DOM manipulation
  */
 
-// Add updatePropertyValue function before any usage
+// UI Element references
+let statusEl, errorEl, errorMessageEl, devicesContainer, consoleOutput, debugConsole;
+
+// Initialize UI elements
+function initializeUIElements() {
+    try {
+        statusEl = document.getElementById('status');
+        errorEl = document.getElementById('error');
+        errorMessageEl = document.getElementById('error-message');
+        devicesContainer = document.getElementById('devices');
+        consoleOutput = document.getElementById('console-output');
+        debugConsole = document.getElementById('debug-console');
+        
+        // Log initialization status
+        console.log('UI Elements initialized:', {
+            status: !!statusEl,
+            error: !!errorEl,
+            errorMessage: !!errorMessageEl,
+            devices: !!devicesContainer,
+            console: !!consoleOutput,
+            debug: !!debugConsole
+        });
+    } catch (error) {
+        console.error('Error initializing UI elements:', error);
+    }
+}
+
+// Property update function
 async function updatePropertyValue(deviceId, property) {
     try {
         if (!deviceId || !property) {
@@ -114,22 +141,6 @@ async function updatePropertyValue(deviceId, property) {
     }
 }
 
-// UI Element references
-let statusEl, errorEl, errorMessageEl, devicesContainer, consoleOutput, debugConsole;
-
-// Initialize UI elements
-function initializeUIElements() {
-    statusEl = document.getElementById('status');
-    errorEl = document.getElementById('error');
-    errorMessageEl = document.getElementById('error-message');
-    devicesContainer = document.getElementById('devices');
-    consoleOutput = document.getElementById('console-output');
-    debugConsole = document.getElementById('debug-console');
-}
-
-// Call initializeUIElements when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeUIElements);
-
 // Debug Console Functions
 function toggleConsole() {
     if (!debugConsole) return;
@@ -142,6 +153,11 @@ function clearConsole() {
 }
 
 function logToConsole(data, type = 'info') {
+    if (!consoleOutput) {
+        console.log('Console output element not found');
+        return;
+    }
+
     const timestamp = new Date().toLocaleTimeString();
     const colorClass = type === 'error' ? 'text-red-400' : 
                      type === 'warning' ? 'text-yellow-400' : 
@@ -157,20 +173,23 @@ function logToConsole(data, type = 'info') {
 
 // Loading state
 function showLoading() {
+    if (!statusEl || !errorEl || !devicesContainer) return;
     statusEl.classList.remove('hidden');
     errorEl.classList.add('hidden');
     devicesContainer.innerHTML = '';
 }
 
 function hideLoading() {
+    if (!statusEl) return;
     statusEl.classList.add('hidden');
 }
 
 function showError(message) {
+    if (!statusEl || !errorEl || !errorMessageEl) return;
     statusEl.classList.add('hidden');
     errorEl.classList.remove('hidden');
     errorMessageEl.textContent = message;
-    UI.logToConsole(message, 'error');
+    logToConsole(message, 'error');
 }
 
 function updateLastUpdateTime() {
