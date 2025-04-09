@@ -957,9 +957,6 @@
             
             document.getElementById('activeDevicesCount').textContent = activeDevices;
             document.getElementById('connectedDevicesCount').textContent = connectedDevices;
-            document.getElementById('greatDevicesCount').textContent = greatDevices;
-            document.getElementById('warningDevicesCount').textContent = warningDevices;
-            document.getElementById('criticalDevicesCount').textContent = criticalDevices;
 
             if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
