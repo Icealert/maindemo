@@ -955,7 +955,6 @@
             const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
             const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
             
-            document.getElementById('activeDevicesCount').textContent = activeDevices;
             document.getElementById('connectedDevicesCount').textContent = connectedDevices;
 
             if (!Array.isArray(devices) || devices.length === 0) {
