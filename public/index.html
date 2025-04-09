@@ -4485,6 +4485,14 @@
             document.getElementById('settings-modal').classList.add('hidden');
         }
 
+        // Function to scroll to the device grid
+        function showConnectedDevices() {
+            const devicesGrid = document.getElementById('devices');
+            if (devicesGrid) {
+                devicesGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        }
+
     </script>
 </body>
 </html>
