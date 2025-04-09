@@ -21,6 +21,14 @@
     </div> <!-- Close #app -->
 
     <script>
+        // Declare variables in outer scope
+        let statusEl;
+        let errorEl;
+        let errorMessageEl;
+        let devicesContainer;
+        let consoleOutput;
+        let debugConsole;
+
         // Function to load HTML components
         function loadComponent(componentPath, placeholderId) {
             // Return the fetch promise
@@ -58,6 +66,14 @@
                 loadComponent('/components/footer.html', 'footer-placeholder')
             ]).then(() => {
                 console.log("Essential components loaded.");
+
+                // Assign element variables now that components are loaded
+                statusEl = document.getElementById('status');
+                errorEl = document.getElementById('error');
+                errorMessageEl = document.getElementById('error-message');
+                devicesContainer = document.getElementById('devices');
+                consoleOutput = document.getElementById('console-output');
+                debugConsole = document.getElementById('debug-console');
 
                 // Now that components are loaded, perform actions dependent on them
                 addRefreshButton(); // Assuming this depends on nav or main content
@@ -110,13 +126,6 @@
         const API_URL = window.location.hostname === 'localhost' 
             ? 'http://localhost:3000'
             : 'https://freezesense.up.railway.app';
-
-        const statusEl = document.getElementById('status');
-        const errorEl = document.getElementById('error');
-        const errorMessageEl = document.getElementById('error-message');
-        const devicesContainer = document.getElementById('devices');
-        const consoleOutput = document.getElementById('console-output');
-        const debugConsole = document.getElementById('debug-console');
 
         // Debug Console Functions
         function toggleConsole() {
