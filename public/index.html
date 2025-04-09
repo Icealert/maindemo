@@ -919,7 +919,7 @@
             const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
             const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
             
-            document.getElementById('connectedDevicesCount').textContent = connectedDevices;
+            document.getElementById('connectedDevicesCount').textContent = `${connectedDevices} / ${activeDevices}`;
 
             if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
