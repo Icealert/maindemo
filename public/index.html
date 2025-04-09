@@ -13,27 +13,12 @@
     <div id="app" class="min-h-screen bg-gray-100">
         <div id="nav-placeholder"></div>
         
-        <!-- Status and Error Messages -->
-        <div id="status" class="fixed top-0 left-0 right-0 bg-blue-100 text-blue-700 px-4 py-3 text-center hidden">
-            Loading...
-                </div>
-        <div id="error" class="fixed top-0 left-0 right-0 bg-red-100 text-red-700 px-4 py-3 text-center hidden">
-            <span id="error-message"></span>
-        </div>
-        
-        <!-- Main Content Area -->
-        <div class="container mx-auto px-4 py-8">
-            <!-- Device Grid Container -->
-            <div id="devices" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <!-- Devices will be dynamically inserted here -->
-            </div>
-        </div>
-        
-        <div id="modals-placeholder"></div>
-        
+        <!-- Placeholders for dynamically loaded content -->
         <div id="main-content"></div>
-
+        <div id="modals-placeholder"></div>
         <div id="footer-placeholder"></div>
+
+    </div> <!-- Close #app -->
 
     <script>
         // Function to load HTML components
