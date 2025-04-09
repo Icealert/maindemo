@@ -918,9 +918,20 @@
             const greatDevices = deviceStatuses.filter(status => status.isGreat).length;
             const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
             const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
+            const disconnectedDevices = activeDevices - connectedDevices;
             
             document.getElementById('connectedDevicesCount').textContent = `${connectedDevices} / ${activeDevices}`;
-            document.getElementById('disconnectedDevicesCount').textContent = activeDevices - connectedDevices;
+
+            // Update disconnected badge
+            const badgeElement = document.getElementById('disconnectedBadgeCount');
+            if (badgeElement) {
+                if (disconnectedDevices > 0) {
+                    badgeElement.textContent = disconnectedDevices;
+                    badgeElement.classList.remove('hidden');
+                } else {
+                    badgeElement.classList.add('hidden');
+                }
+            }
 
             if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
