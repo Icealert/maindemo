@@ -4464,7 +4464,7 @@
         });
 
         // Add these functions to the script section
-        function showDeviceSettings(deviceId) {
+        function showDeviceSettings(deviceId, deviceName) {
             const device = window.lastDevicesData.find(d => d.id === deviceId);
             if (!device) return;
 
@@ -4514,21 +4514,13 @@
             modalContent.appendChild(propertiesSection);
             
             document.getElementById('settings-modal').classList.remove('hidden');
+            document.getElementById('settings-modal-content').innerHTML = ''; // Clear content
         }
 
         function hideDeviceSettings() {
             document.getElementById('settings-modal').classList.add('hidden');
         }
 
-        function showKnownBugs() {
-            document.getElementById('known-bugs-modal').classList.remove('hidden');
-            document.getElementById('known-bugs-modal').classList.add('flex');
-        }
-
-        function hideKnownBugs() {
-            document.getElementById('known-bugs-modal').classList.add('hidden');
-            document.getElementById('known-bugs-modal').classList.remove('flex');
-        }
 
         function showSetupGuide() {
             const modal = document.getElementById('setup-modal');
@@ -4543,15 +4535,7 @@
         }
 
         function hideSetupGuide() {
-            const modal = document.getElementById('setup-modal');
-            if (modal) {
-                modal.classList.add('hidden');
-                modal.classList.remove('flex');
-                document.body.style.overflow = 'auto';
-                console.log('Setup Guide modal closed');
-            } else {
-                console.error('Setup Guide modal element not found');
-            }
+            document.getElementById('setup-modal').classList.add('hidden');
         }
     </script>
 </body>
