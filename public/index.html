@@ -28,6 +28,7 @@
         let devicesContainer;
         let consoleOutput;
         let debugConsole;
+        window.allDevicesData = []; // Store all fetched devices globally
 
         // Function to load HTML components
         function loadComponent(componentPath, placeholderId) {
@@ -77,7 +78,14 @@
 
                 // Now that components are loaded, perform actions dependent on them
                 addRefreshButton(); // Assuming this depends on nav or main content
-                fetchDevices(); // Initial fetch depends on nav potentially (lastUpdateTime)
+                fetchDevices().then(() => {
+                    // Display initial (unsorted) list after first fetch
+                    if(window.allDevicesData && devicesContainer) {
+                       displayDevices(window.allDevicesData);
+                    } else {
+                       console.error("Could not display initial devices list.");
+                    }
+                }); // Initial fetch
 
                 // Corrected Modal Check (run AFTER modals are loaded)
                 setTimeout(() => { // Use setTimeout to ensure DOM has rendered
@@ -262,36 +270,21 @@
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
 
+                // Fetch devices data from API
                 const response = await fetch(`${API_URL}/api/devices`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const devices = await response.json();
+                window.allDevicesData = devices; // Store fetched data globally
                 
-                if (devices.error) {
-                    throw new Error(devices.message || devices.error);
-                }
-                
-                // Sort devices by name
-                devices.sort((a, b) => {
-                    // Extract numbers from device names (assuming format like "001", "002", etc.)
-                    const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
-                    const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
-                    return aNum - bNum;
-                });
-                
-                // Store the sorted devices data for modal use
-                window.lastDevicesData = devices;
-                
-                // Update last update time
-                updateLastUpdateTime();
-                
-                // Log raw device data to console
-                logToConsole('Received device data (sorted):');
-                logToConsole(devices);
-                
-                displayDevices(devices);
+                logToConsole('Devices fetched successfully', 'info');
                 hideLoading();
+                hideError();
+                updateLastUpdateTime(); // Update time after successful fetch
+
+                // No longer call displayDevices here directly
+                // displayDevices(devices);
             } catch (error) {
                 console.error('Error fetching devices:', error);
                 showError(error.message || 'Failed to fetch devices. Please try again later.');
@@ -907,22 +900,24 @@
             });
         }
 
-        function displayDevices(devices) {
+        // Modified displayDevices to accept an argument
+        function displayDevices(devicesToDisplay) { 
             // Clear existing timers before updating display
             clearTimeSinceFlowTimers();
 
-            // Update device counts
-            const activeDevices = devices.length;
-            const deviceStatuses = devices.map(device => calculateDeviceStatus(device));
-            const connectedDevices = deviceStatuses.filter(status => status.isConnected).length;
-            const greatDevices = deviceStatuses.filter(status => status.isGreat).length;
-            const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
-            const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
+            // Base header counts on the full dataset
+            const allDevices = window.allDevicesData || [];
+            const activeDevices = allDevices.length;
+            const allDeviceStatuses = allDevices.map(device => calculateDeviceStatus(device));
+            const connectedDevices = allDeviceStatuses.filter(status => status.isConnected).length;
+            const greatDevices = allDeviceStatuses.filter(status => status.isGreat).length;
+            const warningDevices = allDeviceStatuses.filter(status => status.isWarning).length;
+            const criticalDevices = allDeviceStatuses.filter(status => status.isCritical).length;
             const disconnectedDevices = activeDevices - connectedDevices;
             
             document.getElementById('connectedDevicesCount').textContent = `${connectedDevices} / ${activeDevices}`;
 
-            // Update disconnected badge
+            // Update disconnected badge based on full dataset
             const badgeElement = document.getElementById('disconnectedBadgeCount');
             if (badgeElement) {
                 if (disconnectedDevices > 0) {
@@ -933,7 +928,11 @@
                 }
             }
 
-            if (!Array.isArray(devices) || devices.length === 0) {
+            if (!Array.isArray(devicesToDisplay) || devicesToDisplay.length === 0) {
+                if (!devicesContainer) {
+                    console.error("devicesContainer is not initialized yet.");
+                    return; 
+                }
                 devicesContainer.innerHTML = `
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
@@ -949,21 +948,17 @@
                 return;
             }
 
-            // Log each device's data individually with more detail
-            devices.forEach((device, idx) => {
-                logToConsole(`Device ${idx + 1} (${device.name || device.id}):`);
-                if (device.thing && device.thing.properties) {
-                    logToConsole('Properties found:');
-                    device.thing.properties.forEach(prop => {
-                        logToConsole(`- ${prop.name}: ${prop.last_value} (${prop.type})`);
-                    });
-                } else {
-                    logToConsole('No properties found for this device');
-                }
-            });
+            if (!devicesContainer) {
+                 console.error("devicesContainer is not initialized yet for rendering.");
+                 return;
+            }
 
-            devicesContainer.innerHTML = devices.map((device, index) => {
-                const status = calculateDeviceStatus(device);
+            // Log subset being displayed
+            logToConsole(`Displaying ${devicesToDisplay.length} devices`);
+
+            devicesContainer.innerHTML = devicesToDisplay.map((device, index) => {
+                // Calculate status based on this specific device for card display
+                const status = calculateDeviceStatus(device); 
 
                 return `
                 <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
@@ -4495,6 +4490,34 @@
 
         function hideDeviceSettings() {
             document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        // Function to sort and display devices
+        function displaySortedDevices(sortBy) {
+            if (!window.allDevicesData) {
+                console.error("Full device list not available for sorting.");
+                return;
+            }
+
+            logToConsole(`Sorting devices with criteria: ${sortBy}`);
+
+            // Create a copy to avoid modifying the original list
+            const devicesToSort = [...window.allDevicesData];
+
+            if (sortBy === 'disconnectedFirst') {
+                devicesToSort.sort((a, b) => {
+                    const statusA = calculateDeviceStatus(a);
+                    const statusB = calculateDeviceStatus(b);
+                    // Sort true (disconnected) before false (connected)
+                    return (statusA.isConnected === statusB.isConnected) ? 0 : statusA.isConnected ? 1 : -1;
+                });
+            } else {
+                // Default sort (e.g., by name or original order) - add if needed
+                console.warn(`Unknown sort criteria: ${sortBy}. Displaying default order.`);
+            }
+
+            // Call the main display function with the sorted list
+            displayDevices(devicesToSort);
         }
 
     </script>
