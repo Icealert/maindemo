@@ -16,6 +16,7 @@
         <!-- Placeholders for dynamically loaded content -->
         <div id="main-content"></div>
         <div id="modals-placeholder"></div>
+        <div id="device-status-modal-placeholder"></div> <!-- New Placeholder -->
         <div id="footer-placeholder"></div>
 
     </div> <!-- Close #app -->
@@ -28,7 +29,6 @@
         let devicesContainer;
         let consoleOutput;
         let debugConsole;
-        window.allDevicesData = []; // Store all fetched devices globally
 
         // Function to load HTML components
         function loadComponent(componentPath, placeholderId) {
@@ -64,6 +64,7 @@
                 loadComponent('/components/navigation.html', 'nav-placeholder'),
                 loadComponent('/components/main-content.html', 'main-content'),
                 loadComponent('/components/modals.html', 'modals-placeholder'),
+                loadComponent('/components/device-status-modal.html', 'device-status-modal-placeholder'), // Load new modal
                 loadComponent('/components/footer.html', 'footer-placeholder')
             ]).then(() => {
                 console.log("Essential components loaded.");
@@ -78,14 +79,7 @@
 
                 // Now that components are loaded, perform actions dependent on them
                 addRefreshButton(); // Assuming this depends on nav or main content
-                fetchDevices().then(() => {
-                    // Display initial (unsorted) list after first fetch
-                    if(window.allDevicesData && devicesContainer) {
-                       displayDevices(window.allDevicesData);
-                    } else {
-                       console.error("Could not display initial devices list.");
-                    }
-                }); // Initial fetch
+                fetchDevices(); // Initial fetch depends on nav potentially (lastUpdateTime)
 
                 // Corrected Modal Check (run AFTER modals are loaded)
                 setTimeout(() => { // Use setTimeout to ensure DOM has rendered
@@ -270,21 +264,36 @@
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
 
-                // Fetch devices data from API
                 const response = await fetch(`${API_URL}/api/devices`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const devices = await response.json();
-                window.allDevicesData = devices; // Store fetched data globally
                 
-                logToConsole('Devices fetched successfully', 'info');
+                if (devices.error) {
+                    throw new Error(devices.message || devices.error);
+                }
+                
+                // Sort devices by name
+                devices.sort((a, b) => {
+                    // Extract numbers from device names (assuming format like "001", "002", etc.)
+                    const aNum = parseInt(a.name.replace(/\D/g, '')) || 0;
+                    const bNum = parseInt(b.name.replace(/\D/g, '')) || 0;
+                    return aNum - bNum;
+                });
+                
+                // Store the sorted devices data for modal use
+                window.lastDevicesData = devices;
+                
+                // Update last update time
+                updateLastUpdateTime();
+                
+                // Log raw device data to console
+                logToConsole('Received device data (sorted):');
+                logToConsole(devices);
+                
+                displayDevices(devices);
                 hideLoading();
-                hideError();
-                updateLastUpdateTime(); // Update time after successful fetch
-
-                // No longer call displayDevices here directly
-                // displayDevices(devices);
             } catch (error) {
                 console.error('Error fetching devices:', error);
                 showError(error.message || 'Failed to fetch devices. Please try again later.');
@@ -900,24 +909,22 @@
             });
         }
 
-        // Modified displayDevices to accept an argument
-        function displayDevices(devicesToDisplay) { 
+        function displayDevices(devices) {
             // Clear existing timers before updating display
             clearTimeSinceFlowTimers();
 
-            // Base header counts on the full dataset
-            const allDevices = window.allDevicesData || [];
-            const activeDevices = allDevices.length;
-            const allDeviceStatuses = allDevices.map(device => calculateDeviceStatus(device));
-            const connectedDevices = allDeviceStatuses.filter(status => status.isConnected).length;
-            const greatDevices = allDeviceStatuses.filter(status => status.isGreat).length;
-            const warningDevices = allDeviceStatuses.filter(status => status.isWarning).length;
-            const criticalDevices = allDeviceStatuses.filter(status => status.isCritical).length;
+            // Update device counts
+            const activeDevices = devices.length;
+            const deviceStatuses = devices.map(device => calculateDeviceStatus(device));
+            const connectedDevices = deviceStatuses.filter(status => status.isConnected).length;
+            const greatDevices = deviceStatuses.filter(status => status.isGreat).length;
+            const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
+            const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
             const disconnectedDevices = activeDevices - connectedDevices;
             
             document.getElementById('connectedDevicesCount').textContent = `${connectedDevices} / ${activeDevices}`;
 
-            // Update disconnected badge based on full dataset
+            // Update disconnected badge
             const badgeElement = document.getElementById('disconnectedBadgeCount');
             if (badgeElement) {
                 if (disconnectedDevices > 0) {
@@ -928,11 +935,7 @@
                 }
             }
 
-            if (!Array.isArray(devicesToDisplay) || devicesToDisplay.length === 0) {
-                if (!devicesContainer) {
-                    console.error("devicesContainer is not initialized yet.");
-                    return; 
-                }
+            if (!Array.isArray(devices) || devices.length === 0) {
                 devicesContainer.innerHTML = `
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
@@ -948,17 +951,21 @@
                 return;
             }
 
-            if (!devicesContainer) {
-                 console.error("devicesContainer is not initialized yet for rendering.");
-                 return;
-            }
+            // Log each device's data individually with more detail
+            devices.forEach((device, idx) => {
+                logToConsole(`Device ${idx + 1} (${device.name || device.id}):`);
+                if (device.thing && device.thing.properties) {
+                    logToConsole('Properties found:');
+                    device.thing.properties.forEach(prop => {
+                        logToConsole(`- ${prop.name}: ${prop.last_value} (${prop.type})`);
+                    });
+                } else {
+                    logToConsole('No properties found for this device');
+                }
+            });
 
-            // Log subset being displayed
-            logToConsole(`Displaying ${devicesToDisplay.length} devices`);
-
-            devicesContainer.innerHTML = devicesToDisplay.map((device, index) => {
-                // Calculate status based on this specific device for card display
-                const status = calculateDeviceStatus(device); 
+            devicesContainer.innerHTML = devices.map((device, index) => {
+                const status = calculateDeviceStatus(device);
 
                 return `
                 <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
@@ -4492,32 +4499,62 @@
             document.getElementById('settings-modal').classList.add('hidden');
         }
 
-        // Function to sort and display devices
-        function displaySortedDevices(sortBy) {
-            if (!window.allDevicesData) {
-                console.error("Full device list not available for sorting.");
+        // Device Status Modal Functions
+        function showDeviceStatusModal() {
+            const modal = document.getElementById('device-status-modal');
+            const listElement = document.getElementById('device-status-list');
+            if (!modal || !listElement || !window.lastDevicesData) {
+                console.error('Device status modal elements or data not found');
                 return;
             }
 
-            logToConsole(`Sorting devices with criteria: ${sortBy}`);
+            // Sort devices: disconnected first
+            const sortedDevices = [...window.lastDevicesData].sort((a, b) => {
+                const statusA = calculateDeviceStatus(a);
+                const statusB = calculateDeviceStatus(b);
+                if (!statusA.isConnected && statusB.isConnected) return -1; // a (disconnected) comes first
+                if (statusA.isConnected && !statusB.isConnected) return 1;  // b (disconnected) comes first
+                // Optional: secondary sort by name if connection status is the same
+                const nameA = a.thing?.properties?.find(p => p.name === 'devicename')?.last_value || a.name;
+                const nameB = b.thing?.properties?.find(p => p.name === 'devicename')?.last_value || b.name;
+                return nameA.localeCompare(nameB);
+            });
 
-            // Create a copy to avoid modifying the original list
-            const devicesToSort = [...window.allDevicesData];
+            // Generate list HTML
+            listElement.innerHTML = sortedDevices.map(device => {
+                const status = calculateDeviceStatus(device);
+                const deviceName = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name;
+                const lastActivity = status.lastConnectedTime ? new Date(status.lastConnectedTime).toLocaleString() : 'Never';
+                const statusColor = status.isConnected ? 'text-green-600' : 'text-red-600';
+                const statusText = status.isConnected ? 'Connected' : 'Disconnected';
+                
+                return `
+                    <div class="flex items-center justify-between p-2 border rounded-md ${status.isConnected ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100'}">
+                        <div class="flex items-center">
+                            <span class="w-2.5 h-2.5 rounded-full mr-2 ${status.isConnected ? 'bg-green-500' : 'bg-red-500'}"></span>
+                            <p class="font-medium text-gray-800">${deviceName}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-xs ${statusColor}">${statusText}</p>
+                            ${!status.isConnected ? `<p class="text-[10px] text-gray-500">Last: ${lastActivity}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
 
-            if (sortBy === 'disconnectedFirst') {
-                devicesToSort.sort((a, b) => {
-                    const statusA = calculateDeviceStatus(a);
-                    const statusB = calculateDeviceStatus(b);
-                    // Sort true (disconnected) before false (connected)
-                    return (statusA.isConnected === statusB.isConnected) ? 0 : statusA.isConnected ? 1 : -1;
-                });
-            } else {
-                // Default sort (e.g., by name or original order) - add if needed
-                console.warn(`Unknown sort criteria: ${sortBy}. Displaying default order.`);
+            modal.classList.remove('hidden');
+            modal.classList.add('flex'); // Use flex for centering
+        }
+
+        function hideDeviceStatusModal() {
+            const modal = document.getElementById('device-status-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                // Clear list content when hiding
+                const listElement = document.getElementById('device-status-list');
+                if(listElement) listElement.innerHTML = '<p class="text-center text-gray-500">Loading device statuses...</p>';
             }
-
-            // Call the main display function with the sorted list
-            displayDevices(devicesToSort);
         }
 
     </script>
