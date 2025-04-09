@@ -38,7 +38,8 @@
     <script>
         // Function to load HTML components
         function loadComponent(componentPath, placeholderId) {
-            fetch(componentPath)
+            // Return the fetch promise
+            return fetch(componentPath)
                 .then(response => {
                     if (!response.ok) {
                         console.error(`Failed to load ${componentPath}:`, response.status, response.statusText);
@@ -47,81 +48,77 @@
                     return response.text();
                 })
                 .then(html => {
-                    document.getElementById(placeholderId).innerHTML = html;
+                    const placeholder = document.getElementById(placeholderId);
+                    if (placeholder) {
+                        placeholder.innerHTML = html;
+                    } else {
+                        console.error(`Placeholder element not found: ${placeholderId}`);
+                    }
                 })
                 .catch(error => {
                     console.error(`Error loading ${componentPath}:`, error);
-                    showError(`Failed to load ${componentPath}: ${error.message}`);
+                    // Display error in a user-friendly way if possible
+                    showError(`Failed to load essential component: ${componentPath}. Please refresh.`);
+                    // Rethrow the error so Promise.all catches it
+                    throw error; 
                 });
         }
 
-        // Load components on page load
+        // Single Load Handler
         window.onload = () => {
-            loadComponent('/components/navigation.html', 'nav-placeholder');
-            loadComponent('/components/main-content.html', 'main-content');
-            loadComponent('/components/modals.html', 'modals-placeholder');
-            loadComponent('/components/footer.html', 'footer-placeholder'); // Moved here
+            Promise.all([
+                loadComponent('/components/navigation.html', 'nav-placeholder'),
+                loadComponent('/components/main-content.html', 'main-content'),
+                loadComponent('/components/modals.html', 'modals-placeholder'),
+                loadComponent('/components/footer.html', 'footer-placeholder')
+            ]).then(() => {
+                console.log("Essential components loaded.");
 
-            // Initial fetch of devices
-            fetchDevices();
+                // Now that components are loaded, perform actions dependent on them
+                addRefreshButton(); // Assuming this depends on nav or main content
+                fetchDevices(); // Initial fetch depends on nav potentially (lastUpdateTime)
 
-            // Give the browser a moment to process the DOM updates
-            setTimeout(() => {
-                // Verify all modals were loaded
-                const requiredModals = ['faq-modal', 'disclaimer-modal', 'contact-modal', 'setup-modal', 'known-bugs-modal'];
-                const missingModals = requiredModals.filter(id => !document.getElementById(id));
-                
-                if (missingModals.length > 0) {
-                    console.error('Missing modals after loading:', missingModals);
-                    showError(`Failed to load modals: ${missingModals.join(', ')}. Please refresh the page.`);
-                } else {
-                    console.log('All modals loaded successfully');
-                }
-                
-                // After components are loaded, initialize the app
-                addRefreshButton();
-                fetchDevices();
-            }, 100);
-            
-            // Set up the refresh interval
-            const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
-
-            // Cleanup interval when page is unloaded
-            window.addEventListener('unload', () => {
-                clearInterval(interval);
-            });
-        };
-
-        // Additional check after full page load to ensure modals are properly initialized
-        window.onload = function() {
-            setTimeout(() => {
-                const requiredModals = ['faq-modal', 'disclaimer-modal', 'contact-modal', 'setup-modal', 'known-bugs-modal'];
-                const missingModals = requiredModals.filter(id => !document.getElementById(id));
-                
-                if (missingModals.length > 0) {
-                    console.error('Missing modals after window load:', missingModals);
+                // Corrected Modal Check (run AFTER modals are loaded)
+                setTimeout(() => { // Use setTimeout to ensure DOM has rendered
+                    const requiredModals = ['faq-modal', 'disclaimer-modal', 'contact-modal'];
+                    const missingModals = requiredModals.filter(id => !document.getElementById(id));
                     
-                    // Try to fix the issue by directly injecting the missing modals
-                    missingModals.forEach(modalId => {
-                        if (modalId === 'faq-modal') {
-                            fetch('./components/modals.html')
-                                .then(response => response.text())
-                                .then(html => {
-                                    const tempDiv = document.createElement('div');
-                                    tempDiv.innerHTML = html;
-                                    const faqModal = tempDiv.querySelector('#faq-modal');
-                                    if (faqModal) {
-                                        document.getElementById('modals').appendChild(faqModal);
-                                        console.log('Successfully re-injected faq-modal');
-                                    }
-                                })
-                                .catch(err => console.error('Failed to re-inject modal:', err));
-                        }
-                    });
-                } else {
-                    console.log('All modals verified after window load');
+                    if (missingModals.length > 0) {
+                        console.error('Missing modals after component load:', missingModals);
+                        // Optional: Attempt re-injection using modals-placeholder
+                        missingModals.forEach(modalId => {
+                             // Simplified re-injection logic - might need refinement
+                             if (document.getElementById('modals-placeholder')) {
+                                 console.warn(`Attempting to handle missing modal: ${modalId}`);
+                                 // Basic idea: fetch modals.html again and append the specific missing modal
+                                 // This is complex and might be better handled by ensuring loadComponent works reliably
+                             } else {
+                                 console.error("Cannot re-inject modal, placeholder 'modals-placeholder' not found.")
+                             }
+                        });
+                    } else {
+                        console.log('All required modals verified after component load');
+                    }
+                }, 100); // Short delay
+
+                // Set up the refresh interval (can start after initial load)
+                const interval = setInterval(fetchDevices, 21600000); // 6 hours
+
+                // Cleanup interval when page is unloaded
+                window.addEventListener('unload', () => {
+                    clearInterval(interval);
+                });
+
+            }).catch(error => {
+                console.error("Failed to load one or more essential components:", error);
+                // Display a generic error message since showError might rely on loaded components
+                const errorDiv = document.getElementById('error');
+                const errorMsgSpan = document.getElementById('error-message');
+                if(errorDiv && errorMsgSpan) {
+                    errorMsgSpan.textContent = 'Failed to load page components. Please refresh.';
+                    errorDiv.classList.remove('hidden');
                 }
-            }, 500);
+            });
         };
 
         // Update this at the start of your script
