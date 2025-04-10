@@ -1325,6 +1325,528 @@
 
             modalTitle.textContent = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Device Details';
             
+            // Generate recommendations HTML first
+            const recommendationsListHtml = (() => {
+                const recommendations = [];
+                
+                // Connection Status Recommendations
+                if (!status.isConnected) {
+                    recommendations.push({
+                        type: 'error',
+                        title: 'Connection Lost',
+                        message: 'Device is currently offline. Click below to view troubleshooting steps:',
+                        action: `<div class="space-y-2 mt-1">
+                            <details class="group bg-red-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">1</span>
+                                        <span>Verify Ice Machine Operation</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-red-700">
+                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                        <li>Check if the ice machine is powered on and running</li>
+                                        <li>If the machine is off, turn it on and wait for it to start</li>
+                                    </ul>
+                                </div>
+                            </details>
+
+                            <details class="group bg-red-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">2</span>
+                                        <span>Check Power Supply</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-red-700">
+                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                        <li>Ensure the FreezeSense device is receiving power:
+                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
+                                                <li>Inspect the power cable to confirm it is securely connected</li>
+                                                <li>Check the wall socket where the power adapter is plugged in</li>
+                                                <li>Look for the LED indicator on the power supply—it should be lit</li>
+                                                <li>Try plugging the power supply into a different socket if needed</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </details>
+
+                            <details class="group bg-red-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">3</span>
+                                        <span>Verify WiFi Connection</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-red-700">
+                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                        <li>Confirm network connectivity:
+                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
+                                                <li>Check if other devices on the same WiFi network are working</li>
+                                                <li>If WiFi is down, restart the router and wait for network recovery</li>
+                                                <li>Ensure the device is within range of the WiFi router</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </details>
+
+                            <details class="group bg-red-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">4</span>
+                                        <span>Restart Device</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-red-700">
+                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                        <li>Perform a manual reboot:
+                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
+                                                <li>Unplug the power supply from the wall socket</li>
+                                                <li>Wait for 10 seconds</li>
+                                                <li>Plug the power supply back in</li>
+                                                <li>Allow the device to restart and monitor reconnection</li>
+                                            </ul>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </details>
+
+                            <details class="group bg-red-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">5</span>
+                                        <span>Contact Support</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-red-700">
+                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                        <li>If all previous steps fail:
+                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
+                                                <li>Support is for FreezeSense device issues only</li>
+                                                <li>For ice machine issues, refer to machine troubleshooting guide</li>
+                                            </ul>
+                                        </li>
+                                        <li class="mt-0.5">Contact your maintenance team</li>
+                                    </ul>
+                                </div>
+                            </details>
+                        </div>`
+                    });
+                }
+
+                // Temperature Recommendations
+                if (status.cloudTemp > status.tempThresholdMax) {
+                    recommendations.push({
+                        type: 'warning',
+                        title: 'High Temperature Detected',
+                        message: 'High temperature likely means there is no ice at the sensor level. Follow these steps in order:',
+                        action: `<div class="space-y-2 mt-1">
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
+                                        <span>Check Ice Usage</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <p class="text-sm">Has ice been used at a higher rate than usual?</p>
+                                        <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                            <li>If yes, the machine may not have had enough time to produce and replenish ice at the sensor level</li>
+                                            <li>Allow the ice machine to continue running and monitor if the ice level recovers</li>
+                                            <li>Check usage patterns to determine if demand has recently increased beyond the machine's capacity</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
+                                        <span>Inspect Ice Levels Manually</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                        <li>Open the ice machine bin and check if there is ice at the sensor level</li>
+                                        <li>If there is no ice at the sensor level, proceed to Step 3</li>
+                                        <li>If there is ice at the sensor level, but the system still detects high temperature, proceed to Step 4</li>
+                                    </ul>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
+                                        <span>If No Ice is Present</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Machine Operation:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Verify the ice machine is powered on and operating</li>
+                                                <li>If the machine is off, turn it on and allow it to cycle</li>
+                                                <li>Check if the ice machine is producing ice</li>
+                                                <li>Listen for the sound of water filling and freezing</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">🔹 Environmental Checks:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Ensure proper airflow and ventilation</li>
+                                                <li>Check for blocked vents that could cause overheating</li>
+                                                <li>Inspect the water supply and pressure</li>
+                                                <li>Look for clogged filters that might restrict water flow</li>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">🔹 Monitor Progress:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Watch the next production cycle</li>
+                                                <li>If ice production resumes, the issue may have been temporary</li>
+                                                <li>If ice is still not being produced, maintenance may be required</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
+                                        <span>If Ice is Present but Temperature High</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <p class="text-sm">This suggests a false high-temperature reading due to an incorrect threshold setting.</p>
+                                        <div>
+                                            <p class="font-medium">🔹 Adjust Temperature Threshold:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Navigate to the FreezeSense Properties Section in the system settings</li>
+                                                <li>Locate the Temperature Threshold setting</li>
+                                                <li>Increase the threshold slightly to reduce false alerts</li>
+                                                <li>Save the settings and monitor to ensure proper functionality</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
+                                        <span>If Issue Persists</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Full Machine Inspection:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Clean the machine thoroughly, including:</li>
+                                                <ul class="ml-4 list-circle">
+                                                    <li>Sensors and vents</li>
+                                                    <li>Ice bin and production area</li>
+                                                    <li>Ultrasonic sensor position and clearance</li>
+                                                </ul>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">🔹 Check for Mechanical Issues:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Inspect for problems with:</li>
+                                                <ul class="ml-4 list-circle">
+                                                    <li>Compressor operation</li>
+                                                    <li>Thermostat function</li>
+                                                    <li>Internal components</li>
+                                                </ul>
+                                            </ul>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium">🔹 Next Steps:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>If troubleshooting doesn't resolve the issue:</li>
+                                                <ul class="ml-4 list-circle">
+                                                    <li>Schedule a maintenance inspection</li>
+                                                    <li>Contact your maintenance team</li>
+                                                </ul>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>`
+                    });
+                }
+
+                // Maintenance Recommendations
+                const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
+                if (lastMaintenance) {
+                    const maintenanceDate = new Date(lastMaintenance);
+                    const now = new Date();
+                    const diffDays = Math.ceil(Math.abs(now - maintenanceDate) / (1000 * 60 * 60 * 24));
+                    
+                    if (diffDays > 180) {  // 180 days = 6 months
+                        recommendations.push({
+                            type: 'warning',
+                            title: 'Maintenance Overdue',
+                            message: `Regular maintenance (recommended every 6 months) is overdue by ${(diffDays - 180)} days.`,
+                            action: 'Schedule maintenance service as soon as possible to ensure optimal performance.'
+                        });
+                    } else if (diffDays > 150) {  // Start warning 30 days before 6-month mark
+                        recommendations.push({
+                            type: 'info',
+                            title: 'Maintenance Due Soon',
+                            message: `Regular 6-month maintenance will be due in ${(180 - diffDays)} days.`,
+                            action: 'Plan to schedule maintenance service in the coming weeks.'
+                        });
+                    }
+                } else {
+                    recommendations.push({
+                        type: 'info',
+                        title: 'Maintenance Status Unknown',
+                        message: 'No maintenance history found. Regular maintenance is recommended every 6 months.',
+                        action: 'Please schedule initial maintenance service.'
+                    });
+                }
+
+                if (recommendations.length === 0 && status.isGreat) {
+                    recommendations.push({
+                        type: 'success',
+                        title: 'System Operating Normally',
+                        message: 'All parameters are within normal ranges.',
+                        action: 'Continue regular monitoring and maintenance schedule.'
+                    });
+                }
+
+                // No Flow Recommendations
+                if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
+                    recommendations.push({
+                        type: 'warning',
+                        title: 'No Flow Detected',
+                        message: 'No water flow has been detected for an extended period. Follow these steps to troubleshoot:',
+                        action: `<div class="space-y-2 mt-1">
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
+                                        <span>Check Water Supply</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Verify Water Source:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Check if the main water supply valve is open</li>
+                                                <li>Verify water pressure is adequate</li>
+                                                <li>Look for any visible leaks in supply lines</li>
+                                                <li>Ensure no maintenance work is affecting water supply</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
+                                        <span>Inspect for Blockages</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Check Common Blockage Points:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Inspect and clean the water filter if necessary</li>
+                                                <li>Check for kinked or bent water lines</li>
+                                                <li>Look for mineral buildup in water lines</li>
+                                                <li>Verify the water inlet valve is functioning</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
+                                        <span>Test Water Flow</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Flow Testing Steps:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Initiate a manual water fill cycle if possible</li>
+                                                <li>Listen for water flow sounds</li>
+                                                <li>Check if water is reaching the ice making unit</li>
+                                                <li>Measure water pressure if a gauge is available</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
+                                        <span>Reset and Monitor</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Reset Procedure:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>Power cycle the ice machine:</li>
+                                                <ul class="ml-4 list-circle">
+                                                    <li>Turn off the machine</li>
+                                                    <li>Wait for 5 minutes</li>
+                                                    <li>Turn the machine back on</li>
+                                                </ul>
+                                                <li>Monitor for normal operation</li>
+                                                <li>Check if water flow resumes</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+
+                            <details class="group bg-yellow-50 rounded-lg">
+                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
+                                        <span>If Issue Persists</span>
+                                    </div>
+                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                                    </svg>
+                                </summary>
+                                <div class="p-2 pt-0 text-yellow-700">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <p class="font-medium">🔹 Next Steps:</p>
+                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
+                                                <li>If all troubleshooting steps fail:</li>
+                                                <ul class="ml-4 list-circle">
+                                                    <li>Contact your maintenance team</li>
+                                                    <li>Schedule a professional inspection</li>
+                                                    <li>Document all steps taken for maintenance reference</li>
+                                                </ul>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>`
+                    });
+                }
+
+                return recommendations.length > 0 ? recommendations.map(rec => `
+                    <div class="flex items-start p-3 rounded-lg ${
+                        rec.type === 'error' ? 'bg-red-50 border border-red-200' :
+                        rec.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
+                        rec.type === 'info' ? 'bg-blue-50 border border-blue-200' :
+                        'bg-emerald-50 border border-emerald-200'
+                    }">
+                        <div class="flex-shrink-0">
+                            <svg class="w-5 h-5 ${
+                                rec.type === 'error' ? 'text-red-600' :
+                                rec.type === 'warning' ? 'text-yellow-600' :
+                                rec.type === 'info' ? 'text-blue-600' :
+                                'text-emerald-600'
+                            }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                ${rec.type === 'error' ? 
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
+                                    rec.type === 'warning' ?
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
+                                    rec.type === 'info' ?
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />' :
+                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                                }
+                            </svg>
+                        </div>
+                        <div class="ml-3 flex-1">
+                            <h5 class="text-sm font-medium ${
+                                rec.type === 'error' ? 'text-red-800' :
+                                rec.type === 'warning' ? 'text-yellow-800' :
+                                rec.type === 'info' ? 'text-blue-800' :
+                                'text-emerald-800'
+                            }">${rec.title}</h5>
+                            <p class="mt-1 text-xs ${
+                                rec.type === 'error' ? 'text-red-700' :
+                                rec.type === 'warning' ? 'text-yellow-700' :
+                                rec.type === 'info' ? 'text-blue-700' :
+                                'text-emerald-700'
+                            }">${rec.message}</p>
+                            <p class="mt-1 text-xs font-medium ${
+                                rec.type === 'error' ? 'text-red-900' :
+                                rec.type === 'warning' ? 'text-yellow-900' :
+                                rec.type === 'info' ? 'text-blue-900' :
+                                'text-emerald-900'
+                            }">Recommended Action: ${rec.action}</p>
+                        </div>
+                    </div>
+                `).join('') : '<p class="text-gray-500 text-sm">No recommendations at this time.</p>';
+            })();
+
             // Generate the detailed view with improved layout
             modalContent.innerHTML = `
                 <div class="space-y-6">
@@ -1395,1157 +1917,6 @@
                             <div class="col-span-2 md:col-span-1 space-y-3">
                                 <div class="bg-gray-50 p-3 rounded-lg">
                                     <p class="text-xs font-medium text-gray-500">Last Maintenance</p>
-                                    <p class="text-sm font-semibold text-gray-900 mt-1">${device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value || 'Not recorded'}</p>
-                                    ${(() => {
-                                        const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
-                                        if (lastMaintenance) {
-                                            const [month, day, year] = lastMaintenance.split('/').map(num => parseInt(num));
-                                            const maintenanceDate = new Date(year, month - 1, day); // month is 0-based in JS
-                                            const now = new Date();
-                                            
-                                            // Calculate total months difference
-                                            const monthsDiff = (now.getFullYear() - maintenanceDate.getFullYear()) * 12 + 
-                                                                 (now.getMonth() - maintenanceDate.getMonth());
-                                            
-                                            // Calculate remaining days
-                                            const tempDate = new Date(now.getFullYear(), now.getMonth(), maintenanceDate.getDate());
-                                            const daysDiff = Math.floor((now - tempDate) / (1000 * 60 * 60 * 24));
-                                            
-                                            return `
-                                                <div class="flex items-center mt-2 ${monthsDiff >= 6 ? 'bg-red-50 text-red-700 p-1.5 rounded' : ''}">
-                                                    ${monthsDiff >= 6 ? '<svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>' : ''}
-                                                    <span class="text-xs ${monthsDiff >= 6 ? 'font-medium' : 'text-gray-600'}">
-                                                        ${monthsDiff > 0 ? `${monthsDiff} month${monthsDiff > 1 ? 's' : ''}` : ''}
-                                                        ${daysDiff > 0 ? `${monthsDiff > 0 ? ' and ' : ''}${daysDiff} day${daysDiff > 1 ? 's' : ''}` : ''}
-                                                        since last maintenance
-                                                        ${monthsDiff >= 6 ? ' (Overdue - Recommended every 6 months)' : ''}
-                                                    </span>
-                                                </div>
-                                                ${monthsDiff < 6 ? `
-                                                <div class="text-xs text-gray-600 mt-1">
-                                                    <span class="italic">Recommended maintenance period: 6 months</span>
-                                                </div>
-                                                ` : ''}
-                                            `;
-                                        }
-                                        return `
-                                            <div class="text-xs text-gray-600 mt-1">
-                                                <span class="italic">Recommended maintenance period: 6 months</span>
-                                            </div>
-                                        `;
-                                    })()}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recommendations Section -->
-                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
-                        <div class="flex items-center space-x-2 mb-4">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
-                            <h3 class="text-xl font-semibold text-gray-900">Recommendations</h3>
-                        </div>
-                        <div class="space-y-3">
-                            ${// Store the generated HTML in a variable
-                            (function() {
-                                const recommendations = [];
-                                
-                                // Connection Status Recommendations
-                                if (!status.isConnected) {
-                                    recommendations.push({
-                                        type: 'error',
-                                        title: 'Connection Lost',
-                                        message: 'Device is currently offline. Click below to view troubleshooting steps:',
-                                        action: `<div class="space-y-2 mt-1">
-                                            <details class="group bg-red-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">1</span>
-                                                        <span>Verify Ice Machine Operation</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-red-700">
-                                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>Check if the ice machine is powered on and running</li>
-                                                        <li>If the machine is off, turn it on and wait for it to start</li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-red-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">2</span>
-                                                        <span>Check Power Supply</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-red-700">
-                                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>Ensure the FreezeSense device is receiving power:
-                                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
-                                                                <li>Inspect the power cable to confirm it is securely connected</li>
-                                                                <li>Check the wall socket where the power adapter is plugged in</li>
-                                                                <li>Look for the LED indicator on the power supply—it should be lit</li>
-                                                                <li>Try plugging the power supply into a different socket if needed</li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-red-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">3</span>
-                                                        <span>Verify WiFi Connection</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-red-700">
-                                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>Confirm network connectivity:
-                                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
-                                                                <li>Check if other devices on the same WiFi network are working</li>
-                                                                <li>If WiFi is down, restart the router and wait for network recovery</li>
-                                                                <li>Ensure the device is within range of the WiFi router</li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-red-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">4</span>
-                                                        <span>Restart Device</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-red-700">
-                                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>Perform a manual reboot:
-                                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
-                                                                <li>Unplug the power supply from the wall socket</li>
-                                                                <li>Wait for 10 seconds</li>
-                                                                <li>Plug the power supply back in</li>
-                                                                <li>Allow the device to restart and monitor reconnection</li>
-                                                            </ul>
-                                                        </li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-red-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-red-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-800 text-xs font-bold">5</span>
-                                                        <span>Contact Support</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-red-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-red-700">
-                                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>If all previous steps fail:
-                                                            <ul class="ml-4 mt-0.5 list-circle space-y-0.5">
-                                                                <li>Support is for FreezeSense device issues only</li>
-                                                                <li>For ice machine issues, refer to machine troubleshooting guide</li>
-                                                            </ul>
-                                                        </li>
-                                                        <li class="mt-0.5">Contact your maintenance team</li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-                                        </div>`
-                                    });
-                                }
-
-                                // Temperature Recommendations
-                                if (status.cloudTemp > status.tempThresholdMax) {
-                                    recommendations.push({
-                                        type: 'warning',
-                                        title: 'High Temperature Detected',
-                                        message: 'High temperature likely means there is no ice at the sensor level. Follow these steps in order:',
-                                        action: `<div class="space-y-2 mt-1">
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
-                                                        <span>Check Ice Usage</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <p class="text-sm">Has ice been used at a higher rate than usual?</p>
-                                                        <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                            <li>If yes, the machine may not have had enough time to produce and replenish ice at the sensor level</li>
-                                                            <li>Allow the ice machine to continue running and monitor if the ice level recovers</li>
-                                                            <li>Check usage patterns to determine if demand has recently increased beyond the machine's capacity</li>
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
-                                                        <span>Inspect Ice Levels Manually</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                        <li>Open the ice machine bin and check if there is ice at the sensor level</li>
-                                                        <li>If there is no ice at the sensor level, proceed to Step 3</li>
-                                                        <li>If there is ice at the sensor level, but the system still detects high temperature, proceed to Step 4</li>
-                                                    </ul>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
-                                                        <span>If No Ice is Present</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Machine Operation:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Verify the ice machine is powered on and operating</li>
-                                                                <li>If the machine is off, turn it on and allow it to cycle</li>
-                                                                <li>Check if the ice machine is producing ice</li>
-                                                                <li>Listen for the sound of water filling and freezing</li>
-                                                            </ul>
-                                                        </div>
-                                                        <div>
-                                                            <p class="font-medium">🔹 Environmental Checks:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Ensure proper airflow and ventilation</li>
-                                                                <li>Check for blocked vents that could cause overheating</li>
-                                                                <li>Inspect the water supply and pressure</li>
-                                                                <li>Look for clogged filters that might restrict water flow</li>
-                                                            </ul>
-                                                        </div>
-                                                        <div>
-                                                            <p class="font-medium">🔹 Monitor Progress:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Watch the next production cycle</li>
-                                                                <li>If ice production resumes, the issue may have been temporary</li>
-                                                                <li>If ice is still not being produced, maintenance may be required</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
-                                                        <span>If Ice is Present but Temperature High</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <p class="text-sm">This suggests a false high-temperature reading due to an incorrect threshold setting.</p>
-                                                        <div>
-                                                            <p class="font-medium">🔹 Adjust Temperature Threshold:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Navigate to the FreezeSense Properties Section in the system settings</li>
-                                                                <li>Locate the Temperature Threshold setting</li>
-                                                                <li>Increase the threshold slightly to reduce false alerts</li>
-                                                                <li>Save the settings and monitor to ensure proper functionality</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
-                                                        <span>If Issue Persists</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Full Machine Inspection:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Clean the machine thoroughly, including:</li>
-                                                                <ul class="ml-4 list-circle">
-                                                                    <li>Sensors and vents</li>
-                                                                    <li>Ice bin and production area</li>
-                                                                    <li>Ultrasonic sensor position and clearance</li>
-                                                                </ul>
-                                                            </ul>
-                                                        </div>
-                                                        <div>
-                                                            <p class="font-medium">🔹 Check for Mechanical Issues:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Inspect for problems with:</li>
-                                                                <ul class="ml-4 list-circle">
-                                                                    <li>Compressor operation</li>
-                                                                    <li>Thermostat function</li>
-                                                                    <li>Internal components</li>
-                                                                </ul>
-                                                            </ul>
-                                                        </div>
-                                                        <div>
-                                                            <p class="font-medium">🔹 Next Steps:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>If troubleshooting doesn't resolve the issue:</li>
-                                                                <ul class="ml-4 list-circle">
-                                                                    <li>Schedule a maintenance inspection</li>
-                                                                    <li>Contact your maintenance team</li>
-                                                                </ul>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-                                        </div>`
-                                    });
-                                }
-
-                                // Maintenance Recommendations
-                                const lastMaintenance = device.thing?.properties?.find(p => p.name === 'Last_Maintenance')?.last_value;
-                                if (lastMaintenance) {
-                                    const maintenanceDate = new Date(lastMaintenance);
-                                    const now = new Date();
-                                    const diffDays = Math.ceil(Math.abs(now - maintenanceDate) / (1000 * 60 * 60 * 24));
-                                    
-                                    if (diffDays > 180) {  // 180 days = 6 months
-                                        recommendations.push({
-                                            type: 'warning',
-                                            title: 'Maintenance Overdue',
-                                            message: `Regular maintenance (recommended every 6 months) is overdue by ${(diffDays - 180)} days.`,
-                                            action: 'Schedule maintenance service as soon as possible to ensure optimal performance.'
-                                        });
-                                    } else if (diffDays > 150) {  // Start warning 30 days before 6-month mark
-                                        recommendations.push({
-                                            type: 'info',
-                                            title: 'Maintenance Due Soon',
-                                            message: `Regular 6-month maintenance will be due in ${(180 - diffDays)} days.`,
-                                            action: 'Plan to schedule maintenance service in the coming weeks.'
-                                        });
-                                    }
-                                } else {
-                                    recommendations.push({
-                                        type: 'info',
-                                        title: 'Maintenance Status Unknown',
-                                        message: 'No maintenance history found. Regular maintenance is recommended every 6 months.',
-                                        action: 'Please schedule initial maintenance service.'
-                                    });
-                                }
-
-                                if (recommendations.length === 0 && status.isGreat) {
-                                    recommendations.push({
-                                        type: 'success',
-                                        title: 'System Operating Normally',
-                                        message: 'All parameters are within normal ranges.',
-                                        action: 'Continue regular monitoring and maintenance schedule.'
-                                    });
-                                }
-
-                                // No Flow Recommendations
-                                if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
-                                    recommendations.push({
-                                        type: 'warning',
-                                        title: 'No Flow Detected',
-                                        message: 'No water flow has been detected for an extended period. Follow these steps to troubleshoot:',
-                                        action: `<div class="space-y-2 mt-1">
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">1</span>
-                                                        <span>Check Water Supply</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Verify Water Source:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Check if the main water supply valve is open</li>
-                                                                <li>Verify water pressure is adequate</li>
-                                                                <li>Look for any visible leaks in supply lines</li>
-                                                                <li>Ensure no maintenance work is affecting water supply</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">2</span>
-                                                        <span>Inspect for Blockages</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Check Common Blockage Points:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Inspect and clean the water filter if necessary</li>
-                                                                <li>Check for kinked or bent water lines</li>
-                                                                <li>Look for mineral buildup in water lines</li>
-                                                                <li>Verify the water inlet valve is functioning</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">3</span>
-                                                        <span>Test Water Flow</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Flow Testing Steps:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Initiate a manual water fill cycle if possible</li>
-                                                                <li>Listen for water flow sounds</li>
-                                                                <li>Check if water is reaching the ice making unit</li>
-                                                                <li>Measure water pressure if a gauge is available</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">4</span>
-                                                        <span>Reset and Monitor</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Reset Procedure:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>Power cycle the ice machine:</li>
-                                                                <ul class="ml-4 list-circle">
-                                                                    <li>Turn off the machine</li>
-                                                                    <li>Wait for 5 minutes</li>
-                                                                    <li>Turn the machine back on</li>
-                                                                </ul>
-                                                                <li>Monitor for normal operation</li>
-                                                                <li>Check if water flow resumes</li>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-
-                                            <details class="group bg-yellow-50 rounded-lg">
-                                                <summary class="flex items-center justify-between p-2 font-medium cursor-pointer list-none hover:bg-yellow-100 rounded-lg transition-colors">
-                                                    <div class="flex items-center space-x-2">
-                                                        <span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-yellow-100 text-yellow-800 text-xs font-bold">5</span>
-                                                        <span>If Issue Persists</span>
-                                                    </div>
-                                                    <svg class="w-5 h-5 text-yellow-700 transform group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                                                    </svg>
-                                                </summary>
-                                                <div class="p-2 pt-0 text-yellow-700">
-                                                    <div class="space-y-2">
-                                                        <div>
-                                                            <p class="font-medium">🔹 Next Steps:</p>
-                                                            <ul class="mt-0.5 ml-4 list-disc text-sm space-y-0.5">
-                                                                <li>If all troubleshooting steps fail:</li>
-                                                                <ul class="ml-4 list-circle">
-                                                                    <li>Contact your maintenance team</li>
-                                                                    <li>Schedule a professional inspection</li>
-                                                                    <li>Document all steps taken for maintenance reference</li>
-                                                                </ul>
-                                                            </ul>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </details>
-                                        </div>`
-                                    });
-                                }
-
-                                return recommendations.length > 0 ? recommendations.map(rec => `
-                                    <div class="flex items-start p-3 rounded-lg ${
-                                        rec.type === 'error' ? 'bg-red-50 border border-red-200' :
-                                        rec.type === 'warning' ? 'bg-yellow-50 border border-yellow-200' :
-                                        rec.type === 'info' ? 'bg-blue-50 border border-blue-200' :
-                                        'bg-emerald-50 border border-emerald-200'
-                                    }">
-                                        <div class="flex-shrink-0">
-                                            <svg class="w-5 h-5 ${
-                                                rec.type === 'error' ? 'text-red-600' :
-                                                rec.type === 'warning' ? 'text-yellow-600' :
-                                                rec.type === 'info' ? 'text-blue-600' :
-                                                'text-emerald-600'
-                                            }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                ${rec.type === 'error' ? 
-                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
-                                                    rec.type === 'warning' ?
-                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />' :
-                                                    rec.type === 'info' ?
-                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />' :
-                                                    '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                                                }
-                                            </svg>
-                                        </div>
-                                        <div class="ml-3 flex-1">
-                                            <h5 class="text-sm font-medium ${
-                                                rec.type === 'error' ? 'text-red-800' :
-                                                rec.type === 'warning' ? 'text-yellow-800' :
-                                                rec.type === 'info' ? 'text-blue-800' :
-                                                'text-emerald-800'
-                                            }">${rec.title}</h5>
-                                            <p class="mt-1 text-xs ${
-                                                rec.type === 'error' ? 'text-red-700' :
-                                                rec.type === 'warning' ? 'text-yellow-700' :
-                                                rec.type === 'info' ? 'text-blue-700' :
-                                                'text-emerald-700'
-                                            }">${rec.message}</p>
-                                            <p class="mt-1 text-xs font-medium ${
-                                                rec.type === 'error' ? 'text-red-900' :
-                                                rec.type === 'warning' ? 'text-yellow-900' :
-                                                rec.type === 'info' ? 'text-blue-900' :
-                                                'text-emerald-900'
-                                            }">Recommended Action: ${rec.action}</p>
-                                        </div>
-                                    </div>
-                                `).join('') : '<p class="text-gray-500 text-sm">No recommendations at this time.</p>';
-                            })()}
-                        </div>
-                    </div>
-
-                    <!-- Time Series Graphs Section -->
-                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
-                        <div class="flex items-center space-x-2 mb-4">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                            </svg>
-                            <h3 class="text-xl font-semibold text-gray-900">Time Series Data</h3>
-                        </div>
-                        
-                        <!-- Temperature & Ice Level Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Temperature & Ice Level</h4>
-                                <div class="flex items-center space-x-4 mb-4">
-                                <div class="time-range-selector" id="temp-time-range">
-                                        <button class="time-range-button active" data-days="0" onclick="toggleTempGraph(window.currentDeviceIndex || 0, 0)">Today</button>
-                                        <button class="time-range-button" data-days="1" onclick="toggleTempGraph(window.currentDeviceIndex || 0, 1)">Yesterday</button>
-                                        <button class="time-range-button" data-days="2" onclick="toggleTempGraph(window.currentDeviceIndex || 0, 2)">2 Days Ago</button>
-                                    </div>
-                                    <div class="flex items-center space-x-4">
-                                        <label class="flex items-center space-x-2 cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                id="temp-line-toggle" 
-                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                onclick="toggleTempLine()"
-                                                checked
-                                            >
-                                            <span class="text-sm text-gray-700">Show Temperature</span>
-                                        </label>
-                                        <label class="flex items-center space-x-2 cursor-pointer">
-                                            <input 
-                                                type="checkbox" 
-                                                id="ice-level-toggle" 
-                                                class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-                                                onclick="toggleIceLevel()"
-                                                checked
-                                            >
-                                            <span class="text-sm text-gray-700">Show Ice Level</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Add Statistics Summary Box -->
-                            <div id="tempStats" class="grid grid-cols-1 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                                <!-- Info Message -->
-                                <div class="col-span-full mb-2">
-                                    <p class="text-xs text-gray-600 italic">
-                                        Note: Statistics are only available when a single time period is selected.
-                                        Multi-day selections will disable these statistics.
-                                    </p>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">
-                                            Daily Range
-                                            <span class="ml-1 cursor-help group relative">
-                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                </svg>
-                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
-                                                    Shows min-max temperature range from 12:01 AM to 11:59 PM. Calculated using available data for the selected day.
-                                                </span>
-                                            </span>
-                                        </h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
-                                </div>
-                                <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Daily Average</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
-                                </div>
-                                <div class="stat-box">
-                                    <h5 class="text-xs font-medium text-gray-500">Mode</h5>
-                                    <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="tempChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Status Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Device Status</h4>
-                                <div class="time-range-selector" id="status-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateStatusGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateStatusGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateStatusGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Flow Time Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Flow Rate</h4>
-                                <div class="time-range-selector" id="flow-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateFlowGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateFlowGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateFlowGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <!-- Add Flow Rate Statistics Summary Box -->
-                            <div id="flowStats" class="grid grid-cols-1 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-                                <!-- Info Message -->
-                                <div class="col-span-full mb-2">
-                                    <p class="text-xs text-gray-600 italic">
-                                        Note: Statistics are only available when a single time period is selected.
-                                        Multi-day selections will disable these statistics.
-                                    </p>
-                                </div>
-                                
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">
-                                            Daily Range
-                                            <span class="ml-1 cursor-help group relative">
-                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                </svg>
-                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
-                                                    Shows min-max flow rate from 12:01 AM to 11:59 PM. Calculated using available data for the selected day.
-                                                </span>
-                                            </span>
-                                        </h5>
-                                        <p class="text-sm font-bold text-gray-900" id="flowRange">-</p>
-                                    </div>
-                                    <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Total Flow</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="flowTotal">-</p>
-                                    </div>
-                                    <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="flowStdDev">-</p>
-                                    </div>
-                                    <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Frequency</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="flowFrequency">-</p>
-                                    </div>
-                                    <div class="stat-box col-span-2 md:col-span-1">
-                                        <h5 class="text-xs font-medium text-gray-500">Time Since Last Flow</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="timeSinceLastFlow">-</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="flowChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Status Controls -->
-                    ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
-
-                    <!-- Properties Section -->
-                    ${device.thing ? `
-                        <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4">
-                            <div class="flex items-center space-x-2 mb-6">
-                                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                                </svg>
-                                <h3 class="text-xl font-semibold text-gray-900">Properties</h3>
-                            </div>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                ${device.thing?.properties ? 
-                                    sortProperties(device.thing.properties).filter(property => 
-                                        !['warning', 'critical'].includes(property.name)
-                                    ).map(property => `
-                                        <div class="property-card ${getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
-                                            <div class="px-5 py-4">
-                                                <div class="flex justify-between items-start mb-3">
-                                                    <div class="space-y-1">
-                                                        <div class="flex items-center space-x-2">
-                                                            <h4 class="${getPropertyTextColor(property.name)} font-semibold">${
-    property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' :
-    property.name === 'cloudtemp' ? 'Temperature' :
-    property.name === 'cloudflowrate' ? 'Flow Rate' :
-    property.name === 'Last_Maintenance' ? 'Last Maintenance' :
-    property.name === 'location' ? 'Ice Machine Location' :
-    property.name === 'sensorplacement' ? 'Sensor Placement' :
-    property.name === 'tempThresholdMax' ? 'Temperature Threshold' :
-    property.name === 'noFlowCriticalTime' ? 'No Flow Critical Time' :
-    property.name === 'notificationEmail' ? 'Notification Email Address' :
-    property.name
-}</h4>
-                                                            <span class="px-2 py-0.5 text-xs font-medium rounded-full ${property.permission === 'READ_WRITE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
-                                                                ${property.permission === 'READ_WRITE' ? 'Editable' : 'Read Only'}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                ${property.name === 'Icemachine_PN_SN' ? `
-                                                    <div class="mt-3 p-3 bg-rose-50 rounded-lg border border-rose-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-rose-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-rose-800 mb-1">What is Ice Machine PN/SN?</p>
-                                                                <p class="text-xs text-rose-600 leading-relaxed">This field helps track which ice machine this FreezeSense device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'notificationEmail' ? `
-                                                    <div class="mt-3 p-3 bg-orange-50 rounded-lg border border-orange-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-orange-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-orange-800 mb-1">What is Notification Email Address?</p>
-                                                                <p class="text-xs text-orange-600 leading-relaxed">This email address will receive critical alerts about your ice machine's status. Make sure to enter a valid email address that is regularly monitored to ensure timely response to any issues.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'cloudtemp' ? `
-                                                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-blue-800 mb-1">What is Temperature?</p>
-                                                                <p class="text-xs text-blue-600 leading-relaxed">This is the real-time temperature reading from the sensor placed in your ice machine and helps determine the ice level in your machine.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'cloudflowrate' ? `
-                                                    <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-purple-800 mb-1">What is Flow Rate?</p>
-                                                                <p class="text-xs text-purple-600 leading-relaxed">This measures the real-time water flow rate in your ice machine. It helps monitor water usage and detect potential issues with water supply or ice production.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'Last_Maintenance' ? `
-                                                    <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-amber-800 mb-1">What is Last Maintenance?</p>
-                                                                <p class="text-xs text-amber-600 leading-relaxed">This tracks when your ice machine was last serviced. Regular maintenance every 6 months is recommended to ensure optimal performance, prevent issues, and extend the life of your machine.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'location' ? `
-                                                    <div class="mt-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-teal-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-teal-800 mb-1">What is Ice Machine Location?</p>
-                                                                <p class="text-xs text-teal-600 leading-relaxed">This field helps identify where the ice machine is physically located. Enter a descriptive location (e.g., "Kitchen - North Wall", "Bar Area", "Cafeteria Room 101") to easily locate and service the machine.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'sensorplacement' ? `
-                                                    <div class="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-indigo-800 mb-1">What is Sensor Placement?</p>
-                                                                <p class="text-xs text-indigo-600 leading-relaxed">This setting determines where the temperature sensor is placed in your ice machine, measured as a percentage from the bottom. This helps accurately track ice levels and ensures proper monitoring of your machine's performance.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'tempThresholdMax' ? `
-                                                    <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-blue-800 mb-1">What is Temperature Threshold Max?</p>
-                                                                <p class="text-xs text-blue-600 leading-relaxed">This setting determines the maximum temperature threshold for your ice machine. When the temperature rises above this threshold, it indicates that ice levels have dropped below the sensor level. Adjust this value to fine-tune ice level detection and alert sensitivity.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : property.name === 'noFlowCriticalTime' ? `
-                                                    <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
-                                                        <div class="flex items-start space-x-2">
-                                                            <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                            </svg>
-                                                            <div>
-                                                                <p class="text-sm font-medium text-purple-800 mb-1">What is No Flow Critical Time?</p>
-                                                                <p class="text-xs text-purple-600 leading-relaxed">This setting determines how long (in hours) the system should wait without detecting water flow before triggering a critical alert. Adjust this value based on your ice machine's typical production cycles and usage patterns to avoid false alarms.</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ` : ''}
-
-                                            ${property.permission === 'READ_WRITE' ? `
-                                                    <div class="mt-4">
-                                                    ${property.name === 'sensorplacement' ? 
-                                                        getSensorPlacementSelector(device.id, property)
-                                                    : property.name === 'Last_Maintenance' ? `
-                                                            <div class="flex space-x-3">
-                                                            <input 
-                                                                type="text"
-                                                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
-                                                                value="${property.last_value || ''}"
-                                                                placeholder="MM/DD/YYYY"
-                                                                pattern="^(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/[0-9]{4}$"
-                                                                title="Please enter date in MM/DD/YYYY format"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-colors"
-                                                                type="button"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
-                                                        <p class="mt-2 text-xs text-amber-600">Enter the last maintenance date in MM/DD/YYYY format (e.g., 03/15/2024)</p>
-                                                    ` : `
-                                                            <div class="flex space-x-3">
-                                                            <input 
-                                                                type="${getPropertyInputType(property)}"
-                                                                class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                                                                value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
-                                                                placeholder="Enter new value"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                onkeydown="handlePropertyInputKeydown(event)"
-                                                                step="${getPropertyStep(property)}"
-                                                                ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
-                                                            />
-                                                            <button 
-                                                                onclick="handleUpdateButtonClick(event)"
-                                                                data-device-id="${device.id}"
-                                                                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                                                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
-                                                                type="button"
-                                                            >
-                                                                Update
-                                                            </button>
-                                                        </div>
-                                                    `}
-                                                </div>
-                                            ` : `
-                                                    <div class="mt-3">
-                                                        <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
-                                                            ${property.name.toLowerCase().includes('temp') ? 
-                                                                `${celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
-                                                                property.name === 'cloudflowrate' ?
-                                                                `${Number(property.last_value).toFixed(2)} L/min` :
-                                                                formatPropertyValue(property)}
-                                                        </p>
-                                                        ${property.name === 'cloudflowrate' ? '' : ''}
-                                                    </div>
-                                                `}
-                                                
-                                                <div class="mt-4 pt-3 border-t border-gray-100">
-                                                    <div class="flex items-center space-x-1 text-xs text-gray-500">
-                                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                                        </svg>
-                                                        <span>Last Updated: ${new Date(device.last_activity_at).toLocaleString('en-US', {
-                                                            dateStyle: 'medium',
-                                                timeStyle: 'short'
-                                                        })}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    `).join('') 
-                                    : '<p class="text-gray-500">No properties available</p>'
-                                }
-                            </div>
-                        </div>
-                    ` : '<p class="text-gray-500">No thing data available</p>'}
-                </div>
-            `;
-
-            // Initialize the graphs
-            initializeGraphs(deviceIndex);
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function hideDeviceDetails() {
-            const modal = document.getElementById('device-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        // Standardize all property update handlers
-        async function handleUpdateButtonClick(event) {
-            event.preventDefault(); // Prevent any default button behavior
-            const button = event.target;
-            const input = button.previousElementSibling;
-            const deviceId = button.dataset.deviceId;
-            
-            try {
-                const property = JSON.parse(button.dataset.property);
-                
-                // Add validation for Last_Maintenance property
-                if (property.name === 'Last_Maintenance') {
-                    if (!isValidMaintenanceDate(input.value)) {
-                        showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
-                        return;
-                    }
-                }
-                
-                // Disable input and button during update
-                input.disabled = true;
-                button.disabled = true;
-                const originalText = button.innerHTML;
-                button.innerHTML = '<span class="animate-spin">⌛</span>';
-                
-                property.new_value = input.value;
-                
-                // Log the update attempt
-                logToConsole({
-                    message: 'Attempting to update property via button click',
-                    deviceId: deviceId,
-                    propertyName: property.name,
-                    currentValue: property.last_value,
-                    newValue: property.new_value
-                }, 'info');
-                
-                await updatePropertyValue(deviceId, property);
-                
-                // Show success toast
-                showToast('Property updated successfully. Refreshing...', 'success');
-                
-                // Small delay to show success state
-                setTimeout(() => {
-                    // Force reload from server, not cache
-                    window.location.href = window.location.href.split('#')[0];
-                    window.location.reload(true);
-                }, 1000);
-                
-            } catch (error) {
-                // Re-enable input and button
-                input.disabled = false;
-                button.disabled = false;
-                button.innerHTML = originalText;
-                
-                logToConsole(`Error handling property input: ${error.message}`, 'error');
-                showError(`Failed to update property: ${error.message}`);
-            }
-        }
-
-        // Remove duplicate handlers
-        function handlePropertyUpdate(event, deviceId, property) {
-            return handlePropertyInputKeydown(event);
-        }
-
-        // Update showToast to ensure it's visible
-        function showToast(message, type = 'info') {
-            // Remove any existing toasts
-            const existingToasts = document.querySelectorAll('.toast-notification');
-            existingToasts.forEach(toast => toast.remove());
-            
-            const toast = document.createElement('div');
-            toast.className = `fixed bottom-4 right-4 px-6 py-3 rounded-lg text-white ${
-                type === 'error' ? 'bg-red-500' : 
-                type === 'success' ? 'bg-green-500' : 
-                'bg-blue-500'
-            } shadow-lg z-50 toast-notification`;
-            
-            toast.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    ${type === 'success' ? `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                        </svg>
-                    ` : type === 'error' ? `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    ` : `
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    `}
-                    <span>${message}</span>
-                </div>
-            `;
-            
-            document.body.appendChild(toast);
-            
-            // Don't remove success toasts that indicate refresh
-            if (!message.includes('Refreshing')) {
-                setTimeout(() => toast.remove(), 3000);
-            }
-        }
-
-        function showActiveDevices() {
-            const devices = window.lastDevicesData || [];
-            const modal = document.getElementById('active-devices-modal');
-            const devicesList = document.getElementById('active-devices-list');
-
-            devicesList.innerHTML = devices.map(device => {
-                const statusEvent = device.events?.find(event => event.name === 'r_status');
-                const isConnected = statusEvent?.value === 'CONNECTED';
-                
-                return `
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                        <div>
-                            <h3 class="font-medium text-gray-800">${device.name || 'Unnamed Device'}</h3>
-                            <p class="text-sm text-gray-500">
-                                ID: ${device.id}
-                            </p>
-                        </div>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}">
-                            ${isConnected ? 'Connected' : 'Disconnected'}
-                        </span>
-                    </div>
-                `;
-            }).join('') || '<p class="text-gray-500 text-center py-4">No active devices found</p>';
-
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-        }
-
-        function hideActiveDevices() {
-            const modal = document.getElementById('active-devices-modal');
-            modal.classList.add('hidden');
-            modal.classList.remove('flex');
-        }
-
-        function showConnectedDevices() {
-            const devices = window.lastDevicesData || [];
-            const modal = document.getElementById('connected-devices-modal');
-            const devicesList = document.getElementById('connected-devices-list');
-
-            const connectedDevices = devices.filter(device => {
-                const statusEvent = device.events?.find(event => event.name === 'r_status');
-                return statusEvent?.value === 'CONNECTED';
-            });
-
-            devicesList.innerHTML = connectedDevices.length > 0 ? 
-                connectedDevices.map(device => `
-                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100">
-                        <div>
-                            <h3 class="font-medium text-gray-800">${device.name || 'Unnamed Device'}</h3>
-                            <p class="text-sm text-gray-500">
-                                ID: ${device.id}
-                            </p>
-                        </div>
-                        <span class="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">
-                            Connected
-                        </span>
-                </div>
                 `).join('') 
                 : '<p class="text-gray-500 text-center py-4">No connected devices found</p>';
 
