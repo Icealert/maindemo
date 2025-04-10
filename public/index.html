@@ -850,11 +850,12 @@
             )?.last_value;
 
             // Calculate ice level based on temperature and sensor placement
-            const tempF = cloudTemp !== undefined ? celsiusToFahrenheit(cloudTemp) : undefined;
-            const isIceAboveSensor = tempF !== undefined && tempF <= 34;
+            // const tempF = cloudTemp !== undefined ? celsiusToFahrenheit(cloudTemp) : undefined; // No longer needed for this calculation
+            // const isIceAboveSensor = tempF !== undefined && tempF <= 34; // OLD LOGIC - Incorrectly used hardcoded 34F
+            const isIceAboveSensor = cloudTemp !== undefined && tempThresholdMax !== undefined && cloudTemp <= tempThresholdMax; // NEW LOGIC - Use dynamic threshold
 
-            // If temperature is ≤ 34°F, ice is above the sensor placement
-            // If temperature is > 34°F, ice is below the sensor placement
+            // If temperature is ≤ threshold, ice is above the sensor placement
+            // If temperature is > threshold, ice is below the sensor placement
             const iceLevel = {
                 isAboveSensor: isIceAboveSensor,
                 sensorPlacement: sensorPlacement
