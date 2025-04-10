@@ -695,16 +695,23 @@
 
                 // Get the conditional border class
                 const borderClass = getFlowCardClass(timeSinceFlowHours, criticalTime);
+                const isCriticalNow = !!borderClass; // Check if borderClass is not empty
 
                 // Add or remove only the border class, keep base classes
-                if (borderClass) {
+                if (isCriticalNow) {
                     cardElement.classList.add('border-red-500', 'border-2');
+                    // Make text red
+                    element.classList.remove('text-blue-900');
+                    element.classList.add('text-red-700');
                 } else {
                     cardElement.classList.remove('border-red-500', 'border-2');
+                    // Make text blue
+                    element.classList.remove('text-red-700');
+                    element.classList.add('text-blue-900');
                 }
-                
+
                 // Only log when critical state changes
-                const isCriticalNow = timeSinceFlowHours >= criticalTime;
+                // const isCriticalNow = timeSinceFlowHours >= criticalTime; // Removed duplicate check
                 if (isCriticalNow !== lastCriticalState) {
                     lastCriticalState = isCriticalNow;
                     if (isCriticalNow) {
@@ -971,11 +978,19 @@
 
             devicesContainer.innerHTML = devices.map((device, index) => {
                 const status = calculateDeviceStatus(device);
+
                 // Determine conditional border classes
-                const tempBorderClass = getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax);
-                const iceLevelBorderClass = !status.iceLevel.isAboveSensor && status.sensorPlacement !== undefined ? 'border-red-500 border-2' : '';
+                const isTempCritical = status.cloudTemp !== undefined && status.tempThresholdMax !== undefined && status.cloudTemp >= status.tempThresholdMax;
+                const isIceLevelCritical = !status.iceLevel.isAboveSensor && status.sensorPlacement !== undefined;
+
+                const tempBorderClass = isTempCritical ? 'border-red-500 border-2' : '';
+                const iceLevelBorderClass = isIceLevelCritical ? 'border-red-500 border-2' : '';
                 const statusBorderClass = status.isCritical ? 'border-red-500 border-2' : '';
-                // Note: Flow border is handled by updateTimeSinceFlow
+
+                // Determine conditional text classes
+                const iceLevelTextClass = isIceLevelCritical ? 'text-red-700' : 'text-blue-900';
+                const tempTextClass = isTempCritical ? 'text-red-700' : 'text-blue-900';
+                // Status text color is handled inline based on isGreat/isWarning/isCritical
 
                 return `
                 <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
@@ -1015,7 +1030,7 @@
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Ice Level</p>
                             </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight">
+                            <p class="text-sm font-bold leading-tight ${iceLevelTextClass}">
                                 ${getIceLevelText(status)}
                             </p>
                         </div>
@@ -1028,7 +1043,7 @@
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Temperature</p>
                             </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight">${formatTemperature(status.cloudTemp)}</p>
+                            <p class="text-sm font-bold leading-tight ${tempTextClass}">${formatTemperature(status.cloudTemp)}</p>
                             <p class="text-[10px] text-blue-600 mt-0.5 flex items-center">
                                 <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
@@ -1038,14 +1053,14 @@
                         </div>
                         
                         <!-- Time Since Flow -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg"> <!-- Border handled by JS -->
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg"> <!-- Border and Text color handled by JS -->
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Time Since Flow</p>
                             </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow"
+                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow" {/* Base text color is blue, JS toggles red */}
                                data-start-time="${status.flowLastUpdate || ''}"
                                data-critical-time="${status.noFlowCriticalTime || ''}"
                                data-device-id="${device.id}">
@@ -1085,15 +1100,10 @@
                             <p class="text-sm font-bold leading-tight ${
                                 status.isGreat ? 'text-emerald-600' :
                                 status.isWarning ? 'text-yellow-600' :
-                                status.isCritical ? 'text-red-600' :
-                                'text-blue-900' // Default to blue if no specific status
+                                status.isCritical ? 'text-red-700' : /* Use red for critical */
+                                'text-blue-900'
                             }">
-                                ${
-                                    status.isGreat ? 'Great' :
-                                    status.isWarning ? 'Warning' :
-                                    status.isCritical ? 'Critical' :
-                                    'Not Available'
-                                }
+                                ${ status.isGreat ? 'Great' : status.isWarning ? 'Warning' : status.isCritical ? 'Critical' : 'Not Available' }
                             </p>
                             <div class="text-[10px] mt-0.5">
                                 ${(() => {
