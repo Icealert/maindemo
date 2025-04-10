@@ -1042,7 +1042,7 @@
                     
                     <div class="grid grid-cols-2 gap-2 mb-3">
                         <!-- Ice Level -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${iceLevelBorderClass} ${iceLevelParentStyleClass}">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${isIceLevelCritical ? 'border-2 border-red-500' : ''} ${iceLevelParentStyleClass}">
                             <div class="flex items-center mb-1">
                                 <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
@@ -1055,7 +1055,7 @@
                         </div>
                         
                         <!-- Temperature -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${tempBorderClass} ${tempParentStyleClass}">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${isTempCritical ? 'border-2 border-red-500' : ''} ${tempParentStyleClass}">
                             <div class="flex items-center mb-1">
                                 <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13V5a4 4 0 118 0v8a6 6 0 11-8 0z" />
@@ -1110,7 +1110,7 @@
                         </div>
                         
                         <!-- Status -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${statusBorderClass} ${statusParentStyleClass}">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${status.isCritical ? 'border-2 border-red-500' : ''} ${statusParentStyleClass}">
                             <div class="flex items-center mb-1">
                                 <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
