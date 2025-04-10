@@ -2253,13 +2253,14 @@
         }
 
         // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
-        fetchDevices();
-        const interval = setInterval(fetchDevices, 21600000);  // 6 hours in milliseconds
+        // REMOVED: Initial fetch and interval setup are now correctly handled within window.onload
+        // fetchDevices(); 
+        // const interval = setInterval(fetchDevices, 21600000); 
 
-        // Cleanup interval when page is unloaded
-        window.addEventListener('unload', () => {
-            clearInterval(interval);
-        });
+        // Cleanup interval when page is unloaded - REMOVED - Handled within window.onload
+        // window.addEventListener('unload', () => { 
+        //     clearInterval(interval); 
+        // });
 
         function showDisclaimer() {
             const modal = document.getElementById('disclaimer-modal');
@@ -2579,6 +2580,18 @@
 
         function hideDeviceSettings() {
             document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        // Helper function to convert Celsius to Fahrenheit
+        function celsiusToFahrenheit(celsius) {
+            if (celsius === undefined || celsius === null || isNaN(celsius)) {
+                return NaN; // Return NaN for invalid input
+            }
+            return (celsius * 9/5) + 32;
+        }
+
+        function fahrenheitToCelsius(fahrenheit) {
+            return (fahrenheit - 32) * 5/9;
         }
 
     </script>
