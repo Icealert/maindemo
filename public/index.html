@@ -137,6 +137,17 @@
             API_URL = 'https://freezesense.up.railway.app'; // Production API (Default)
         }
 
+        // Helper function to reliably get the API URL
+        function getApiUrl() {
+            if (!window.API_URL) {
+                console.error("API_URL is not defined on window object!");
+                // Potentially recalculate or throw error
+                // For now, let's log and return undefined, which might surface the root cause
+                return undefined; 
+            }
+            return window.API_URL;
+        }
+
         // Debug Console Functions
         function toggleConsole() {
             debugConsole.classList.toggle('hidden');
@@ -1748,7 +1759,7 @@
                 </div>
             `;
 
-            // Initialize the graphs
+            // Initialize the graphs (without passing API URL)
             initializeGraphs(deviceIndex);
 
             modal.classList.remove('hidden');

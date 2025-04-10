@@ -72,6 +72,11 @@ async function fetchTimeSeriesData(deviceId, hours) {
     }
 
     try {
+        const apiUrl = getApiUrl(); // Get URL right before use
+        if (!apiUrl) {
+            throw new Error("API URL could not be retrieved.");
+        }
+
         const now = new Date();
         const from = new Date(now - hours * 60 * 60 * 1000);
         const device = window.lastDevicesData.find(d => d.id === deviceId);
@@ -117,7 +122,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
         // Fetch numerical data (temp, flow)
          const fetchData = async (property) => {
             if (!property) return Promise.resolve({ data: [] });
-            const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
+            const currentApiUrl = getApiUrl(); // Get URL right before fetch
+            if (!currentApiUrl) throw new Error("API URL not available for fetch.");
+            const url = `${currentApiUrl}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
             window.logToConsole(`Fetching ${property.name} data from: ${url}`);
             return fetch(url, fetchOptions).then(async res => {
                 if (!res.ok) {
@@ -131,7 +138,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
         // Fetch status data (warning, critical) - needs different aggregation
         const fetchStatusData = async (property) => {
             if (!property) return Promise.resolve({ data: [] });
-            const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${statusQueryParams}`;
+            const currentApiUrl = getApiUrl(); // Get URL right before fetch
+            if (!currentApiUrl) throw new Error("API URL not available for status fetch.");
+            const url = `${currentApiUrl}/api/proxy/timeseries/${thingId}/${property.id}?${statusQueryParams}`;
              window.logToConsole(`Fetching ${property.name} status data from: ${url}`);
             return fetch(url, fetchOptions).then(async res => {
                 if (!res.ok) {
@@ -458,7 +467,7 @@ function formatTempValue(value) {
  * @param {number} deviceIdx - The index of the device in window.lastDevicesData.
  * @param {number[]} selectedDays - Array of days to display (0=Today, 1=Yesterday, ...).
  */
- async function updateTempGraph(deviceIdx, selectedDays) {
+async function updateTempGraph(deviceIdx, selectedDays) {
     currentDeviceIndex = deviceIdx; // Store index for helpers like formatTempValue
 
     if (!Array.isArray(selectedDays) || selectedDays.length === 0) {
@@ -685,7 +694,7 @@ function toggleTempGraph(deviceIdx, day) {
  * @param {number} deviceIdx - The index of the device.
  * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
  */
- async function updateStatusGraph(deviceIdx, selectedDay) {
+async function updateStatusGraph(deviceIdx, selectedDay) {
     currentDeviceIndex = deviceIdx; // Store index
     const device = window.lastDevicesData[deviceIdx];
     updateTimeRangeButtons('status-time-range', selectedDay);
@@ -1152,7 +1161,7 @@ async function updateFlowGraph(deviceIdx, selectedDay) {
                 },
                 legend: {
                     position: 'top',
-                    labels: { usePointStyle: true, padding: 15, boxWidth: 10, font: { size: 11 } }
+                     display: datasets.length > 1 // Only show legend if both are displayed
                 }
             },
             scales: {
@@ -1175,17 +1184,20 @@ async function updateFlowGraph(deviceIdx, selectedDay) {
 /**
  * Updates the active state of time range buttons within a specific container.
  * @param {string} containerId - The ID of the container div holding the buttons.
- * @param {number} selectedDay - The day index that should be marked active.
+ * @param {number|number[]} selectedValue - The currently selected day(s) (0, 1, or 2).
  */
-function updateTimeRangeButtons(containerId, selectedDay) {
+function updateTimeRangeButtons(containerId, selectedValue) {
     const container = document.getElementById(containerId);
     if (!container) {
         window.logToConsole(`Button container not found: ${containerId}`, 'error');
         return;
     }
-    container.querySelectorAll('.time-range-button').forEach(button => {
-        const days = parseInt(button.dataset.days);
-        if (days === selectedDay) {
+    const buttons = container.querySelectorAll('.time-range-button');
+    const selectedValues = Array.isArray(selectedValue) ? selectedValue : [selectedValue]; // Ensure it's an array
+
+    buttons.forEach(button => {
+        const buttonValue = parseInt(button.dataset.days);
+        if (selectedValues.includes(buttonValue)) {
             button.classList.add('active');
         } else {
             button.classList.remove('active');
@@ -1260,26 +1272,52 @@ function formatDuration(ms) {
 // Helper function to fetch time series for a specific property (e.g., for future use)
 async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
     try {
-        const endTime = new Date();
-        const startTime = new Date(endTime);
-        startTime.setHours(startTime.getHours() - hours);
+        const apiUrl = getApiUrl(); // Get URL right before use
+        if (!apiUrl) {
+            throw new Error("API URL could not be retrieved for property fetch.");
+        }
+
+        const now = new Date();
+        const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
+
         const device = window.lastDevicesData.find(d => d.id === deviceId);
         const property = device?.thing?.properties?.find(p => p.name === propertyName);
         if (!property) throw new Error(`Property ${propertyName} not found`);
 
-        const interval = Math.max(Math.ceil(hours * 3600 / 1000), 60);
-        const queryParams = new URLSearchParams({ interval: interval.toString(), from: startTime.toISOString(), to: endTime.toISOString(), aggregation: 'AVG', desc: 'false' }).toString();
-        const apiUrl = `${window.API_URL}/api/proxy/timeseries/${device.thing.id}/${property.id}?${queryParams}`; // Use thing ID
-        
-        const response = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-        
+        const thingId = device.thing.id;
+        const propertyId = property.id;
+
+        const interval = Math.max(Math.ceil(hours * 3600 / 1000), 60); // Min interval 60s
+
+        const queryParams = new URLSearchParams({
+            interval: interval.toString(),
+            from: from.toISOString(),
+            to: now.toISOString(),
+            // Determine aggregation based on property type or name if necessary
+            aggregation: (propertyName === 'warning' || propertyName === 'critical') ? 'LAST' : 'AVG',
+            desc: 'false'
+        }).toString();
+
+        const url = `${apiUrl}/api/proxy/timeseries/${thingId}/${propertyId}?${queryParams}`;
+        window.logToConsole(`Fetching raw time series for ${propertyName} from: ${url}`);
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Fetch failed for ${propertyName}: ${response.status} - ${errorText}`);
+        }
+
         const data = await response.json();
-        return parseTsArray(data.data || []); // Use helper
+        return data.data || []; // Return the array of {time, value}
 
     } catch (error) {
-        window.logToConsole(`Error fetching property timeseries (${propertyName}): ${error.message}`, 'error');
-        return { timestamps: [], values: [] };
+        window.logToConsole(`Error fetching raw time series for ${propertyName}: ${error.message}`, 'error');
+        // Don't show a global error here, let the caller handle it
+        return null;
     }
 }
 
