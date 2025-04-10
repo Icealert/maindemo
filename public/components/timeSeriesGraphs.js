@@ -268,7 +268,7 @@ function formatTempValue(value) {
      if (value === undefined || value === null || isNaN(value)) return '-';
     const device = window.lastDevicesData[currentDeviceIndex]; // Assumes currentDeviceIndex is set
     const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-    const thresholdF = tempThresholdMaxC !== undefined ? window.celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global converter
+    const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global converter
 
     const displayValue = value.toFixed(1); // Format to one decimal place
 
@@ -302,7 +302,7 @@ function formatTempValue(value) {
 
     const device = window.lastDevicesData[currentDeviceIndex]; // Use module-level index
     const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-    const thresholdF = tempThresholdMaxC !== undefined ? window.celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global conversion
+    const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global conversion
     const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
     const placementPercent = (sensorPlacement * 100).toFixed(0);
 
@@ -322,7 +322,7 @@ function formatTempValue(value) {
         if (selectedDay === 0 && hour > currentHour) continue;
 
         hasDataForDay = true;
-        const tempF = window.celsiusToFahrenheit(tempC); // Use global conversion
+        const tempF = celsiusToFahrenheit(tempC); // Use global conversion
         allTempsForDayF.push(tempF);
 
 
@@ -915,17 +915,17 @@ function toggleTempGraph(deviceIdx, day) {
         summaryContainer.innerHTML = `
             <div class="p-3 bg-emerald-50 rounded-lg">
                 <h5 class="text-sm font-medium text-emerald-800">Great State</h5>
-                <p class="text-xs text-emerald-600 mt-1">Duration: ${window.formatDuration(timeInStates.great)}</p>
+                <p class="text-xs text-emerald-600 mt-1">Duration: ${formatDuration(timeInStates.great)}</p>
                 <p class="text-xs text-emerald-600">${totalDurationMs ? Math.round((timeInStates.great / totalDurationMs) * 100) : 0}% of time</p>
             </div>
             <div class="p-3 bg-yellow-50 rounded-lg">
                 <h5 class="text-sm font-medium text-yellow-800">Warning State</h5>
-                <p class="text-xs text-yellow-600 mt-1">Duration: ${window.formatDuration(timeInStates.warning)}</p>
+                <p class="text-xs text-yellow-600 mt-1">Duration: ${formatDuration(timeInStates.warning)}</p>
                 <p class="text-xs text-yellow-600">${totalDurationMs ? Math.round((timeInStates.warning / totalDurationMs) * 100) : 0}% of time</p>
             </div>
             <div class="p-3 bg-red-50 rounded-lg">
                 <h5 class="text-sm font-medium text-red-800">Critical State</h5>
-                <p class="text-xs text-red-600 mt-1">Duration: ${window.formatDuration(timeInStates.critical)}</p>
+                <p class="text-xs text-red-600 mt-1">Duration: ${formatDuration(timeInStates.critical)}</p>
                 <p class="text-xs text-red-600">${totalDurationMs ? Math.round((timeInStates.critical / totalDurationMs) * 100) : 0}% of time</p>
             </div>
         `;
@@ -1009,7 +1009,7 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
         // Time Since Last Flow
          const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
          if (lastFlowTime) {
-            timeSinceLastFlowEl.textContent = window.formatTimeDuration(now - lastFlowTime);
+            timeSinceLastFlowEl.textContent = formatTimeDuration(now - lastFlowTime);
          } else {
              // If no flow recorded today, calculate from start of day or last known flow
              timeSinceLastFlowEl.textContent = 'N/A'; // Or calculate based on full dataset if needed
