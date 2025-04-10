@@ -1037,7 +1037,7 @@
                         <!-- Ice Level -->
                         <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${iceLevelBorderClass} ${iceLevelParentStyleClass}">
                             <div class="flex items-center mb-1">
-                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Default: text-blue-600 */}
+                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Ice Level</p>
@@ -1072,7 +1072,7 @@
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Time Since Flow</p>
                             </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow" {/* Base text color is blue, JS toggles red */}
+                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow"  
                                data-start-time="${status.flowLastUpdate || ''}"
                                data-critical-time="${status.noFlowCriticalTime || ''}"
                                data-device-id="${device.id}">
@@ -1104,10 +1104,10 @@
                         <!-- Status -->
                         <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${statusBorderClass} ${statusParentStyleClass}">
                             <div class="flex items-center mb-1">
-                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Default: text-blue-600 */}
+                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                            <p class="text-blue-800 font-medium text-xs">Status</p> {/* Default: text-blue-800 */}
+                            <p class="text-blue-800 font-medium text-xs">Status</p> 
                             </div>
                             <p class="text-sm font-bold leading-tight ${ /* Default colors here, overridden by parent when critical */
                                 status.isGreat ? 'text-emerald-600' :
@@ -1131,7 +1131,7 @@
                                     }
                                     return issues.length > 0 ? /* Issue list is already red or green */
                                         `<div class="flex items-center text-red-600">
-                                            <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* text-red-600 handled by parent */}
+                                            <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                             </svg>
                                             ${issues.join(', ')}
