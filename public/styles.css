@@ -69,7 +69,7 @@ body {
 }
 
 .connected-badge {
-    animation: pulse 2s infinite;
+    /* animation: pulse 2s infinite; */ /* Removed animation */
 }
 
 .modal-content {
