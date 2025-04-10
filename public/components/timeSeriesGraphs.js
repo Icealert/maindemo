@@ -1074,7 +1074,7 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
 async function updateFlowGraph(deviceIdx, selectedDay) {
     currentDeviceIndex = deviceIdx; // Store index
     const device = window.lastDevicesData[deviceIdx];
-    updateTimeRangeButtons('flow-time-range', selectedDay); // Use the specific ID
+    updateTimeRangeButtons('flow-time-range', selectedDay);
 
     // Manage stats display based on selection (only single day supported for now)
     const statsContainer = document.getElementById('flowStats');
@@ -1179,7 +1179,7 @@ async function updateFlowGraph(deviceIdx, selectedDay) {
 function updateTimeRangeButtons(containerId, selectedDay) {
     const container = document.getElementById(containerId);
     if (!container) {
-        window.logToConsole(`Button container not found: ${containerId}`, 'warning');
+        window.logToConsole(`Button container not found: ${containerId}`, 'error');
         return;
     }
     container.querySelectorAll('.time-range-button').forEach(button => {
@@ -1230,15 +1230,63 @@ function initializeGraphs(deviceIdx) {
 }
 
 
-// --- Expose functions needed by index.html ---
+// Expose necessary functions to the global scope
 window.initializeGraphs = initializeGraphs;
-window.updateTempGraph = updateTempGraph; // Needed if called directly elsewhere? Check index.html
-window.toggleTempGraph = toggleTempGraph; // Called by onclick
-window.toggleIceLevel = toggleIceLevel; // Called by onclick
-window.toggleTempLine = toggleTempLine; // Called by onclick
-window.updateStatusGraph = updateStatusGraph; // Called by onclick
-window.updateFlowGraph = updateFlowGraph; // Called by onclick
+window.toggleTempGraph = toggleTempGraph; // Also needed by button onclick
+window.toggleIceLevel = toggleIceLevel;   // Also needed by checkbox onclick
+window.toggleTempLine = toggleTempLine;     // Also needed by checkbox onclick
+window.updateStatusGraph = updateStatusGraph; // Needed by button onclick
+window.updateFlowGraph = updateFlowGraph;     // Needed by button onclick
 
 // Note: processTemperatureByHour, processFlowByHour, fetchTimeSeriesData, etc.
 // are internal helpers and don't need to be exposed on `window`.
 // `updateTimeRangeButtons` is also internal. 
+
+// Helper function to format milliseconds into h/m/s string
+function formatDuration(ms) {
+    if (ms === undefined || ms === null || isNaN(ms) || ms < 0) return '0s';
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    let result = '';
+    if (hours > 0) result += `${hours}h `;
+    if (minutes > 0 || hours > 0) result += `${minutes}m `;
+    result += `${seconds}s`;
+    return result.trim() || '0s';
+}
+
+// Helper function to fetch time series for a specific property (e.g., for future use)
+async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
+    try {
+        const endTime = new Date();
+        const startTime = new Date(endTime);
+        startTime.setHours(startTime.getHours() - hours);
+        const device = window.lastDevicesData.find(d => d.id === deviceId);
+        const property = device?.thing?.properties?.find(p => p.name === propertyName);
+        if (!property) throw new Error(`Property ${propertyName} not found`);
+
+        const interval = Math.max(Math.ceil(hours * 3600 / 1000), 60);
+        const queryParams = new URLSearchParams({ interval: interval.toString(), from: startTime.toISOString(), to: endTime.toISOString(), aggregation: 'AVG', desc: 'false' }).toString();
+        const apiUrl = `${window.API_URL}/api/proxy/timeseries/${device.thing.id}/${property.id}?${queryParams}`; // Use thing ID
+        
+        const response = await fetch(apiUrl, { headers: { 'Accept': 'application/json' } });
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
+        const data = await response.json();
+        return parseTsArray(data.data || []); // Use helper
+
+    } catch (error) {
+        window.logToConsole(`Error fetching property timeseries (${propertyName}): ${error.message}`, 'error');
+        return { timestamps: [], values: [] };
+    }
+}
+
+// Add global error handling? (Optional)
+window.addEventListener('error', function(event) {
+    window.logToConsole(`Unhandled Error: ${event.message} at ${event.filename}:${event.lineno}`, 'error');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    window.logToConsole(`Unhandled Promise Rejection: ${event.reason}`, 'error');
+}); 
