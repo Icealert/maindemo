@@ -74,7 +74,6 @@ async function fetchTimeSeriesData(deviceId, hours) {
     try {
         const now = new Date();
         const from = new Date(now - hours * 60 * 60 * 1000);
-
         const device = window.lastDevicesData.find(d => d.id === deviceId);
         if (!device?.thing?.id) {
             throw new Error("Device or Thing not found");
@@ -106,6 +105,15 @@ async function fetchTimeSeriesData(deviceId, hours) {
             desc: 'false'
         }).toString();
 
+        // Use LAST aggregation for status properties
+        const statusQueryParams = new URLSearchParams({
+            interval: interval.toString(),
+            from: from.toISOString(),
+            to: now.toISOString(),
+            aggregation: 'LAST', // Use LAST for status changes
+            desc: 'false'
+        }).toString();
+
         // Fetch numerical data (temp, flow)
          const fetchData = async (property) => {
             if (!property) return Promise.resolve({ data: [] });
@@ -123,13 +131,6 @@ async function fetchTimeSeriesData(deviceId, hours) {
         // Fetch status data (warning, critical) - needs different aggregation
         const fetchStatusData = async (property) => {
             if (!property) return Promise.resolve({ data: [] });
-            const statusQueryParams = new URLSearchParams({
-                interval: interval.toString(),
-                from: from.toISOString(),
-                to: now.toISOString(),
-                aggregation: 'LAST', // Use LAST for status changes
-                desc: 'false'
-            }).toString();
             const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${statusQueryParams}`;
              window.logToConsole(`Fetching ${property.name} status data from: ${url}`);
             return fetch(url, fetchOptions).then(async res => {
