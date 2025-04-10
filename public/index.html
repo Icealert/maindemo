@@ -611,18 +611,17 @@
             if (celsius === undefined || celsius === null) return 'N/A';
             const fahrenheit = celsiusToFahrenheit(celsius);
             const value = `${fahrenheit.toFixed(1)}°F`;
-            
-            if (maxThreshold !== null && celsius >= maxThreshold) {
-                return `<span class="temp-warning">${value}</span>`;
-            }
+            // Remove conditional span wrapper
             return value;
         }
 
         function getTemperatureCardClass(temp, maxThreshold) {
             if (temp === undefined || temp === null || maxThreshold === undefined || maxThreshold === null) {
-                return 'bg-gradient-to-br from-blue-50 to-blue-100';
+                // Return empty string if no data
+                return '';
             }
-            return temp >= maxThreshold ? 'temp-warning-box' : 'bg-gradient-to-br from-blue-50 to-blue-100';
+            // Return only the border class if critical, otherwise empty string
+            return temp >= maxThreshold ? 'border-red-500 border-2' : '';
         }
 
         function formatTimeDuration(milliseconds) {
@@ -663,10 +662,11 @@
 
         function getFlowCardClass(timeSinceFlowHours, criticalTime) {
             if (timeSinceFlowHours === null || criticalTime === undefined || criticalTime === null) {
-                return 'bg-gradient-to-br from-green-50 to-green-100';
+                // Return empty string if no data or threshold
+                return '';
             }
-            console.log('Time comparison:', { timeSinceFlowHours, criticalTime, isWarning: timeSinceFlowHours >= criticalTime });
-            return parseFloat(timeSinceFlowHours) >= parseFloat(criticalTime) ? 'flow-warning-box' : 'bg-gradient-to-br from-green-50 to-green-100';
+            // Return only the border class if critical, otherwise empty string
+            return parseFloat(timeSinceFlowHours) >= parseFloat(criticalTime) ? 'border-red-500 border-2' : '';
         }
 
         function updateTimeSinceFlow(element, startTime) {
@@ -692,9 +692,16 @@
                 const timeSinceFlowMs = new Date() - new Date(startTime);
                 const timeSinceFlowHours = timeSinceFlowMs / (1000 * 60 * 60);
                 element.textContent = formatTimeDuration(timeSinceFlowMs);
-                
-                // Update warning state
-                cardElement.className = `property-card ${getFlowCardClass(timeSinceFlowHours, criticalTime)} p-2 rounded-lg`;
+
+                // Get the conditional border class
+                const borderClass = getFlowCardClass(timeSinceFlowHours, criticalTime);
+
+                // Add or remove only the border class, keep base classes
+                if (borderClass) {
+                    cardElement.classList.add('border-red-500', 'border-2');
+                } else {
+                    cardElement.classList.remove('border-red-500', 'border-2');
+                }
                 
                 // Only log when critical state changes
                 const isCriticalNow = timeSinceFlowHours >= criticalTime;
@@ -964,6 +971,11 @@
 
             devicesContainer.innerHTML = devices.map((device, index) => {
                 const status = calculateDeviceStatus(device);
+                // Determine conditional border classes
+                const tempBorderClass = getTemperatureCardClass(status.cloudTemp, status.tempThresholdMax);
+                const iceLevelBorderClass = !status.iceLevel.isAboveSensor && status.sensorPlacement !== undefined ? 'border-red-500 border-2' : '';
+                const statusBorderClass = status.isCritical ? 'border-red-500 border-2' : '';
+                // Note: Flow border is handled by updateTimeSinceFlow
 
                 return `
                 <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
@@ -996,7 +1008,7 @@
                     
                     <div class="grid grid-cols-2 gap-2 mb-3">
                         <!-- Ice Level -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${iceLevelBorderClass}">
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
@@ -1009,7 +1021,7 @@
                         </div>
                         
                         <!-- Temperature -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${tempBorderClass}">
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
@@ -1026,15 +1038,15 @@
                         </div>
                         
                         <!-- Time Since Flow -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg"> {/* Border handled by JS */}
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                                 </svg>
                             <p class="text-blue-800 font-medium text-xs">Time Since Flow</p>
                             </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow" 
-                               data-start-time="${status.flowLastUpdate || ''}" 
+                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow"
+                               data-start-time="${status.flowLastUpdate || ''}"
                                data-critical-time="${status.noFlowCriticalTime || ''}"
                                data-device-id="${device.id}">
                                 ${formatTimeDuration(status.timeSinceFlowMs)}
@@ -1063,7 +1075,7 @@
                         </div>
                         
                         <!-- Status -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${statusBorderClass}">
                             <div class="flex items-center mb-1">
                                 <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -1071,7 +1083,7 @@
                             <p class="text-blue-800 font-medium text-xs">Status</p>
                             </div>
                             <p class="text-sm font-bold leading-tight ${
-                                status.isGreat ? 'text-emerald-600' : 
+                                status.isGreat ? 'text-emerald-600' :
                                 status.isWarning ? 'text-yellow-600' :
                                 status.isCritical ? 'text-red-600' :
                                 'text-blue-900' // Default to blue if no specific status
@@ -1095,13 +1107,13 @@
                                     if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
                                         issues.push('No Flow');
                                     }
-                                    return issues.length > 0 ? 
+                                    return issues.length > 0 ?
                                         `<div class="flex items-center text-red-600">
                                             <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                                             </svg>
                                             ${issues.join(', ')}
-                                        </div>` : 
+                                        </div>` :
                                         status.isGreat ? '<div class="flex items-center text-emerald-600"><svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>All Systems Normal</div>' : '';
                                 })()}
                             </div>
