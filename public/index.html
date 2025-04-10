@@ -990,11 +990,13 @@
 
                 // Determine conditional text classes
                 // const iceLevelTextClass = isIceLevelCritical ? 'text-red-700' : 'text-blue-900'; // Removed: Handled by parent class
-                const tempTextClass = isTempCritical ? 'text-red-700' : 'text-blue-900';
+                // const tempTextClass = isTempCritical ? 'text-red-700' : 'text-blue-900'; // Removed: Handled by parent class
                 // Status text color is handled inline based on isGreat/isWarning/isCritical
 
                 // Determine parent-level style class for Ice Level card when critical
                 const iceLevelParentStyleClass = isIceLevelCritical ? '[&_svg]:text-red-600 [&_p]:text-red-700' : '';
+                // Determine parent-level style class for Temperature card when critical
+                const tempParentStyleClass = isTempCritical ? '[&_svg]:text-red-600 [&_p]:text-red-700' : '';
 
                 return `
                 <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
@@ -1040,16 +1042,16 @@
                         </div>
                         
                         <!-- Temperature -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${tempBorderClass}">
+                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${tempBorderClass} ${tempParentStyleClass}">
                             <div class="flex items-center mb-1">
-                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <svg class="w-3 h-3 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Default: text-blue-600 */}
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                                 </svg>
-                            <p class="text-blue-800 font-medium text-xs">Temperature</p>
+                            <p class="text-blue-800 font-medium text-xs">Temperature</p> {/* Default: text-blue-800 */}
                             </div>
-                            <p class="text-sm font-bold leading-tight ${tempTextClass}">${formatTemperature(status.cloudTemp)}</p>
-                            <p class="text-[10px] text-blue-600 mt-0.5 flex items-center">
-                                <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <p class="text-sm font-bold leading-tight text-blue-900">${formatTemperature(status.cloudTemp)}</p> {/* Default: text-blue-900, removed conditional class */}
+                            <p class="text-[10px] text-blue-600 mt-0.5 flex items-center"> {/* Default: text-blue-600 */}
+                                <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"> {/* Default: text-blue-600 applies via parent */}
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                                 </svg>
                                 Max: ${formatTemperature(status.tempThresholdMax)}
