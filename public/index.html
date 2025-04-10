@@ -123,9 +123,16 @@
         };
 
         // Update this at the start of your script
-        const API_URL = window.location.hostname === 'localhost' 
-            ? 'http://localhost:3000'
-            : 'https://freezesense.up.railway.app';
+        const hostname = window.location.hostname;
+        let API_URL;
+
+        if (hostname === 'localhost') {
+            API_URL = 'http://localhost:3000'; // Local development
+        } else if (hostname === 'web-staging-c951.up.railway.app') {
+            API_URL = 'https://web-staging-c951.up.railway.app'; // Staging API
+        } else {
+            API_URL = 'https://freezesense.up.railway.app'; // Production API (Default)
+        }
 
         // Debug Console Functions
         function toggleConsole() {
