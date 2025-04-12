@@ -1281,8 +1281,10 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
         const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
 
         const device = window.lastDevicesData.find(d => d.id === deviceId);
-        const property = device?.thing?.properties?.find(p => p.name === propertyName);
-        if (!property) throw new Error(`Property ${propertyName} not found`);
+        if (!device || !device.thing) throw new Error("Device or thing not found");
+
+        const property = device.thing.properties.find(p => p.name === propertyName);
+        if (!property) throw new Error(`Property '${propertyName}' not found`);
 
         const thingId = device.thing.id;
         const propertyId = property.id;
@@ -1298,6 +1300,7 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
             desc: 'false'
         }).toString();
 
+        // Use window.API_URL directly here as well
         const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${propertyId}?${queryParams}`;
         window.logToConsole(`Fetching raw time series for ${propertyName} from: ${url}`);
 
