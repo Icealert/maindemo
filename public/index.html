@@ -62,6 +62,21 @@
 
         // Single Load Handler
         window.onload = () => {
+            // Define API_URL based on hostname *before* loading components or fetching data
+            const hostname = window.location.hostname;
+            let API_URL;
+
+            if (hostname === 'localhost') {
+                API_URL = 'http://localhost:3000'; // Local development
+            } else if (hostname === 'web-staging-c951.up.railway.app') {
+                API_URL = 'https://web-staging-c951.up.railway.app'; // Staging API
+            } else {
+                API_URL = 'https://freezesense.up.railway.app'; // Production API (Default)
+            }
+            // Assign to window object to make it globally accessible *after* this point
+            window.API_URL = API_URL;
+            console.log("API_URL set to:", window.API_URL); // Add log for verification
+
             Promise.all([
                 loadComponent('/components/navigation.html', 'nav-placeholder'),
                 loadComponent('/components/main-content.html', 'main-content'),
@@ -124,29 +139,6 @@
                 }
             });
         };
-
-        // Update this at the start of your script
-        const hostname = window.location.hostname;
-        let API_URL;
-
-        if (hostname === 'localhost') {
-            API_URL = 'http://localhost:3000'; // Local development
-        } else if (hostname === 'web-staging-c951.up.railway.app') {
-            API_URL = 'https://web-staging-c951.up.railway.app'; // Staging API
-        } else {
-            API_URL = 'https://freezesense.up.railway.app'; // Production API (Default)
-        }
-
-        // Helper function to reliably get the API URL
-        function getApiUrl() {
-            if (!window.API_URL) {
-                console.error("API_URL is not defined on window object!");
-                // Potentially recalculate or throw error
-                // For now, let's log and return undefined, which might surface the root cause
-                return undefined; 
-            }
-            return window.API_URL;
-        }
 
         // Debug Console Functions
         function toggleConsole() {

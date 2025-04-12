@@ -72,9 +72,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
     }
 
     try {
-        const apiUrl = getApiUrl(); // Get URL right before use
-        if (!apiUrl) {
-            throw new Error("API URL could not be retrieved.");
+        // Use window.API_URL directly, assuming it's set by index.html onload
+        if (!window.API_URL) {
+            throw new Error("API URL is not available on window object.");
         }
 
         const now = new Date();
@@ -122,9 +122,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
         // Fetch numerical data (temp, flow)
          const fetchData = async (property) => {
             if (!property) return Promise.resolve({ data: [] });
-            const currentApiUrl = getApiUrl(); // Get URL right before fetch
-            if (!currentApiUrl) throw new Error("API URL not available for fetch.");
-            const url = `${currentApiUrl}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
+            // Use window.API_URL directly
+            if (!window.API_URL) throw new Error("API URL not available for fetch.");
+            const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
             window.logToConsole(`Fetching ${property.name} data from: ${url}`);
             return fetch(url, fetchOptions).then(async res => {
                 if (!res.ok) {
@@ -138,9 +138,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
         // Fetch status data (warning, critical) - needs different aggregation
         const fetchStatusData = async (property) => {
             if (!property) return Promise.resolve({ data: [] });
-            const currentApiUrl = getApiUrl(); // Get URL right before fetch
-            if (!currentApiUrl) throw new Error("API URL not available for status fetch.");
-            const url = `${currentApiUrl}/api/proxy/timeseries/${thingId}/${property.id}?${statusQueryParams}`;
+            // Use window.API_URL directly
+            if (!window.API_URL) throw new Error("API URL not available for status fetch.");
+            const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${statusQueryParams}`;
              window.logToConsole(`Fetching ${property.name} status data from: ${url}`);
             return fetch(url, fetchOptions).then(async res => {
                 if (!res.ok) {
@@ -1272,8 +1272,8 @@ function formatDuration(ms) {
 // Helper function to fetch time series for a specific property (e.g., for future use)
 async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
     try {
-        const apiUrl = getApiUrl(); // Get URL right before use
-        if (!apiUrl) {
+        // Use window.API_URL directly
+        if (!window.API_URL) {
             throw new Error("API URL could not be retrieved for property fetch.");
         }
 
@@ -1298,7 +1298,7 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
             desc: 'false'
         }).toString();
 
-        const url = `${apiUrl}/api/proxy/timeseries/${thingId}/${propertyId}?${queryParams}`;
+        const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${propertyId}?${queryParams}`;
         window.logToConsole(`Fetching raw time series for ${propertyName} from: ${url}`);
 
         const response = await fetch(url, {
