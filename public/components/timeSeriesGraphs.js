@@ -151,17 +151,22 @@ async function fetchTimeSeriesData(deviceId, hours) {
             }
         };
 
-        // Fetch all properties
-        const [tempResult, flowResult, warningResult, criticalResult] = await Promise.all([
+        // Fetch only temp and flow properties for now
+        const [tempResult, flowResult /*, warningResult, criticalResult */] = await Promise.all([
             fetchPropertyHistory(tempProperty),
-            fetchPropertyHistory(flowProperty),
-            fetchPropertyHistory(warningProperty),
-            fetchPropertyHistory(criticalProperty)
+            fetchPropertyHistory(flowProperty)
+            // fetchPropertyHistory(warningProperty),
+            // fetchPropertyHistory(criticalProperty)
         ]);
+
+        // Initialize warning/critical results as empty for now
+        const warningResult = { timestamps: [], values: [] };
+        const criticalResult = { timestamps: [], values: [] };
 
         window.logToConsole('Raw API History Responses:', { tempResult, flowResult, warningResult, criticalResult }, 'info');
 
         // Process status data: Convert 'true'/'false' strings or booleans to 1/0
+        // This processing is kept but will operate on empty arrays for now
         warningResult.values = warningResult.values.map(val => 
             (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
         );
@@ -169,13 +174,25 @@ async function fetchTimeSeriesData(deviceId, hours) {
             (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
         );
 
-        // Align data 
-        const primaryTimestamps = tempResult.timestamps.length ? tempResult.timestamps : 
-                                 flowResult.timestamps.length ? flowResult.timestamps : 
-                                 warningResult.timestamps.length ? warningResult.timestamps : 
-                                 criticalResult.timestamps;
+        // Align data - More robust checks
+        let primaryTimestamps = [];
+        if (tempResult && tempResult.timestamps && tempResult.timestamps.length > 0) {
+            primaryTimestamps = tempResult.timestamps;
+        } else if (flowResult && flowResult.timestamps && flowResult.timestamps.length > 0) {
+            primaryTimestamps = flowResult.timestamps;
+        } 
+        // Removed checks for warning/critical as they are not fetched
+        // else if (warningResult && warningResult.timestamps && warningResult.timestamps.length > 0) {
+        //     primaryTimestamps = warningResult.timestamps;
+        // } else if (criticalResult && criticalResult.timestamps && criticalResult.timestamps.length > 0) {
+        //     primaryTimestamps = criticalResult.timestamps;
+        // }
 
         const getValueAtTime = (time, dataResult) => {
+            // Add check for valid dataResult
+            if (!dataResult || !dataResult.timestamps || dataResult.timestamps.length === 0) {
+                return null;
+            }
             const targetTime = new Date(time).getTime();
             let closestValue = null;
             let minDiff = Infinity;
@@ -193,23 +210,23 @@ async function fetchTimeSeriesData(deviceId, hours) {
             return closestValue;
         };
 
-        // Build aligned result
+        // Build aligned result - exclude status for now
         const alignedResult = {
             timestamps: primaryTimestamps,
             temperature: primaryTimestamps.map(t => getValueAtTime(t, tempResult)),
             flowRate: primaryTimestamps.map(t => getValueAtTime(t, flowResult)),
-            warningStatus: primaryTimestamps.map(t => getValueAtTime(t, warningResult)),
-            criticalStatus: primaryTimestamps.map(t => getValueAtTime(t, criticalResult)),
+            // warningStatus: primaryTimestamps.map(t => getValueAtTime(t, warningResult)),
+            // criticalStatus: primaryTimestamps.map(t => getValueAtTime(t, criticalResult)),
+            warningStatus: [], // Return empty array for now
+            criticalStatus: [] // Return empty array for now
         };
 
-        window.logToConsole('Processed & Aligned Time Series Data (New Endpoint):', {
+        window.logToConsole('Processed & Aligned Time Series Data (Temp/Flow Only):', {
             points: alignedResult.timestamps.length,
             sample: alignedResult.timestamps.slice(0, 5).map((t, i) => ({
                 time: new Date(t).toLocaleString(),
                 temp: alignedResult.temperature[i],
-                flow: alignedResult.flowRate[i],
-                warning: alignedResult.warningStatus[i],
-                critical: alignedResult.criticalStatus[i]
+                flow: alignedResult.flowRate[i]
             }))
         });
 
