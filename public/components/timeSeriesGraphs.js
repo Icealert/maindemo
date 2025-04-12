@@ -163,16 +163,18 @@ async function fetchTimeSeriesData(deviceId, hours) {
         const warningResult = { timestamps: [], values: [] };
         const criticalResult = { timestamps: [], values: [] };
 
-        window.logToConsole('Raw API History Responses:', { tempResult, flowResult, warningResult, criticalResult }, 'info');
+        window.logToConsole('Raw API History Responses:', { tempResult, flowResult /* , warningResult, criticalResult */ }, 'info');
 
         // Process status data: Convert 'true'/'false' strings or booleans to 1/0
         // This processing is kept but will operate on empty arrays for now
+        /* // Commenting out status processing for now
         warningResult.values = warningResult.values.map(val => 
             (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
         );
         criticalResult.values = criticalResult.values.map(val => 
             (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
         );
+        */
 
         // Align data - More robust checks
         let primaryTimestamps = [];
@@ -215,8 +217,8 @@ async function fetchTimeSeriesData(deviceId, hours) {
             timestamps: primaryTimestamps,
             temperature: primaryTimestamps.map(t => getValueAtTime(t, tempResult)),
             flowRate: primaryTimestamps.map(t => getValueAtTime(t, flowResult)),
-            // warningStatus: primaryTimestamps.map(t => getValueAtTime(t, warningResult)),
-            // criticalStatus: primaryTimestamps.map(t => getValueAtTime(t, criticalResult)),
+            // warningStatus: primaryTimestamps.map(t => getValueAtTime(t, warningResult)), // Excluded
+            // criticalStatus: primaryTimestamps.map(t => getValueAtTime(t, criticalResult)), // Excluded
             warningStatus: [], // Return empty array for now
             criticalStatus: [] // Return empty array for now
         };
@@ -227,6 +229,8 @@ async function fetchTimeSeriesData(deviceId, hours) {
                 time: new Date(t).toLocaleString(),
                 temp: alignedResult.temperature[i],
                 flow: alignedResult.flowRate[i]
+                // warning: alignedResult.warningStatus[i], // Excluded
+                // critical: alignedResult.criticalStatus[i] // Excluded
             }))
         });
 
