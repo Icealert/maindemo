@@ -76,14 +76,16 @@ async function fetchTimeSeriesData(deviceId, hours) {
         if (!window.API_URL) {
             throw new Error("API URL is not available on window object.");
         }
+        const API_URL = window.API_URL; // Use local const for brevity
 
         const now = new Date();
         const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
         const device = window.lastDevicesData.find(d => d.id === deviceId);
-        if (!device?.thing?.id) {
-            throw new Error("Device or Thing not found");
+        
+        if (!device || !device.thing) {
+            throw new Error("Device or Thing data not found");
         }
-        const thingId = device.thing.id;
+
         const properties = device.thing.properties || [];
 
         const tempProperty = properties.find(p => p.name === 'cloudtemp');
@@ -91,112 +93,90 @@ async function fetchTimeSeriesData(deviceId, hours) {
         const warningProperty = properties.find(p => p.name === 'warning');
         const criticalProperty = properties.find(p => p.name === 'critical');
 
+        window.logToConsole(`Fetching time series data for device ${deviceId} (${hours} hours):`, 'info');
 
-        window.logToConsole(`Fetching time series data for thing ${thingId} (${hours} hours):`, 'info');
-
-        const timeRangeSeconds = hours * 3600;
-        const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60); // Min interval 60s
+        // Use only from and to query parameters
+        const queryParams = new URLSearchParams({
+            from: from.toISOString(),
+            to: now.toISOString()
+        }).toString();
 
         const fetchOptions = {
             method: 'GET',
             headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
         };
 
-        const queryParams = new URLSearchParams({
-            interval: interval.toString(),
-            from: from.toISOString(),
-            to: now.toISOString(),
-            aggregation: 'AVG', // Use AVG for numerical data
-            desc: 'false'
-        }).toString();
+        // Single fetch helper using the correct endpoint structure
+        const fetchPropertyHistory = async (property) => {
+            if (!property || !property.id) {
+                 window.logToConsole(`Skipping fetch: Property object or ID is missing for name: ${property?.name || 'unknown'}.`, 'warning');
+                return Promise.resolve({ timestamps: [], values: [] });
+            }
 
-        // Use LAST aggregation for status properties
-        const statusQueryParams = new URLSearchParams({
-            interval: interval.toString(),
-            from: from.toISOString(),
-            to: now.toISOString(),
-            aggregation: 'AVG',
-            desc: 'false'
-        }).toString();
+            // Use the /api/iot/v2/devices... endpoint structure
+            const url = `${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?${queryParams}`;
+            window.logToConsole(`Fetching ${property.name} history from: ${url}`);
 
-        // Fetch numerical data (temp, flow)
-         const fetchData = async (property) => {
-            if (!property) return Promise.resolve({ data: [] });
-            // Use window.API_URL directly
-            if (!window.API_URL) throw new Error("API URL not available for fetch.");
-            const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
-            window.logToConsole(`Fetching ${property.name} data from: ${url}`);
-            return fetch(url, fetchOptions).then(async res => {
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    throw new Error(`${property.name} fetch failed: ${res.status} - ${errorText}`);
+            try {
+                const response = await fetch(url, fetchOptions);
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => `Status: ${response.status}`);
+                    // Log specific error but return empty to not break Promise.all
+                    window.logToConsole(`${property.name} history fetch failed: ${response.status} - ${errorText}`, 'error'); 
+                    return { timestamps: [], values: [] }; 
                 }
-                return res.json();
-            });
+                const data = await response.json();
+                return { 
+                    timestamps: data.timestamps || [], 
+                    values: data.values || [] 
+                };
+            } catch (error) {
+                window.logToConsole(`Network or other error fetching ${property.name}: ${error.message}`, 'error');
+                return { timestamps: [], values: [] };
+            }
         };
 
-        // Fetch status data (warning, critical) - needs different aggregation
-        const fetchStatusData = async (property) => {
-            if (!property) return Promise.resolve({ data: [] });
-            // Use window.API_URL directly
-            if (!window.API_URL) throw new Error("API URL not available for status fetch.");
-            const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${statusQueryParams}`;
-             window.logToConsole(`Fetching ${property.name} status data from: ${url}`);
-            return fetch(url, fetchOptions).then(async res => {
-                if (!res.ok) {
-                    const errorText = await res.text();
-                    throw new Error(`${property.name} status fetch failed: ${res.status} - ${errorText}`);
-                }
-                return res.json();
-            });
-        };
-
-
-        const [tempData, flowData, warningData, criticalData] = await Promise.all([
-            fetchData(tempProperty),
-            fetchData(flowProperty),
-            fetchStatusData(warningProperty),
-            fetchStatusData(criticalProperty)
+        // Fetch all properties
+        const [tempResult, flowResult, warningResult, criticalResult] = await Promise.all([
+            fetchPropertyHistory(tempProperty),
+            fetchPropertyHistory(flowProperty),
+            fetchPropertyHistory(warningProperty),
+            fetchPropertyHistory(criticalProperty)
         ]);
 
-         window.logToConsole('Raw API Responses:', { tempData, flowData, warningData, criticalData }, 'info');
+        window.logToConsole('Raw API History Responses:', { tempResult, flowResult, warningResult, criticalResult }, 'info');
 
-        // Process numerical data
-        const tempResult = parseTsArray(tempData.data || []);
-        const flowResult = parseTsArray(flowData.data || []);
+        // Process status data: Convert 'true'/'false' strings or booleans to 1/0
+        warningResult.values = warningResult.values.map(val => 
+            (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
+        );
+        criticalResult.values = criticalResult.values.map(val => 
+            (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
+        );
 
-        // Process status data - Convert 'true'/'false' strings or booleans to 1/0
-        const processStatus = (statusRawData) => {
-            const parsed = parseTsArray(statusRawData.data || []);
-            parsed.values = parsed.values.map(val => (val === true || String(val).toLowerCase() === 'true') ? 1 : 0);
-            return parsed;
-        };
-        const warningResult = processStatus(warningData);
-        const criticalResult = processStatus(criticalData);
+        // Align data 
+        const primaryTimestamps = tempResult.timestamps.length ? tempResult.timestamps : 
+                                 flowResult.timestamps.length ? flowResult.timestamps : 
+                                 warningResult.timestamps.length ? warningResult.timestamps : 
+                                 criticalResult.timestamps;
 
-
-        // Align data - Find common timestamps or the most frequent source
-        // For simplicity, we'll use temperature timestamps as the primary source if available
-        const primaryTimestamps = tempResult.times.length ? tempResult.times : flowResult.times.length ? flowResult.times : warningResult.times.length ? warningResult.times : criticalResult.times;
-
-        // Function to get value at a specific time (or nearest within tolerance)
         const getValueAtTime = (time, dataResult) => {
-            const tolerance = interval * 1000 / 2; // +/- half interval
             const targetTime = new Date(time).getTime();
             let closestValue = null;
             let minDiff = Infinity;
+            const estimatedIntervalMs = 60 * 1000; 
+            const tolerance = estimatedIntervalMs / 2;
 
-            for (let i = 0; i < dataResult.times.length; i++) {
-                 const dataTime = new Date(dataResult.times[i]).getTime();
-                 const diff = Math.abs(targetTime - dataTime);
-                 if (diff <= tolerance && diff < minDiff) {
-                     minDiff = diff;
-                     closestValue = dataResult.values[i];
-                 }
+            for (let i = 0; i < dataResult.timestamps.length; i++) {
+                const dataTime = new Date(dataResult.timestamps[i]).getTime();
+                const diff = Math.abs(targetTime - dataTime);
+                if (diff <= tolerance && diff < minDiff) {
+                    minDiff = diff;
+                    closestValue = dataResult.values[i];
+                }
             }
             return closestValue;
         };
-
 
         // Build aligned result
         const alignedResult = {
@@ -207,7 +187,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
             criticalStatus: primaryTimestamps.map(t => getValueAtTime(t, criticalResult)),
         };
 
-        window.logToConsole('Processed & Aligned Time Series Data:', {
+        window.logToConsole('Processed & Aligned Time Series Data (New Endpoint):', {
             points: alignedResult.timestamps.length,
             sample: alignedResult.timestamps.slice(0, 5).map((t, i) => ({
                 time: new Date(t).toLocaleString(),
@@ -1276,6 +1256,7 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
         if (!window.API_URL) {
             throw new Error("API URL could not be retrieved for property fetch.");
         }
+        const API_URL = window.API_URL;
 
         const now = new Date();
         const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
@@ -1284,24 +1265,18 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
         if (!device || !device.thing) throw new Error("Device or thing not found");
 
         const property = device.thing.properties.find(p => p.name === propertyName);
-        if (!property) throw new Error(`Property '${propertyName}' not found`);
+        if (!property || !property.id) {
+             throw new Error(`Property '${propertyName}' not found or missing ID`);
+        }
 
-        const thingId = device.thing.id;
-        const propertyId = property.id;
-
-        const interval = Math.max(Math.ceil(hours * 3600 / 1000), 60); // Min interval 60s
-
+        // Use only from and to parameters
         const queryParams = new URLSearchParams({
-            interval: interval.toString(),
             from: from.toISOString(),
-            to: now.toISOString(),
-            // Determine aggregation based on property type or name if necessary
-            aggregation: (propertyName === 'warning' || propertyName === 'critical') ? 'LAST' : 'AVG',
-            desc: 'false'
+            to: now.toISOString()
         }).toString();
 
-        // Use window.API_URL directly here as well
-        const url = `${window.API_URL}/api/proxy/timeseries/${thingId}/${propertyId}?${queryParams}`;
+        // Use the /api/iot/v2/devices... endpoint structure
+        const url = `${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?${queryParams}`;
         window.logToConsole(`Fetching raw time series for ${propertyName} from: ${url}`);
 
         const response = await fetch(url, {
@@ -1310,17 +1285,19 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
+            const errorText = await response.text().catch(() => `Status: ${response.status}`);
             throw new Error(`Fetch failed for ${propertyName}: ${response.status} - ${errorText}`);
         }
 
         const data = await response.json();
-        return data.data || []; // Return the array of {time, value}
+        return { 
+            timestamps: data.timestamps || [], 
+            values: data.values || [] 
+        }; 
 
     } catch (error) {
         window.logToConsole(`Error fetching raw time series for ${propertyName}: ${error.message}`, 'error');
-        // Don't show a global error here, let the caller handle it
-        return null;
+        return { timestamps: [], values: [] }; 
     }
 }
 
