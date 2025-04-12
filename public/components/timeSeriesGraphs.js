@@ -53,173 +53,205 @@ function parseTsArray(arr) {
     return cleanResult;
 }
 
-/**
- * Fetches time series data for temperature and flow rate for a specific device.
- * Caches results to avoid redundant API calls.
- * @param {string} deviceId - The ID of the device.
- * @param {number} hours - The number of hours of data to fetch.
- * @returns {Promise<object|null>} A promise resolving to an object containing timestamps and corresponding data arrays, or null on error.
- */
+// Replace the entire function with the user-provided version
 async function fetchTimeSeriesData(deviceId, hours) {
+    // Check cache first
     const cacheKey = `${deviceId}-${hours}`;
     if (timeSeriesDataCache.has(cacheKey)) {
-        window.logToConsole('Using cached time series data', 'info');
+        logToConsole('Using cached time series data', 'info');
         return timeSeriesDataCache.get(cacheKey);
     }
 
     try {
-        // Use window.API_URL directly, assuming it's set by index.html onload
-        if (!window.API_URL) {
-            throw new Error("API URL is not available on window object.");
-        }
-        const API_URL = window.API_URL; // Use local const for brevity
-
         const now = new Date();
+        // Correct date subtraction
         const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
-        window.logToConsole(`Date Check: now = ${now.toISOString()}, from = ${from.toISOString()}`, 'info');
 
+        // 1) Identify the device & its properties
         const device = window.lastDevicesData.find(d => d.id === deviceId);
-        
-        // Use deviceId directly as required by the /api/iot/v2/devices endpoint
-        if (!device || !device.thing) { 
-            throw new Error("Device or Thing data not found");
+        // Use window.API_URL defined in index.html
+        const API_URL = window.API_URL; 
+        if (!API_URL) {
+             throw new Error("API URL is not available");
         }
-
+        if (!device?.thing?.id) {
+            throw new Error("Device or Thing not found");
+        }
+        const thingId = device.thing.id;
         const properties = device.thing.properties || [];
 
+        // Find relevant properties
         const tempProperty = properties.find(p => p.name === 'cloudtemp');
         const flowProperty = properties.find(p => p.name === 'cloudflowrate');
-        const warningProperty = properties.find(p => p.name === 'warning');
-        const criticalProperty = properties.find(p => p.name === 'critical');
 
-        window.logToConsole(`Fetching time series data for device ${deviceId} (${hours} hours):`, 'info');
+        // Log request details for debugging
+        logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
+        if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
+        if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
 
-        // Single fetch helper using the /api/iot/v2/devices endpoint structure
-        const fetchPropertyHistory = async (property) => {
-            if (!property || !property.id) {
-                 window.logToConsole(`Skipping fetch: Property object or ID is missing for name: ${property?.name || 'unknown'}.`, 'warning');
-                return Promise.resolve({ timestamps: [], values: [] });
-            }
+        // Log property details for debugging
+        logToConsole('Property details:', {
+            temperature: tempProperty ? {
+                id: tempProperty.id,
+                type: tempProperty.type,
+                name: tempProperty.name,
+                last_value: tempProperty.last_value
+            } : null,
+            flow: flowProperty ? {
+                id: flowProperty.id,
+                type: flowProperty.type,
+                name: flowProperty.name,
+                last_value: flowProperty.last_value
+            } : null
+        }, 'info');
 
-            // Build query parameters (only from/to)
-            const queryParams = new URLSearchParams({
-                from: from.toISOString(),
-                to: now.toISOString()
-            }).toString();
+        // 2) Compute interval to stay under 1000 points
+        const timeRangeSeconds = hours * 3600;
+        const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
 
-            // Use the /api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries endpoint
-            const url = `${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?${queryParams}`;
-            window.logToConsole(`Fetching ${property.name} history from: ${url}`);
-
-            try {
-                const response = await fetch(url, {
-                    method: 'GET',
-                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
-                });
-                if (!response.ok) {
-                    const errorText = await response.text().catch(() => `Status: ${response.status}`);
-                    window.logToConsole(`${property.name} history fetch failed: ${response.status} - ${errorText}`, 'error'); 
-                    return { timestamps: [], values: [] }; 
-                }
-                const data = await response.json();
-                window.logToConsole(`Raw API data for ${property.name}:`, data, 'info'); // Keep log
-                // Expecting { timestamps: [], values: [] } structure directly
-                return { 
-                    timestamps: data.timestamps || [], 
-                    values: data.values || [] 
-                };
-            } catch (error) {
-                window.logToConsole(`Network or other error fetching ${property.name}: ${error.message}`, 'error');
-                return { timestamps: [], values: [] };
+        // 3) Basic fetch options
+        const fetchOptions = {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
             }
         };
 
-        // Fetch all properties again
-        const [tempResult, flowResult, warningResult, criticalResult] = await Promise.all([
-            fetchPropertyHistory(tempProperty),
-            fetchPropertyHistory(flowProperty),
-            fetchPropertyHistory(warningProperty),
-            fetchPropertyHistory(criticalProperty)
+        // 4) Build query string
+        const queryParams = new URLSearchParams({
+            interval: interval.toString(),
+            from: from.toISOString(),
+            to: now.toISOString(),
+            aggregation: 'AVG',
+            desc: 'false'
+        }).toString();
+
+        // Log query details
+        logToConsole('Time series query parameters:', {
+            interval,
+            from: from.toLocaleString(),
+            to: now.toLocaleString(),
+            queryString: queryParams
+        }, 'info');
+
+        // 5) Make parallel fetch calls for temperature and flow
+        const [tempData, flowData] = await Promise.all([
+            // Temperature fetch
+            tempProperty
+                ? fetch(
+                    `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
+                    fetchOptions
+                ).then(async res => {
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
+                    }
+                    return res.json();
+                })
+                : Promise.resolve({ data: [] }),
+
+            // Flow Rate fetch
+            flowProperty
+                ? fetch(
+                    `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
+                    fetchOptions
+                ).then(async res => {
+                    if (!res.ok) {
+                        const errorText = await res.text();
+                        throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
+                    }
+                    return res.json();
+                })
+                : Promise.resolve({ data: [] })
         ]);
 
-        window.logToConsole('Raw API History Responses:', { tempResult, flowResult , warningResult, criticalResult }, 'info');
+        // Log raw response data
+        logToConsole('Raw temperature response:', tempData, 'info');
+        logToConsole('Temperature data details:', {
+            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${queryParams}`,
+            tempPropertyId: tempProperty?.id,
+            responseStatus: tempData ? 'Success' : 'No data',
+            dataPoints: tempData?.data?.length || 0,
+            tempProperty: tempProperty,
+            rawResponse: tempData
+        }, 'info');
 
-        // Process status data: Convert 'true'/'false' strings or booleans to 1/0
-        // Re-enable status processing 
-        warningResult.values = warningResult.values.map(val => 
-            (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
-        );
-        criticalResult.values = criticalResult.values.map(val => 
-            (val === true || String(val).toLowerCase() === 'true') ? 1 : 0
-        );
-        
+        // Add logging for flow rate data
+        logToConsole('Raw flow rate response:', flowData, 'info');
+        logToConsole('Flow data details:', {
+            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${queryParams}`,
+            flowPropertyId: flowProperty?.id,
+            responseStatus: flowData ? 'Success' : 'No data',
+            dataPoints: flowData?.data?.length || 0,
+            flowProperty: flowProperty,
+            rawResponse: flowData
+        }, 'info');
 
-        // Align data - Restore checks for warning/critical
-        let primaryTimestamps = [];
-        if (tempResult && tempResult.timestamps && tempResult.timestamps.length > 0) {
-            primaryTimestamps = tempResult.timestamps;
-        } else if (flowResult && flowResult.timestamps && flowResult.timestamps.length > 0) {
-            primaryTimestamps = flowResult.timestamps;
-        } else if (warningResult && warningResult.timestamps && warningResult.timestamps.length > 0) {
-             primaryTimestamps = warningResult.timestamps;
-        } else if (criticalResult && criticalResult.timestamps && criticalResult.timestamps.length > 0) {
-             primaryTimestamps = criticalResult.timestamps;
-        }
+        // 6) Process the responses
+        const tempResult = parseTsArray(tempData.data || []);
+        const flowResult = parseTsArray(flowData.data || []);
 
-        const getValueAtTime = (time, dataResult) => {
-            // Add check for valid dataResult
-            if (!dataResult || !dataResult.timestamps || dataResult.timestamps.length === 0) {
-                return null;
+        // Log the raw API responses with sample data
+        logToConsole('Raw API Response Data:', {
+            temperature: {
+                total: tempData.data?.length || 0,
+                sample: tempData.data?.slice(0, 5)?.map(d => ({
+                    time: new Date(d.time).toLocaleString(),
+                    value: d.value !== null ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                }))
+            },
+            flow: {
+                total: flowData.data?.length || 0,
+                sample: flowData.data?.slice(0, 5)?.map(d => ({
+                    time: new Date(d.time).toLocaleString(),
+                    value: d.value !== null ? `${d.value.toFixed(3)} L/min` : 'null'
+                }))
             }
-            const targetTime = new Date(time).getTime();
-            let closestValue = null;
-            let minDiff = Infinity;
-            const estimatedIntervalMs = 60 * 1000; 
-            const tolerance = estimatedIntervalMs / 2;
+        }, 'info');
 
-            for (let i = 0; i < dataResult.timestamps.length; i++) {
-                const dataTime = new Date(dataResult.timestamps[i]).getTime();
-                const diff = Math.abs(targetTime - dataTime);
-                if (diff <= tolerance && diff < minDiff) {
-                    minDiff = diff;
-                    closestValue = dataResult.values[i];
+        // Log the processed results
+        logToConsole('Time series data fetched:', {
+            temperaturePoints: tempResult.times.length,
+            flowPoints: flowResult.times.length,
+            processedData: {
+                temperature: {
+                    sample: tempResult.values.slice(0, 5).map((v, i) => ({
+                        time: new Date(tempResult.times[i]).toLocaleString(),
+                        value: v !== null ? `${v.toFixed(2)}°C (${((v * 9/5) + 32).toFixed(2)}°F)` : 'null'
+                    }))
+                },
+                flow: {
+                    sample: flowResult.values.slice(0, 5).map((v, i) => ({
+                        time: new Date(flowResult.times[i]).toLocaleString(),
+                        value: v !== null ? `${v.toFixed(3)} L/min` : 'null'
+                    }))
                 }
             }
-            return closestValue;
-        };
-
-        // Build aligned result - include status again
-        const alignedResult = {
-            timestamps: primaryTimestamps,
-            temperature: primaryTimestamps.map(t => getValueAtTime(t, tempResult)),
-            flowRate: primaryTimestamps.map(t => getValueAtTime(t, flowResult)),
-            warningStatus: primaryTimestamps.map(t => getValueAtTime(t, warningResult)), 
-            criticalStatus: primaryTimestamps.map(t => getValueAtTime(t, criticalResult)), 
-            // warningStatus: [], // Return empty array for now
-            // criticalStatus: [] // Return empty array for now
-        };
-
-        window.logToConsole('Processed & Aligned Time Series Data:', {
-            points: alignedResult.timestamps.length,
-            sample: alignedResult.timestamps.slice(0, 5).map((t, i) => ({
-                time: new Date(t).toLocaleString(),
-                temp: alignedResult.temperature[i],
-                flow: alignedResult.flowRate[i],
-                 warning: alignedResult.warningStatus[i], 
-                 critical: alignedResult.criticalStatus[i] 
-            }))
         });
 
-        // Log final aligned result before returning
-        window.logToConsole('fetchTimeSeriesData Final Aligned Result:', alignedResult, 'info');
+        // 7) Return formatted data
+        const result = {
+            timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
+            temperature: tempResult.values, // Keep temperature
+            timeSinceFlow: flowResult.values, // Use timeSinceFlow as per snippet
+            // Remove iceLevel calculation if not needed or handle differently
+            // iceLevel: tempResult.values?.map(celsius => { 
+            //     if (celsius === null || celsius === undefined) return null;
+            //     const f = (celsius * 9) / 5 + 32;
+            //     return f <= 34 ? 100 : 0;
+            // }) || []
+            // Explicitly add empty arrays for status to avoid errors downstream
+            warningStatus: [],
+            criticalStatus: []
+        };
 
-        // Cache the result
-        timeSeriesDataCache.set(cacheKey, alignedResult);
-        return alignedResult;
+        // Cache the result before returning
+        timeSeriesDataCache.set(cacheKey, result);
 
+        return result;
     } catch (error) {
-        window.logToConsole(`Error fetching time series: ${error.message}`, 'error');
-        window.showError(`Failed to load graph data: ${error.message}`);
+        logToConsole(`Error fetching time series: ${error.message}`, 'error');
         return null;
     }
 }
@@ -497,8 +529,9 @@ async function updateTempGraph(deviceIdx, selectedDays) {
     const maxHours = (Math.max(...selectedDays) + 1) * 24;
     const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
 
-    if (!timeSeriesData) {
-        window.logToConsole('Failed to get time series data for temp graph', 'error');
+    // Use timeSeriesData.temperature
+    if (!timeSeriesData || !timeSeriesData.temperature) { 
+        window.logToConsole('Failed to get time series data (or temperature data) for temp graph', 'error');
         // Optionally display an error on the chart canvas
         return;
     }
@@ -517,6 +550,7 @@ async function updateTempGraph(deviceIdx, selectedDays) {
 
 
     for (const day of selectedDays) {
+         // Pass timeSeriesData.temperature 
          const { datasets, thresholdF, noData } = processTemperatureByHour(timeSeriesData.timestamps, timeSeriesData.temperature, day);
          if (!noData) {
             hasAnyData = true;
@@ -696,297 +730,16 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
 
     window.logToConsole(`Updating status graph for day ${selectedDay}`, 'info');
 
-    const maxHours = (selectedDay + 1) * 24;
-    const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
-
-    // Destroy existing chart
-    if (charts.statusChart) {
-        charts.statusChart.destroy();
-        charts.statusChart = null;
-    }
+    // Display unavailable message as status data is not fetched by the current fetchTimeSeriesData
+    window.logToConsole('Status data not available with current fetchTimeSeriesData version.', 'warning');
+    const noDataMessage = document.createElement('div');
+    noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
+    noDataMessage.innerHTML = `<p class="text-lg font-medium">Status history not available</p>`;
     const ctx = document.getElementById('statusChart').getContext('2d');
     const chartContainer = ctx.canvas.parentElement;
-    // Remove previous 'no data' message if it exists
-    const existingNoDataMsg = chartContainer.querySelector('.no-data-message');
-    if (existingNoDataMsg) {
-        existingNoDataMsg.remove();
-    }
-
-    // Check if data fetching failed or returned null
-    if (!timeSeriesData) {
-        window.logToConsole('Failed to get time series data for status graph', 'error');
-        // Display no data message
-        const noDataMessage = document.createElement('div');
-        noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
-        noDataMessage.innerHTML = `<p class="text-lg font-medium">Failed to load status data</p>`;
-        chartContainer.style.position = 'relative'; 
-        chartContainer.appendChild(noDataMessage);
-        return;
-    }
-
-    const now = new Date();
-    const dayStart = new Date(now);
-    dayStart.setDate(now.getDate() - selectedDay);
-    dayStart.setHours(0, 0, 0, 0);
-
-    const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
-    const displayEndTime = selectedDay === 0 ? now : dayEnd; // Use current time for today's end
-
-    // Filter data for the selected day - Robust checks needed
-    const dayDataPoints = [];
-    // Ensure source arrays exist and have the same length before iterating
-    if (timeSeriesData.timestamps && timeSeriesData.warningStatus && timeSeriesData.criticalStatus && 
-        timeSeriesData.timestamps.length === timeSeriesData.warningStatus.length &&
-        timeSeriesData.timestamps.length === timeSeriesData.criticalStatus.length) {
-            
-        for (let i = 0; i < timeSeriesData.timestamps.length; i++) {
-            // Check if timestamp is valid before creating Date object
-            if (!timeSeriesData.timestamps[i]) continue; 
-            const timestamp = new Date(timeSeriesData.timestamps[i]);
-            // Check if date parsing was successful
-            if (isNaN(timestamp.getTime())) continue; 
-
-             if (timestamp >= dayStart && timestamp <= displayEndTime) {
-                dayDataPoints.push({
-                    timestamp: timestamp,
-                    // Ensure values are 0 or 1, handle nulls/undefined safely
-                    warning: timeSeriesData.warningStatus[i] === 1 ? 1 : 0,
-                    critical: timeSeriesData.criticalStatus[i] === 1 ? 1 : 0,
-                });
-            }
-        }
-    } else {
-        window.logToConsole('Status data arrays mismatch or missing in timeSeriesData', 'warning');
-    }
-
-    // Sort just in case API/processing order wasn't perfect
-    dayDataPoints.sort((a, b) => a.timestamp - b.timestamp);
-
-    // Ensure first point is at dayStart and last is at displayEndTime
-    if (dayDataPoints.length > 0) {
-        // Add start point if needed
-        if (dayDataPoints[0].timestamp > dayStart) {
-            // Find the status just before the first point or assume 'great'
-             let initialWarning = 0;
-             let initialCritical = 0;
-             // Safely find index before start
-             const idxBefore = timeSeriesData.timestamps?.findIndex(t => {
-                 if (!t) return false;
-                 const d = new Date(t);
-                 return !isNaN(d.getTime()) && d >= dayStart;
-             });
-
-             if (idxBefore !== undefined && idxBefore > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
-                initialWarning = timeSeriesData.warningStatus[idxBefore - 1] === 1 ? 1 : 0;
-                initialCritical = timeSeriesData.criticalStatus[idxBefore - 1] === 1 ? 1 : 0;
-             } else if (timeSeriesData.timestamps?.length > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
-                 // Use first available point if possible
-                 initialWarning = timeSeriesData.warningStatus[0] === 1 ? 1 : 0;
-                 initialCritical = timeSeriesData.criticalStatus[0] === 1 ? 1 : 0;
-             }
-            dayDataPoints.unshift({ timestamp: dayStart, warning: initialWarning, critical: initialCritical });
-        }
-        // Add end point if needed
-        if (dayDataPoints[dayDataPoints.length - 1].timestamp < displayEndTime) {
-            dayDataPoints.push({
-                timestamp: displayEndTime,
-                warning: dayDataPoints[dayDataPoints.length - 1].warning,
-                critical: dayDataPoints[dayDataPoints.length - 1].critical
-            });
-        }
-    } else {
-        // If no data points for the day, create a single 'great' state for the whole period
-         // Need to determine status at start of day - More robust checks
-         let initialWarning = 0;
-         let initialCritical = 0;
-         const idxBefore = timeSeriesData.timestamps?.findIndex(t => {
-             if (!t) return false;
-             const d = new Date(t);
-             return !isNaN(d.getTime()) && d >= dayStart;
-         });
-
-         if (idxBefore !== undefined && idxBefore > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
-            initialWarning = timeSeriesData.warningStatus[idxBefore - 1] === 1 ? 1 : 0;
-            initialCritical = timeSeriesData.criticalStatus[idxBefore - 1] === 1 ? 1 : 0;
-         } else if (timeSeriesData.timestamps?.length > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
-             // If no point before, use the very first status available if any
-             initialWarning = timeSeriesData.warningStatus[0] === 1 ? 1 : 0;
-             initialCritical = timeSeriesData.criticalStatus[0] === 1 ? 1 : 0;
-         }
-        dayDataPoints.push({ timestamp: dayStart, warning: initialWarning, critical: initialCritical });
-        dayDataPoints.push({ timestamp: displayEndTime, warning: initialWarning, critical: initialCritical });
-    }
-
-
-     window.logToConsole(`Processed ${dayDataPoints.length} status points for day ${selectedDay}`, 'info');
-
-    const labels = dayDataPoints.map(d => d.timestamp); // Use actual timestamps for labels
-
-    const datasets = [
-        {
-            label: 'Critical', // Order: Critical > Warning > Great
-            data: dayDataPoints.map(d => ({ x: d.timestamp, y: d.critical })),
-            borderColor: 'rgb(239, 68, 68)',
-            backgroundColor: 'rgba(239, 68, 68, 0.3)',
-            fill: true, // Fill down to zero
-            stepped: 'before', // Show state duration correctly
-            pointRadius: 0,
-            order: 1
-        },
-        {
-            label: 'Warning',
-             // Only show warning if not critical
-            data: dayDataPoints.map(d => ({ x: d.timestamp, y: d.critical ? 0 : d.warning })),
-            borderColor: 'rgb(234, 179, 8)',
-            backgroundColor: 'rgba(234, 179, 8, 0.3)',
-            fill: true,
-            stepped: 'before',
-            pointRadius: 0,
-            order: 2
-        },
-        {
-            label: 'Great',
-            // Show great only if not critical or warning
-            data: dayDataPoints.map(d => ({ x: d.timestamp, y: (d.critical || d.warning) ? 0 : 1 })),
-            borderColor: 'rgb(16, 185, 129)',
-            backgroundColor: 'rgba(16, 185, 129, 0.3)',
-            fill: true,
-            stepped: 'before',
-            pointRadius: 0,
-            order: 3
-        }
-    ];
-
-    charts.statusChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            // Labels are not directly used with time scale, but can be useful
-            // labels: labels.map(t => t.toLocaleTimeString()),
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'nearest', axis: 'x', intersect: false },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        title: (context) => {
-                             // Get time from the first dataset's point
-                            const point = context[0].element;
-                            if (point && point.x) {
-                                // Check if point.x is a valid date/timestamp before formatting
-                                const date = new Date(point.x);
-                                if (!isNaN(date.getTime())) {
-                                    return date.toLocaleString();
-                                }
-                            }
-                            return '';
-                        },
-                        label: (context) => {
-                             // Determine the status based on which dataset has y=1 at this point
-                            const time = context.chart.scales.x.getValueForPixel(context.chart.tooltip.x);
-                            let status = 'Great'; // Default
-                             // Check datasets in order: Critical, Warning
-                             const critData = context.chart.data.datasets[0].data;
-                             const warnData = context.chart.data.datasets[1].data;
-
-                            // Find the data point at or just before the tooltip time
-                            let pointCrit = null, pointWarn = null;
-                             // Add checks to ensure data arrays exist
-                             if (critData) {
-                                 for(let i = critData.length - 1; i >= 0; i--) {
-                                     if(critData[i]?.x <= time) { pointCrit = critData[i]; break; }
-                                 }
-                             }
-                             if (warnData) {
-                                 for(let i = warnData.length - 1; i >= 0; i--) {
-                                     if(warnData[i]?.x <= time) { pointWarn = warnData[i]; break; }
-                                 }
-                             }
-
-                             if(pointCrit && pointCrit.y === 1) status = 'Critical';
-                             else if(pointWarn && pointWarn.y === 1) status = 'Warning';
-
-                            return `Status: ${status}`;
-                        }
-                    },
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)', padding: 10
-                },
-                legend: {
-                    position: 'top',
-                    labels: { usePointStyle: true, padding: 15, boxWidth: 10, font: { size: 11 } }
-                }
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'hour',
-                         tooltipFormat: 'MMM d, HH:mm', // Format for tooltips
-                         displayFormats: {
-                             hour: 'HH:mm' // Format for axis labels
-                         }
-                    },
-                    min: dayStart.valueOf(), // Use epoch ms for min/max
-                    max: displayEndTime.valueOf(),
-                    title: { display: true, text: 'Time' },
-                    grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { source: 'auto', maxRotation: 45, font: { size: 10 } }
-                },
-                y: {
-                    min: -0.1, max: 1.1,
-                    title: { display: true, text: 'State' },
-                    grid: { drawOnChartArea: false }, // Cleaner look
-                    ticks: {
-                        stepSize: 1,
-                        callback: value => value === 1 ? 'Active' : value === 0 ? '' : '' // Simplified Y-axis
-                    }
-                }
-            }
-        }
-    });
-
-     // --- Calculate and Display Time in States ---
-     const timeInStates = { great: 0, warning: 0, critical: 0 };
-     for (let i = 0; i < dayDataPoints.length - 1; i++) {
-         const duration = dayDataPoints[i + 1].timestamp.getTime() - dayDataPoints[i].timestamp.getTime();
-         if (dayDataPoints[i].critical) {
-             timeInStates.critical += duration;
-         } else if (dayDataPoints[i].warning) {
-             timeInStates.warning += duration;
-         } else {
-             timeInStates.great += duration;
-         }
-     }
-
-    const totalDurationMs = displayEndTime.getTime() - dayStart.getTime();
-
-    // Update the summary divs
-    const summaryContainer = ctx.canvas.parentElement.nextElementSibling; // Assumes summary div is immediately after chart container
-    if (summaryContainer && summaryContainer.classList.contains('grid')) {
-        summaryContainer.innerHTML = `
-            <div class="p-3 bg-emerald-50 rounded-lg">
-                <h5 class="text-sm font-medium text-emerald-800">Great State</h5>
-                <p class="text-xs text-emerald-600 mt-1">Duration: ${formatDuration(timeInStates.great)}</p>
-                <p class="text-xs text-emerald-600">${totalDurationMs ? Math.round((timeInStates.great / totalDurationMs) * 100) : 0}% of time</p>
-            </div>
-            <div class="p-3 bg-yellow-50 rounded-lg">
-                <h5 class="text-sm font-medium text-yellow-800">Warning State</h5>
-                <p class="text-xs text-yellow-600 mt-1">Duration: ${formatDuration(timeInStates.warning)}</p>
-                <p class="text-xs text-yellow-600">${totalDurationMs ? Math.round((timeInStates.warning / totalDurationMs) * 100) : 0}% of time</p>
-            </div>
-            <div class="p-3 bg-red-50 rounded-lg">
-                <h5 class="text-sm font-medium text-red-800">Critical State</h5>
-                <p class="text-xs text-red-600 mt-1">Duration: ${formatDuration(timeInStates.critical)}</p>
-                <p class="text-xs text-red-600">${totalDurationMs ? Math.round((timeInStates.critical / totalDurationMs) * 100) : 0}% of time</p>
-            </div>
-        `;
-    } else {
-        window.logToConsole('Status summary container not found or invalid', 'warning');
-    }
-
+    chartContainer.style.position = 'relative'; 
+    chartContainer.appendChild(noDataMessage);
+    return; // Exit
 }
 
 /**
@@ -1142,19 +895,15 @@ async function updateFlowGraph(deviceIdx, selectedDay) {
     const maxHours = (selectedDay + 1) * 24;
     const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
 
-    if (!timeSeriesData) {
-        window.logToConsole('Failed to get time series data for flow graph', 'error');
+    // Use timeSeriesData.timeSinceFlow (which corresponds to flow rate in the new structure)
+    if (!timeSeriesData || !timeSeriesData.timeSinceFlow) { 
+        window.logToConsole('Failed to get time series data (or flow data) for flow graph', 'error');
         return;
     }
 
-    // Destroy existing chart
-    if (charts.flowChart) {
-        charts.flowChart.destroy();
-        charts.flowChart = null;
-    }
-
     // Process data for the selected day
-    const { datasets, noData } = processFlowByHour(timeSeriesData.timestamps, timeSeriesData.flowRate, selectedDay); // Use flowRate
+    // Pass timeSeriesData.timeSinceFlow as the values
+    const { datasets, noData } = processFlowByHour(timeSeriesData.timestamps, timeSeriesData.timeSinceFlow, selectedDay); 
 
 
     const ctx = document.getElementById('flowChart').getContext('2d');
