@@ -720,39 +720,65 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
     const maxHours = (selectedDay + 1) * 24;
     const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
 
-    if (!timeSeriesData) {
-        window.logToConsole('Failed to get time series data for status graph', 'error');
-        return;
-    }
-
     // Destroy existing chart
     if (charts.statusChart) {
         charts.statusChart.destroy();
         charts.statusChart = null;
     }
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    const chartContainer = ctx.canvas.parentElement;
+    // Remove previous 'no data' message if it exists
+    const existingNoDataMsg = chartContainer.querySelector('.no-data-message');
+    if (existingNoDataMsg) {
+        existingNoDataMsg.remove();
+    }
+
+    // Check if data fetching failed or returned null
+    if (!timeSeriesData) {
+        window.logToConsole('Failed to get time series data for status graph', 'error');
+        // Display no data message
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
+        noDataMessage.innerHTML = `<p class="text-lg font-medium">Failed to load status data</p>`;
+        chartContainer.style.position = 'relative'; 
+        chartContainer.appendChild(noDataMessage);
+        return;
+    }
 
     const now = new Date();
     const dayStart = new Date(now);
-    dayStart.setDate(dayStart.getDate() - selectedDay);
+    dayStart.setDate(now.getDate() - selectedDay);
     dayStart.setHours(0, 0, 0, 0);
 
     const dayEnd = new Date(dayStart);
     dayEnd.setHours(23, 59, 59, 999);
     const displayEndTime = selectedDay === 0 ? now : dayEnd; // Use current time for today's end
 
-
-    // Filter data for the selected day
+    // Filter data for the selected day - Robust checks needed
     const dayDataPoints = [];
-    for (let i = 0; i < timeSeriesData.timestamps.length; i++) {
-        const timestamp = new Date(timeSeriesData.timestamps[i]);
-         if (timestamp >= dayStart && timestamp <= displayEndTime) {
-            dayDataPoints.push({
-                timestamp: timestamp,
-                // Ensure values are 0 or 1, handle nulls
-                warning: timeSeriesData.warningStatus[i] === 1 ? 1 : 0,
-                critical: timeSeriesData.criticalStatus[i] === 1 ? 1 : 0,
-            });
+    // Ensure source arrays exist and have the same length before iterating
+    if (timeSeriesData.timestamps && timeSeriesData.warningStatus && timeSeriesData.criticalStatus && 
+        timeSeriesData.timestamps.length === timeSeriesData.warningStatus.length &&
+        timeSeriesData.timestamps.length === timeSeriesData.criticalStatus.length) {
+            
+        for (let i = 0; i < timeSeriesData.timestamps.length; i++) {
+            // Check if timestamp is valid before creating Date object
+            if (!timeSeriesData.timestamps[i]) continue; 
+            const timestamp = new Date(timeSeriesData.timestamps[i]);
+            // Check if date parsing was successful
+            if (isNaN(timestamp.getTime())) continue; 
+
+             if (timestamp >= dayStart && timestamp <= displayEndTime) {
+                dayDataPoints.push({
+                    timestamp: timestamp,
+                    // Ensure values are 0 or 1, handle nulls/undefined safely
+                    warning: timeSeriesData.warningStatus[i] === 1 ? 1 : 0,
+                    critical: timeSeriesData.criticalStatus[i] === 1 ? 1 : 0,
+                });
+            }
         }
+    } else {
+        window.logToConsole('Status data arrays mismatch or missing in timeSeriesData', 'warning');
     }
 
     // Sort just in case API/processing order wasn't perfect
@@ -765,10 +791,20 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
             // Find the status just before the first point or assume 'great'
              let initialWarning = 0;
              let initialCritical = 0;
-             const idxBefore = timeSeriesData.timestamps.findIndex(t => new Date(t) >= dayStart);
-             if (idxBefore > 0) {
+             // Safely find index before start
+             const idxBefore = timeSeriesData.timestamps?.findIndex(t => {
+                 if (!t) return false;
+                 const d = new Date(t);
+                 return !isNaN(d.getTime()) && d >= dayStart;
+             });
+
+             if (idxBefore !== undefined && idxBefore > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
                 initialWarning = timeSeriesData.warningStatus[idxBefore - 1] === 1 ? 1 : 0;
                 initialCritical = timeSeriesData.criticalStatus[idxBefore - 1] === 1 ? 1 : 0;
+             } else if (timeSeriesData.timestamps?.length > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
+                 // Use first available point if possible
+                 initialWarning = timeSeriesData.warningStatus[0] === 1 ? 1 : 0;
+                 initialCritical = timeSeriesData.criticalStatus[0] === 1 ? 1 : 0;
              }
             dayDataPoints.unshift({ timestamp: dayStart, warning: initialWarning, critical: initialCritical });
         }
@@ -782,14 +818,19 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
         }
     } else {
         // If no data points for the day, create a single 'great' state for the whole period
-         // Need to determine status at start of day
+         // Need to determine status at start of day - More robust checks
          let initialWarning = 0;
          let initialCritical = 0;
-         const idxBefore = timeSeriesData.timestamps.findIndex(t => new Date(t) >= dayStart);
-         if (idxBefore > 0) {
+         const idxBefore = timeSeriesData.timestamps?.findIndex(t => {
+             if (!t) return false;
+             const d = new Date(t);
+             return !isNaN(d.getTime()) && d >= dayStart;
+         });
+
+         if (idxBefore !== undefined && idxBefore > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
             initialWarning = timeSeriesData.warningStatus[idxBefore - 1] === 1 ? 1 : 0;
             initialCritical = timeSeriesData.criticalStatus[idxBefore - 1] === 1 ? 1 : 0;
-         } else if (timeSeriesData.timestamps.length > 0) {
+         } else if (timeSeriesData.timestamps?.length > 0 && timeSeriesData.warningStatus && timeSeriesData.criticalStatus) {
              // If no point before, use the very first status available if any
              initialWarning = timeSeriesData.warningStatus[0] === 1 ? 1 : 0;
              initialCritical = timeSeriesData.criticalStatus[0] === 1 ? 1 : 0;
@@ -838,7 +879,6 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
         }
     ];
 
-    const ctx = document.getElementById('statusChart').getContext('2d');
     charts.statusChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -857,7 +897,11 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
                              // Get time from the first dataset's point
                             const point = context[0].element;
                             if (point && point.x) {
-                                return new Date(point.x).toLocaleString();
+                                // Check if point.x is a valid date/timestamp before formatting
+                                const date = new Date(point.x);
+                                if (!isNaN(date.getTime())) {
+                                    return date.toLocaleString();
+                                }
                             }
                             return '';
                         },
@@ -871,11 +915,16 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
 
                             // Find the data point at or just before the tooltip time
                             let pointCrit = null, pointWarn = null;
-                             for(let i = critData.length - 1; i >= 0; i--) {
-                                 if(critData[i].x <= time) { pointCrit = critData[i]; break; }
+                             // Add checks to ensure data arrays exist
+                             if (critData) {
+                                 for(let i = critData.length - 1; i >= 0; i--) {
+                                     if(critData[i]?.x <= time) { pointCrit = critData[i]; break; }
+                                 }
                              }
-                             for(let i = warnData.length - 1; i >= 0; i--) {
-                                 if(warnData[i].x <= time) { pointWarn = warnData[i]; break; }
+                             if (warnData) {
+                                 for(let i = warnData.length - 1; i >= 0; i--) {
+                                     if(warnData[i]?.x <= time) { pointWarn = warnData[i]; break; }
+                                 }
                              }
 
                              if(pointCrit && pointCrit.y === 1) status = 'Critical';
