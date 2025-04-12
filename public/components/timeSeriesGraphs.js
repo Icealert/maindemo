@@ -20,6 +20,9 @@ function parseTsArray(arr) {
         type: typeof arr
     }, 'info');
 
+    // Log first few raw input elements
+    window.logToConsole('parseTsArray Raw Input Sample:', arr?.slice(0, 3), 'info');
+
     if (!Array.isArray(arr)) {
         window.logToConsole('parseTsArray received non-array input:', arr, 'warning');
         return { times: [], values: [] };
@@ -44,15 +47,8 @@ function parseTsArray(arr) {
         values: validIndices.map(i => result.values[i])
     };
 
-     window.logToConsole('parseTsArray processed result:', {
-        originalLength: arr.length,
-        validLength: cleanResult.times.length,
-        sample: validIndices.slice(0, 3).map(i => ({
-            time: new Date(cleanResult.times[i]).toLocaleString(),
-            value: cleanResult.values[i]
-        }))
-    }, 'info');
-
+    // Log first few cleaned elements
+    window.logToConsole('parseTsArray Cleaned Result Sample:', cleanResult.times.slice(0, 3).map((t, i) => ({ time: t, value: cleanResult.values[i] })), 'info');
 
     return cleanResult;
 }
@@ -142,6 +138,8 @@ async function fetchTimeSeriesData(deviceId, hours) {
                     return { timestamps: [], values: [] }; 
                 }
                 const data = await response.json();
+                // Log the raw data received from the API
+                window.logToConsole(`Raw API data for ${property.name}:`, data, 'info'); 
                 // The proxy endpoint returns { data: [{time:..., value:...}] }
                 // We need to parse this structure
                 return parseTsArray(data.data || []);
@@ -233,6 +231,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
                 // critical: alignedResult.criticalStatus[i] // Excluded
             }))
         });
+
+        // Log final aligned result before returning
+        window.logToConsole('fetchTimeSeriesData Final Aligned Result:', alignedResult, 'info');
 
         // Cache the result
         timeSeriesDataCache.set(cacheKey, alignedResult);
