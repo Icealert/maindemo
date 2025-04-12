@@ -110,6 +110,7 @@ app.use(compression());
 // Configure CORS with specific origins
 const allowedOrigins = [
     'https://freezesense.up.railway.app',
+    'https://web-staging-c951.up.railway.app',
     'http://localhost:3000'
 ];
 
