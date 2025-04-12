@@ -80,6 +80,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
 
         const now = new Date();
         const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
+        // Log the dates being used
+        window.logToConsole(`Date Check: now = ${now.toISOString()}, from = ${from.toISOString()}`, 'info');
+
         const device = window.lastDevicesData.find(d => d.id === deviceId);
         
         if (!device || !device.thing) {
