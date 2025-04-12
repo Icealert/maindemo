@@ -85,9 +85,10 @@ async function fetchTimeSeriesData(deviceId, hours) {
 
         const device = window.lastDevicesData.find(d => d.id === deviceId);
         
-        if (!device || !device.thing) {
-            throw new Error("Device or Thing data not found");
+        if (!device || !device.thing || !device.thing.id) { // Ensure thing.id exists
+            throw new Error("Device, Thing, or Thing ID data not found");
         }
+        const thingId = device.thing.id; // Use thingId for the proxy endpoint
 
         const properties = device.thing.properties || [];
 
@@ -98,30 +99,42 @@ async function fetchTimeSeriesData(deviceId, hours) {
 
         window.logToConsole(`Fetching time series data for device ${deviceId} (${hours} hours):`, 'info');
 
-        // Use only from and to query parameters
-        const queryParams = new URLSearchParams({
-            from: from.toISOString(),
-            to: now.toISOString()
-        }).toString();
-
-        const fetchOptions = {
-            method: 'GET',
-            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
-        };
-
-        // Single fetch helper using the correct endpoint structure
+        // Single fetch helper using the /api/proxy/timeseries endpoint
         const fetchPropertyHistory = async (property) => {
             if (!property || !property.id) {
                  window.logToConsole(`Skipping fetch: Property object or ID is missing for name: ${property?.name || 'unknown'}.`, 'warning');
                 return Promise.resolve({ timestamps: [], values: [] });
             }
 
-            // Use the /api/iot/v2/devices... endpoint structure
-            const url = `${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?${queryParams}`;
+            // Calculate interval for this fetch
+            const timeRangeSeconds = hours * 3600;
+            const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60); // Min interval 60s
+
+            // Build query parameters dynamically
+            const params = {
+                interval: interval.toString(),
+                from: from.toISOString(),
+                to: now.toISOString(),
+                desc: 'false' // Fetch oldest first
+            };
+            // Add aggregation only for non-status properties
+            if (property.name !== 'warning' && property.name !== 'critical') {
+                params.aggregation = 'AVG'; 
+            } else {
+                // For status, try omitting aggregation - API might default correctly
+                 window.logToConsole(`Omitting aggregation for status property: ${property.name}`, 'info');
+            }
+            const queryParams = new URLSearchParams(params).toString();
+
+            // Use the /api/proxy/timeseries... endpoint structure with thingId
+            const url = `${API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
             window.logToConsole(`Fetching ${property.name} history from: ${url}`);
 
             try {
-                const response = await fetch(url, fetchOptions);
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' }
+                });
                 if (!response.ok) {
                     const errorText = await response.text().catch(() => `Status: ${response.status}`);
                     // Log specific error but return empty to not break Promise.all
@@ -129,10 +142,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
                     return { timestamps: [], values: [] }; 
                 }
                 const data = await response.json();
-                return { 
-                    timestamps: data.timestamps || [], 
-                    values: data.values || [] 
-                };
+                // The proxy endpoint returns { data: [{time:..., value:...}] }
+                // We need to parse this structure
+                return parseTsArray(data.data || []);
             } catch (error) {
                 window.logToConsole(`Network or other error fetching ${property.name}: ${error.message}`, 'error');
                 return { timestamps: [], values: [] };
@@ -1265,21 +1277,34 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
         const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
 
         const device = window.lastDevicesData.find(d => d.id === deviceId);
-        if (!device || !device.thing) throw new Error("Device or thing not found");
+        if (!device || !device.thing || !device.thing.id) { // Check thing.id
+            throw new Error("Device, Thing, or Thing ID not found");
+        }
+        const thingId = device.thing.id; // Use thingId
 
         const property = device.thing.properties.find(p => p.name === propertyName);
         if (!property || !property.id) {
              throw new Error(`Property '${propertyName}' not found or missing ID`);
         }
 
-        // Use only from and to parameters
-        const queryParams = new URLSearchParams({
-            from: from.toISOString(),
-            to: now.toISOString()
-        }).toString();
+        // Calculate interval
+        const timeRangeSeconds = hours * 3600;
+        const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
 
-        // Use the /api/iot/v2/devices... endpoint structure
-        const url = `${API_URL}/api/iot/v2/devices/${deviceId}/properties/${property.id}/timeseries?${queryParams}`;
+        // Build query parameters dynamically
+        const params = {
+            interval: interval.toString(),
+            from: from.toISOString(),
+            to: now.toISOString(),
+            desc: 'false'
+        };
+        if (propertyName !== 'warning' && propertyName !== 'critical') {
+            params.aggregation = 'AVG';
+        }
+        const queryParams = new URLSearchParams(params).toString();
+
+        // Use the /api/proxy/timeseries... endpoint structure with thingId
+        const url = `${API_URL}/api/proxy/timeseries/${thingId}/${property.id}?${queryParams}`;
         window.logToConsole(`Fetching raw time series for ${propertyName} from: ${url}`);
 
         const response = await fetch(url, {
@@ -1293,10 +1318,8 @@ async function fetchPropertyTimeSeries(deviceId, propertyName, hours) {
         }
 
         const data = await response.json();
-        return { 
-            timestamps: data.timestamps || [], 
-            values: data.values || [] 
-        }; 
+        // Parse the result as it comes from the proxy endpoint
+        return parseTsArray(data.data || []); 
 
     } catch (error) {
         window.logToConsole(`Error fetching raw time series for ${propertyName}: ${error.message}`, 'error');
