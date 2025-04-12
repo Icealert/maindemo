@@ -901,6 +901,12 @@ async function updateFlowGraph(deviceIdx, selectedDay) {
         return;
     }
 
+    // Destroy existing chart
+    if (charts.flowChart) {
+        charts.flowChart.destroy();
+        charts.flowChart = null;
+    }
+
     // Process data for the selected day
     // Pass timeSeriesData.timeSinceFlow as the values
     const { datasets, noData } = processFlowByHour(timeSeriesData.timestamps, timeSeriesData.timeSinceFlow, selectedDay); 
