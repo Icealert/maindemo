@@ -78,7 +78,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
         }
 
         const now = new Date();
-        const from = new Date(now - hours * 60 * 60 * 1000);
+        const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
         const device = window.lastDevicesData.find(d => d.id === deviceId);
         if (!device?.thing?.id) {
             throw new Error("Device or Thing not found");
@@ -115,7 +115,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
             interval: interval.toString(),
             from: from.toISOString(),
             to: now.toISOString(),
-            aggregation: 'LAST', // Use LAST for status changes
+            aggregation: 'AVG',
             desc: 'false'
         }).toString();
 
