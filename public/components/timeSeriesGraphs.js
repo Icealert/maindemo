@@ -13,40 +13,76 @@ let charts = {}; // Store chart instances { tempChart: null, statusChart: null, 
  * @returns {object} An object with 'times' and 'values' arrays.
  */
 function parseTsArray(arr) {
-    window.logToConsole('parseTsArray raw input:', {
+    // Log the entire raw input object/array for deep inspection
+    window.logToConsole('parseTsArray full raw input:', arr, 'info'); 
+
+    window.logToConsole('parseTsArray raw input type:', {
         isArray: Array.isArray(arr),
-        length: arr?.length || 0,
-        sample: arr?.slice(0, 3),
+        length: arr?.length,
         type: typeof arr
     }, 'info');
 
-    // Log first few raw input elements
-    window.logToConsole('parseTsArray Raw Input Sample:', arr?.slice(0, 3), 'info');
-
+    // Log first few raw input elements if it's an array
+    if (Array.isArray(arr)) {
+        window.logToConsole('parseTsArray Raw Input Sample (if array):', arr.slice(0, 3), 'info');
+    } else if (arr && typeof arr === 'object') {
+        // If not an array, but an object, log its keys
+        window.logToConsole('parseTsArray received non-array object with keys:', Object.keys(arr), 'warning');
+        // Attempt to handle common nested structures like { data: [...] } or { values: [...] }
+        if (Array.isArray(arr.data)) {
+            window.logToConsole('parseTsArray trying arr.data', 'info');
+            arr = arr.data;
+        } else if (Array.isArray(arr.values)) {
+             window.logToConsole('parseTsArray trying arr.values', 'info');
+             arr = arr.values; // Assuming structure { values: [{ time: ..., value: ...}, ...] }
+        } else {
+            window.logToConsole('parseTsArray received non-array input with unexpected structure.', arr, 'warning');
+            return { times: [], values: [] }; // Return empty if structure is unknown
+        }
+    } else if (arr !== null && arr !== undefined) {
+        window.logToConsole('parseTsArray received unexpected non-array, non-object input:', arr, 'warning');
+        return { times: [], values: [] };
+    }
+    
+    // If input was null/undefined or became non-array after checks
     if (!Array.isArray(arr)) {
-        window.logToConsole('parseTsArray received non-array input:', arr, 'warning');
+        window.logToConsole('parseTsArray input is not a valid array after checks.', arr, 'warning');
         return { times: [], values: [] };
     }
 
     const result = {
-        times: arr.map(obj => obj.time || obj.timestamp || obj.created_at || obj.date),
-        values: arr.map(obj => obj.hasOwnProperty('value') ? obj.value : obj.hasOwnProperty('data') ? obj.data : obj.hasOwnProperty('reading') ? obj.reading : null)
+        times: [],
+        values: []
     };
+
+    // Safely map values, checking each object
+    arr.forEach(obj => {
+        if (obj && typeof obj === 'object') {
+            const time = obj.time || obj.timestamp || obj.created_at || obj.date || null;
+            const value = obj.hasOwnProperty('value') ? obj.value : 
+                          obj.hasOwnProperty('data') ? obj.data : 
+                          obj.hasOwnProperty('reading') ? obj.reading : null;
+            
+            result.times.push(time);
+            // Ensure nulls are explicitly pushed if value is missing or undefined
+            result.values.push(value === undefined ? null : value);
+        } else {
+            // Handle cases where array elements are not objects
+            window.logToConsole('parseTsArray found non-object element in array:', obj, 'warning');
+            result.times.push(null);
+            result.values.push(null);
+        }
+    });
 
     if (result.times.length !== result.values.length) {
-        window.logToConsole('Array length mismatch in parseTsArray', 'error');
+        window.logToConsole('Array length mismatch in parseTsArray after processing', 'error');
+        // Consider how to handle mismatch - potentially return empty or try to reconcile
     }
 
-    // Keep all entries, but ensure null values are explicitly null
-    const cleanResult = {
-        times: result.times.map(time => time || null), // Ensure null if time is missing (less likely)
-        values: result.values.map(value => (value === undefined || value === null) ? null : value)
-    };
-
     // Log first few cleaned elements
-    window.logToConsole('parseTsArray Cleaned Result Sample:', cleanResult.times.slice(0, 3).map((t, i) => ({ time: t, value: cleanResult.values[i] })), 'info');
+    window.logToConsole('parseTsArray Cleaned Result Sample:', result.times.slice(0, 3).map((t, i) => ({ time: t, value: result.values[i] })), 'info');
 
-    return cleanResult;
+    return result;
 }
 
 // Replace the entire function with the user-provided version
@@ -298,55 +334,66 @@ function formatTempValue(value) {
  * @param {number} selectedDay - 0 for Today, 1 for Yesterday, etc.
  * @returns {object} Object containing datasets for Chart.js, the threshold in Fahrenheit, and a noData flag.
  */
- function processTemperatureByHour(timestamps, temperatures, selectedDay) {
-     window.logToConsole(`Processing temperature data for day ${selectedDay}`, 'info');
-     window.logToConsole(`Inputs: ${timestamps?.length} timestamps, ${temperatures?.length} temps`, 'info');
+function processTemperatureByHour(timestamps, temperatures, selectedDay) {
+    window.logToConsole(`Processing temperature data for day ${selectedDay}`, 'info');
+    window.logToConsole(`Inputs: ${timestamps?.length} timestamps, ${temperatures?.length} temps`, 'info');
 
+    // --- Work with UTC dates for consistency --- 
+    const now = new Date();
+    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    // Calculate the start of the target day in UTC
+    const dayStartUtc = new Date(todayUtc);
+    dayStartUtc.setUTCDate(todayUtc.getUTCDate() - selectedDay);
+    // dayStartUtc is now 00:00:00 UTC of the target day
+
+    // Calculate the end of the target day in UTC (start of the next day)
+    const dayEndUtc = new Date(dayStartUtc);
+    dayEndUtc.setUTCDate(dayStartUtc.getUTCDate() + 1);
+    // dayEndUtc is now 00:00:00 UTC of the *next* day
+
+    // Get current hour in UTC for filtering today's future hours
+    const currentUtcHour = now.getUTCHours();
+    // --- End UTC Date Setup ---
 
     const hourlyData = {};
-    const now = new Date();
-    const currentHour = now.getHours();
-
-    const dayStart = new Date(now);
-    dayStart.setDate(dayStart.getDate() - selectedDay);
-    dayStart.setHours(0, 0, 0, 0);
-
-    const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
-
     const device = window.lastDevicesData[currentDeviceIndex]; // Use module-level index
     const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
     const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global conversion
     const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
     const placementPercent = (sensorPlacement * 100).toFixed(0);
 
-
     let hasDataForDay = false;
     let allTempsForDayF = []; // Store temps in Fahrenheit for stats
 
     for (let i = 0; i < timestamps.length; i++) {
-        const timestamp = new Date(timestamps[i]);
+        const timestampStr = timestamps[i];
         const tempC = temperatures[i];
 
-        if (tempC === null || tempC === undefined || isNaN(tempC)) continue;
-        if (timestamp < dayStart || timestamp > dayEnd) continue;
+        // Skip invalid data points
+        if (tempC === null || tempC === undefined || isNaN(tempC) || !timestampStr) continue;
 
-        const hour = timestamp.getHours();
-        // For today, only include hours up to the current hour
-        if (selectedDay === 0 && hour > currentHour) continue;
+        const timestamp = new Date(timestampStr); // Assume timestampStr is ISO/UTC
+
+        // Compare timestamps directly with UTC boundaries
+        if (timestamp.getTime() < dayStartUtc.getTime() || timestamp.getTime() >= dayEndUtc.getTime()) continue;
+
+        const hourUtc = timestamp.getUTCHours(); // Get hour in UTC
+
+        // For today (selectedDay === 0), only include hours up to the current UTC hour
+        if (selectedDay === 0 && hourUtc > currentUtcHour) continue;
 
         hasDataForDay = true;
         const tempF = celsiusToFahrenheit(tempC); // Use global conversion
         allTempsForDayF.push(tempF);
 
-
-        if (!hourlyData[hour]) {
-            hourlyData[hour] = { tempsF: [], hour };
+        if (!hourlyData[hourUtc]) {
+            hourlyData[hourUtc] = { tempsF: [], hour: hourUtc };
         }
-        hourlyData[hour].tempsF.push(tempF);
+        hourlyData[hourUtc].tempsF.push(tempF);
     }
 
-     window.logToConsole(`Processed hourly temperature data for day ${selectedDay}:`, hourlyData);
+    window.logToConsole(`Processed hourly temperature data for day ${selectedDay}:`, hourlyData);
 
     // Update statistics display if it's a single day view and data exists
     const statsContainer = document.getElementById('tempStats');
@@ -387,12 +434,11 @@ function formatTempValue(value) {
     ];
     const dayColor = colors[selectedDay % colors.length];
 
-
     const hourlyAvgTempsF = Array(24).fill(null);
     const hourlyIceLevel = Array(24).fill(null); // 1 = Above Sensor, 0 = Below Sensor
 
     for (let hour = 0; hour < 24; hour++) {
-         if (selectedDay === 0 && hour > currentHour) continue; // Don't plot future hours for today
+         if (selectedDay === 0 && hour > currentUtcHour) continue; // Don't plot future hours for today
 
         const data = hourlyData[hour];
         if (data && data.tempsF.length > 0) {
@@ -739,124 +785,149 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
  * @returns {object} Object containing datasets for Chart.js and a noData flag.
  */
 function processFlowByHour(timestamps, flowValues, selectedDay) {
-            logToConsole('Processing flow data:', 'info');
-            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
-            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
-            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
+    logToConsole('Processing flow data:', 'info');
+    logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+    logToConsole(`Flow values received: ${flowValues.length}`, 'info');
+    logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
-            const hourlyData = {};
-            const now = new Date();
-            const currentHour = now.getHours();
-            
-            const dayStart = new Date(now);
-            dayStart.setDate(dayStart.getDate() - selectedDay);
-            dayStart.setHours(0, 0, 0, 0);
-            
-            const dayEnd = new Date(dayStart);
-            dayEnd.setHours(23, 59, 59, 999);
+    // --- Work with UTC dates for consistency --- 
+    const now = new Date();
+    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
-            // Track if we have any data for this day
-            let hasDataForDay = false;
-            let allFlowsForDay = [];
+    const dayStartUtc = new Date(todayUtc);
+    dayStartUtc.setUTCDate(todayUtc.getUTCDate() - selectedDay);
 
-            // Process each flow reading
-            for (let i = 0; i < timestamps.length; i++) {
-                const timestamp = new Date(timestamps[i]);
-                const flow = flowValues[i];
-                
-                if (flow === null || flow === undefined) continue;
-                
-                if (timestamp < dayStart || timestamp > dayEnd) continue;
-                
-                const hour = timestamp.getHours();
-                if (selectedDay === 0 && hour > currentHour) continue;
-                
-                hasDataForDay = true;
-                allFlowsForDay.push(flow);
+    const dayEndUtc = new Date(dayStartUtc);
+    dayEndUtc.setUTCDate(dayStartUtc.getUTCDate() + 1);
 
-                if (!hourlyData[hour]) {
-                    hourlyData[hour] = {
-                        flows: [],
-                        hour,
-                        date: new Date(timestamp)
-                    };
-                }
-                
-                hourlyData[hour].flows.push(flow);
-            }
+    const currentUtcHour = now.getUTCHours();
+    // --- End UTC Date Setup ---
 
-            // Update statistics if we have data
-            if (hasDataForDay) {
-                // Calculate daily range
-                const minFlow = Math.min(...allFlowsForDay);
-                const maxFlow = Math.max(...allFlowsForDay);
-                document.getElementById('flowRange').textContent = 
-                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
+    const hourlyData = {};
+    const device = window.lastDevicesData[currentDeviceIndex];
+    const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+    const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global conversion
+    const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
+    const placementPercent = (sensorPlacement * 100).toFixed(0);
 
-                // Calculate total flow
-                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
-                document.getElementById('flowTotal').textContent = 
-                    `${totalFlow.toFixed(3)} L/min`;
+    let hasDataForDay = false;
+    let allFlowsForDay = [];
+    let lastFlowTime = null;
 
-                // Calculate standard deviation
-                const stdDev = calculateStdDev(allFlowsForDay);
-                document.getElementById('flowStdDev').textContent = 
-                    `±${stdDev.toFixed(3)} L/min`;
+    // Process each flow reading
+    for (let i = 0; i < timestamps.length; i++) {
+        const timestampStr = timestamps[i];
+        const flow = flowValues[i];
+        
+        // Skip invalid data points
+        if (flow === null || flow === undefined || !timestampStr) continue;
+        
+        const timestamp = new Date(timestampStr); // Assume ISO/UTC
 
-                // Update frequency
-                document.getElementById('flowFrequency').textContent = 
-                    `${allFlowsForDay.length} points`;
+        // Compare timestamps directly with UTC boundaries
+        if (timestamp.getTime() < dayStartUtc.getTime() || timestamp.getTime() >= dayEndUtc.getTime()) continue;
+        
+        const hourUtc = timestamp.getUTCHours(); // Get hour in UTC
 
-                // Update time since last flow if it's today
-                if (selectedDay === 0 && allFlowsForDay.length > 0) {
-                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
-                    const timeSinceFlow = now - lastFlowTime;
-                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
-                }
-            }
+        // For today (selectedDay === 0), only include hours up to the current UTC hour
+        if (selectedDay === 0 && hourUtc > currentUtcHour) continue;
+        
+        hasDataForDay = true;
+        allFlowsForDay.push(flow);
+        if (flow > 0) { // Track time of last positive flow
+            lastFlowTime = timestamp;
+        }
 
-            // If no data for this day, return empty datasets
-            if (!hasDataForDay) {
-                return {
-                    datasets: [],
-                    noData: true
-                };
-            }
-
-            // Create hourly averages
-            const hourlyAverages = Array(24).fill(null);
-            Object.values(hourlyData).forEach(hourData => {
-                if (hourData.flows.length > 0) {
-                    const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
-                    hourlyAverages[hourData.hour] = avgFlow;
-                }
-            });
-
-            // Create dataset
-            const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
-            const colors = [
-                { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
-                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
-                { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
-            ];
-
-            const datasets = [{
-                label: `Flow Rate (${dayLabels[selectedDay]})`,
-                data: hourlyAverages,
-                borderColor: colors[selectedDay].border,
-                backgroundColor: colors[selectedDay].background,
-                tension: 0.1,
-                fill: true,
-                pointRadius: 3,
-                pointHoverRadius: 5
-            }];
-
-            return {
-                datasets,
-                noData: false
+        if (!hourlyData[hourUtc]) {
+            hourlyData[hourUtc] = {
+                flows: [],
+                hour: hourUtc,
+                date: timestamp // Store the actual Date object if needed later
             };
         }
+        
+        hourlyData[hourUtc].flows.push(flow);
+    }
+
+    // Update statistics if we have data
+    const statsContainer = document.getElementById('flowStats');
+    if (statsContainer && hasDataForDay) {
+        // Calculate daily range
+        const minFlow = Math.min(...allFlowsForDay);
+        const maxFlow = Math.max(...allFlowsForDay);
+        document.getElementById('flowRange').textContent = 
+            `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
+
+        // Calculate total flow
+        const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
+        document.getElementById('flowTotal').textContent = 
+            `${totalFlow.toFixed(3)} L/min`;
+
+        // Calculate standard deviation
+        const stdDev = calculateStdDev(allFlowsForDay);
+        document.getElementById('flowStdDev').textContent = 
+            `±${stdDev.toFixed(3)} L/min`;
+
+        // Update frequency
+        document.getElementById('flowFrequency').textContent = 
+            `${allFlowsForDay.length} points`;
+
+        // Update time since last flow if it's today
+        if (selectedDay === 0 && allFlowsForDay.length > 0) {
+            const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+            const timeSinceFlow = now - lastFlowTime;
+            timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
+        } else if (statsContainer) {
+            // Clear stats if no data
+            document.getElementById('flowRange').textContent = '-';
+            document.getElementById('flowTotal').textContent = '-';
+            document.getElementById('flowStdDev').textContent = '-';
+            document.getElementById('flowFrequency').textContent = '-';
+            document.getElementById('timeSinceLastFlow').textContent = '-';
+        }
+    }
+
+    // If no data for this day, return empty datasets
+    if (!hasDataForDay) {
+        return {
+            datasets: [],
+            noData: true
+        };
+    }
+
+    // Create hourly averages
+    const hourlyAverages = Array(24).fill(null);
+    Object.values(hourlyData).forEach(hourData => {
+        if (hourData.flows.length > 0) {
+            const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
+            hourlyAverages[hourData.hour] = avgFlow; // Use hourUtc stored in hourData.hour
+        }
+    });
+
+    // Create dataset
+    const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
+    const colors = [
+        { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
+        { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
+        { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
+    ];
+
+    const datasets = [{
+        label: `Flow Rate (${dayLabels[selectedDay]})`,
+        data: hourlyAverages,
+        borderColor: colors[selectedDay].border,
+        backgroundColor: colors[selectedDay].background,
+        tension: 0.1,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 5
+    }];
+
+    return {
+        datasets,
+        noData: false
+    };
+}
 
 
 /**
