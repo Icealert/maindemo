@@ -171,42 +171,49 @@ async function fetchTimeSeriesData(deviceId, hours) {
             queryString: queryParams
         }, 'info');
 
-        // 5) Make parallel fetch calls for temperature and flow
-        const [tempData, flowData] = await Promise.all([
-            // Temperature fetch
-            tempProperty
-                ? fetch(
+        // 5) Fetch Temperature Data Sequentially
+        logToConsole('Fetching Temperature Data...', 'info');
+        let tempData = { data: [] }; // Default empty
+        if (tempProperty) {
+            try {
+                const tempResponse = await fetch(
                     `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
                     fetchOptions
-                ).then(async res => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Temperature fetch failed: ${res.status} - ${errorText}`);
-                    }
-                    return res.json();
-                })
-                : Promise.resolve({ data: [] }),
+                );
+                if (!tempResponse.ok) {
+                    const errorText = await tempResponse.text();
+                    throw new Error(`Temperature fetch failed: ${tempResponse.status} - ${errorText}`);
+                }
+                tempData = await tempResponse.json();
+                window.logToConsole('Raw temperature response:', tempData, 'info');
+            } catch (error) {
+                logToConsole(`Error during temperature fetch: ${error.message}`, 'error');
+                // Keep default empty tempData
+            }
+        }
 
-            // Flow Rate fetch
-            flowProperty
-                ? fetch(
+        // 6) Fetch Flow Data Sequentially
+        logToConsole('Fetching Flow Data...', 'info');
+        let flowData = { data: [] }; // Default empty
+        if (flowProperty) {
+             try {
+                const flowResponse = await fetch(
                     `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
                     fetchOptions
-                ).then(async res => {
-                    if (!res.ok) {
-                        const errorText = await res.text();
-                        throw new Error(`Flow rate fetch failed: ${res.status} - ${errorText}`);
-                    }
-                    return res.json();
-                })
-                : Promise.resolve({ data: [] })
-        ]);
+                );
+                if (!flowResponse.ok) {
+                    const errorText = await flowResponse.text();
+                    throw new Error(`Flow rate fetch failed: ${flowResponse.status} - ${errorText}`);
+                }
+                flowData = await flowResponse.json();
+                window.logToConsole('Raw flow rate response:', flowData, 'info');
+            } catch (error) {
+                logToConsole(`Error during flow fetch: ${error.message}`, 'error');
+                // Keep default empty flowData
+            }
+        }
 
-        // Log raw response data
-        window.logToConsole('Raw temperature response:', tempData, 'info');
-        window.logToConsole('Raw flow rate response:', flowData, 'info');
-
-        // 6) Process the responses
+        // 7) Process the responses (moved logging here)
         window.logToConsole('Before parsing temperature:', { 
             tempDataExists: !!tempData, 
             tempDataKeys: tempData ? Object.keys(tempData) : null,
@@ -261,7 +268,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
             }
         });
 
-        // 7) Return formatted data
+        // 8) Return formatted data
         const result = {
             temperature: {
                 timestamps: tempResult.times,
