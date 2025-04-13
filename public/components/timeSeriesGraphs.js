@@ -210,16 +210,15 @@ async function fetchTimeSeriesData(deviceId, hours) {
 
         // 7) Return formatted data
         const result = {
-            timestamps: tempResult.times.length ? tempResult.times : flowResult.times,
-            temperature: tempResult.values, // Keep temperature
-            timeSinceFlow: flowResult.values, // Use timeSinceFlow as per snippet
-            // Remove iceLevel calculation if not needed or handle differently
-            // iceLevel: tempResult.values?.map(celsius => { 
-            //     if (celsius === null || celsius === undefined) return null;
-            //     const f = (celsius * 9) / 5 + 32;
-            //     return f <= 34 ? 100 : 0;
-            // }) || []
-            // Explicitly add empty arrays for status to avoid errors downstream
+            temperature: {
+                timestamps: tempResult.times,
+                values: tempResult.values
+            },
+            flow: {
+                timestamps: flowResult.times,
+                values: flowResult.values
+            },
+            // Keep status placeholders if needed elsewhere
             warningStatus: [],
             criticalStatus: []
         };
@@ -516,7 +515,7 @@ async function updateTempGraph(deviceIdx, selectedDays) {
     const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
 
     // Use timeSeriesData.temperature
-    if (!timeSeriesData || !timeSeriesData.temperature) { 
+    if (!timeSeriesData || !timeSeriesData.temperature || !timeSeriesData.temperature.values) { 
         window.logToConsole('Failed to get time series data (or temperature data) for temp graph', 'error');
         // Optionally display an error on the chart canvas
         return;
@@ -536,8 +535,12 @@ async function updateTempGraph(deviceIdx, selectedDays) {
 
 
     for (const day of selectedDays) {
-         // Pass timeSeriesData.temperature 
-         const { datasets, thresholdF, noData } = processTemperatureByHour(timeSeriesData.timestamps, timeSeriesData.temperature, day);
+         // Pass timeSeriesData.temperature.timestamps and .values
+         const { datasets, thresholdF, noData } = processTemperatureByHour(
+            timeSeriesData.temperature.timestamps, 
+            timeSeriesData.temperature.values, 
+            day
+        );
          if (!noData) {
             hasAnyData = true;
             // Add threshold dataset only once
@@ -883,136 +886,140 @@ async function updateFlowGraph(deviceIndex, selectedDay) {
                 statsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
             
-            fetchTimeSeriesData(device.id, 72).then(data => {
-                if (!data) {
-                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
-                    return;
-                }
+            const timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
 
-                // Destroy existing chart if it exists
-                const chartElement = document.getElementById('flowChart');
-                const existingChart = Chart.getChart(chartElement);
-                if (existingChart) {
-                    existingChart.destroy();
-                }
+            if (!timeSeriesData || !timeSeriesData.flow || !timeSeriesData.flow.values) {
+                logToConsole('No data returned from fetchTimeSeriesData or flow data missing', 'error');
+                // Handle no data display (might need refinement based on overall structure)
+                return;
+            }
 
-                // Remove any existing no-data message
-                const chartContainer = chartElement.parentElement;
-                const existingMessage = chartContainer.querySelector('.no-data-message');
-                if (existingMessage) {
-                    existingMessage.remove();
-                }
+            // Destroy existing chart if it exists
+            const chartElement = document.getElementById('flowChart');
+            const existingChart = Chart.getChart(chartElement);
+            if (existingChart) {
+                existingChart.destroy();
+            }
 
-                // Process flow data for each selected day
-                const allDatasets = [];
-                let hasAnyData = false;
+            // Remove any existing no-data message
+            const chartContainer = chartElement.parentElement;
+            const existingMessage = chartContainer.querySelector('.no-data-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
 
-                for (const day of selectedDays) {
-                    const { datasets, noData } = processFlowByHour(data.timestamps, data.timeSinceFlow, day);
-                    
-                    if (noData) {
-                        const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
-                        logToConsole(`No flow data available for ${dayLabel}`, 'warning');
-                    } else {
-                        hasAnyData = true;
-                        allDatasets.push(...datasets);
-                    }
-                }
+            // Process flow data for each selected day
+            const allDatasets = [];
+            let hasAnyData = false;
 
-                // Create hour labels (00:00 to 23:00)
-                const hourLabels = Array.from({ length: 24 }, (_, i) => 
-                    `${i.toString().padStart(2, '0')}:00`
+            for (const day of selectedDays) {
+                // Pass flow-specific timestamps and values
+                const { datasets, noData } = processFlowByHour(
+                    timeSeriesData.flow.timestamps, 
+                    timeSeriesData.flow.values, 
+                    day
                 );
+                
+                if (noData) {
+                    const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+                    logToConsole(`No flow data available for ${dayLabel}`, 'warning');
+                } else {
+                    hasAnyData = true;
+                    allDatasets.push(...datasets);
+                }
+            }
 
-                // Create the chart
-                const ctx = chartElement.getContext('2d');
-                new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: hourLabels,
-                        datasets: allDatasets
+            // Create hour labels (00:00 to 23:00)
+            const hourLabels = Array.from({ length: 24 }, (_, i) => 
+                `${i.toString().padStart(2, '0')}:00`
+            );
+
+            // Create the chart
+            const ctx = chartElement.getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hourLabels,
+                    datasets: allDatasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    title: (context) => {
-                                        const hour = parseInt(context[0].label);
-                                        const nextHour = (hour + 1) % 24;
-                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
-                                    },
-                                    label: (context) => {
-                                        const value = context.raw;
-                                        if (value === null) return `${context.dataset.label}: No data`;
-                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
-                                    }
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                title: (context) => {
+                                    const hour = parseInt(context[0].label);
+                                    const nextHour = (hour + 1) % 24;
+                                    return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
                                 },
-                                titleAlign: 'center',
-                                bodyAlign: 'left',
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleFont: { size: 13, weight: 'bold' },
-                                bodyFont: { size: 12 },
-                                padding: 12
-                            },
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 15
+                                label: (context) => {
+                                    const value = context.raw;
+                                    if (value === null) return `${context.dataset.label}: No data`;
+                                    return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
                                 }
+                            },
+                            titleAlign: 'center',
+                            bodyAlign: 'left',
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: { size: 13, weight: 'bold' },
+                            bodyFont: { size: 12 },
+                            padding: 12
+                        },
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                usePointStyle: true,
+                                padding: 15
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Hour of Day'
+                            },
+                            grid: {
+                                display: true,
+                                drawOnChartArea: true
                             }
                         },
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Hour of Day'
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                }
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Flow Rate (L/min)',
+                                font: { size: 12 }
                             },
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Flow Rate (L/min)',
-                                    font: { size: 12 }
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                },
-                                ticks: {
-                                    callback: value => `${value.toFixed(1)} L/min`
-                                }
+                            grid: {
+                                display: true,
+                                drawOnChartArea: true
+                            },
+                            ticks: {
+                                callback: value => `${value.toFixed(1)} L/min`
                             }
                         }
                     }
-                });
-
-                // If there's no data for any selected day, show a message
-                if (!hasAnyData) {
-                    const noDataMessage = document.createElement('div');
-                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
-                    noDataMessage.innerHTML = `
-                        <div class="text-gray-500 text-center">
-                            <p class="text-lg font-medium">No flow rate data available</p>
-                            <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
-                        </div>
-                    `;
-                    chartContainer.appendChild(noDataMessage);
                 }
-            }).catch(error => {
-                logToConsole(`Error updating flow graph: ${error.message}`, 'error');
             });
+
+            // If there's no data for any selected day, show a message
+            if (!hasAnyData) {
+                const noDataMessage = document.createElement('div');
+                noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
+                noDataMessage.innerHTML = `
+                    <div class="text-gray-500 text-center">
+                        <p class="text-lg font-medium">No flow rate data available</p>
+                        <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
+                    </div>
+                `;
+                chartContainer.appendChild(noDataMessage);
+            }
         }
 
 
