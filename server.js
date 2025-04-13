@@ -860,23 +860,50 @@ function generateEmailContent(device, status) {
 async function updateDeviceStatus(device, status, devicesApi) {
     // Get the authenticated client instance (token should already be set)
     const client = IotApi.ApiClient.instance;
+    // Ensure properties exist
+    const properties = device.thing?.properties;
+    if (!properties) {
+        console.error(`Cannot update status for device ${device.id}: Properties missing.`);
+        return;
+    }
+
     // Create Properties API instance
     const propertiesApi = new IotApi.PropertiesV2Api(client);
 
     const thingId = device.thing.id;
     
     if (status.shouldUpdateWarning) {
-        // Use propertiesApi here
-        await propertiesApi.propertiesV2Publish(thingId, 'warning', {
-            value: status.shouldBeWarning
-        });
+        const warningProperty = properties.find(p => p.name === 'warning');
+        if (warningProperty && warningProperty.id) {
+            try {
+                // Use propertiesApi here
+                await propertiesApi.propertiesV2Publish(thingId, warningProperty.id, {
+                    value: status.shouldBeWarning
+                });
+                updateLastStatusTime(device.id, 'warning'); // Update cooldown timestamp on success
+            } catch (publishError) {
+                console.error(`Failed to publish warning status for ${device.id}:`, publishError);
+            }
+        } else {
+            console.warn(`Device ${device.id} is missing 'warning' property or its ID.`);
+        }
     }
     
     if (status.shouldUpdateCritical) {
-        // Use propertiesApi here
-        await propertiesApi.propertiesV2Publish(thingId, 'critical', {
-            value: status.shouldBeCritical
-        });
+        const criticalProperty = properties.find(p => p.name === 'critical');
+        if (criticalProperty && criticalProperty.id) {
+            try {
+                // Use propertiesApi here
+                await propertiesApi.propertiesV2Publish(thingId, criticalProperty.id, {
+                    value: status.shouldBeCritical
+                });
+                updateLastStatusTime(device.id, 'critical'); // Update cooldown timestamp on success
+            } catch (publishError) {
+                console.error(`Failed to publish critical status for ${device.id}:`, publishError);
+            }
+        } else {
+            console.warn(`Device ${device.id} is missing 'critical' property or its ID.`);
+        }
     }
 }
 
