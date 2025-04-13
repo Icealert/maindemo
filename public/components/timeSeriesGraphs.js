@@ -156,7 +156,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
 
         // 4) Build query string
         const queryParams = new URLSearchParams({
-            // interval: interval.toString(), // Let API determine default interval
+            interval: interval.toString(), // Let API determine default interval
             from: from.toISOString(),
             to: now.toISOString(),
             // aggregation: 'AVG', // Remove aggregation for now
