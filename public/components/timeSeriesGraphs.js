@@ -592,6 +592,12 @@ async function updateTempGraph(deviceIdx, selectedDays) {
     let hasAnyData = false;
     let thresholdDatasetAdded = false; // Ensure threshold is added only once
 
+    // Log the data just before processing loop
+    window.logToConsole('Temp data before processing loop:', { 
+        timestampsLength: timeSeriesData?.temperature?.timestamps?.length, 
+        valuesLength: timeSeriesData?.temperature?.values?.length,
+        selectedDays: selectedDays
+    }, 'info');
 
     for (const day of selectedDays) {
          // Pass timeSeriesData.temperature.timestamps and .values
