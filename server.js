@@ -467,7 +467,8 @@ setInterval(async () => {
             }
         }
     } catch (error) {
-        console.error('Notification check failed:', error.message);
+        // Log the full error object
+        console.error('Notification check interval failed:', error); 
     }
 }, 300000);
 
@@ -633,7 +634,8 @@ async function sendNotificationEmail(device, email) {
         // Clear references to help GC
         criticalReasons.length = 0;
     } catch (error) {
-        logger.error('Email failed:', error);
+        // Log the full error object
+        console.error('Error in device monitoring:', error);
     }
 }
 
@@ -856,16 +858,23 @@ function generateEmailContent(device, status) {
 
 // Function to update device status
 async function updateDeviceStatus(device, status, devicesApi) {
+    // Get the authenticated client instance (token should already be set)
+    const client = IotApi.ApiClient.instance;
+    // Create Properties API instance
+    const propertiesApi = new IotApi.PropertiesV2Api(client);
+
     const thingId = device.thing.id;
     
     if (status.shouldUpdateWarning) {
-        await devicesApi.propertiesV2Publish(thingId, 'warning', {
+        // Use propertiesApi here
+        await propertiesApi.propertiesV2Publish(thingId, 'warning', {
             value: status.shouldBeWarning
         });
     }
     
     if (status.shouldUpdateCritical) {
-        await devicesApi.propertiesV2Publish(thingId, 'critical', {
+        // Use propertiesApi here
+        await propertiesApi.propertiesV2Publish(thingId, 'critical', {
             value: status.shouldBeCritical
         });
     }
