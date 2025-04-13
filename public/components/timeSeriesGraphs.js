@@ -8,8 +8,25 @@ let tempLineVisible = true; // Default visibility state for temperature line
 let charts = {}; // Store chart instances { tempChart: null, statusChart: null, flowChart: null }
 
 /**
+ * Local utility function to convert Celsius to Fahrenheit with validation
+ * @param {number} celsius - Temperature in Celsius
+ * @returns {number} Temperature in Fahrenheit, or null if invalid input
+ */
+function celsiusToFahrenheit(celsius) {
+    // Check if input is a valid number
+    if (celsius === null || celsius === undefined || isNaN(celsius)) {
+        window.logToConsole('celsiusToFahrenheit received invalid input:', celsius, 'warning');
+        return null;
+    }
+    // Convert to number in case it's a string
+    const celsiusNum = Number(celsius);
+    // The conversion formula
+    return (celsiusNum * 9/5) + 32;
+}
+
+/**
  * Parses the timestamp array from API response, handling potential inconsistencies.
- * @param {Array} arr - The raw array from the API.
+ * @param {Array|Object} arr - The raw array or object from the API.
  * @returns {object} An object with 'times' and 'values' arrays.
  */
 function parseTsArray(arr) {
@@ -28,13 +45,30 @@ function parseTsArray(arr) {
     } else if (arr && typeof arr === 'object') {
         // If not an array, but an object, log its keys
         window.logToConsole('parseTsArray received non-array object with keys:', Object.keys(arr), 'warning');
-        // Attempt to handle common nested structures like { data: [...] } or { values: [...] }
+        
+        // Handle different API response formats
         if (Array.isArray(arr.data)) {
-            window.logToConsole('parseTsArray trying arr.data', 'info');
+            window.logToConsole('parseTsArray using arr.data array', 'info');
             arr = arr.data;
+        } else if (Array.isArray(arr.values) && Array.isArray(arr.timestamps)) {
+            // Direct timestamps + values format
+            window.logToConsole('parseTsArray found timestamps/values arrays format', 'info');
+            const length = Math.min(arr.timestamps.length, arr.values.length);
+            window.logToConsole(`Converting ${length} timestamp/value pairs to array format`, 'info');
+            
+            const result = {
+                times: arr.timestamps || [],
+                values: arr.values || []
+            };
+            window.logToConsole('Returning direct timestamps/values result:', {
+                timesLength: result.times.length,
+                valuesLength: result.values.length,
+                sample: result.times.slice(0, 3).map((t, i) => ({ time: t, value: result.values[i] }))
+            }, 'info');
+            return result;
         } else if (Array.isArray(arr.values)) {
-             window.logToConsole('parseTsArray trying arr.values', 'info');
-             arr = arr.values; // Assuming structure { values: [{ time: ..., value: ...}, ...] }
+            window.logToConsole('parseTsArray using arr.values', 'info');
+            arr = arr.values; // Assuming structure { values: [{ time: ..., value: ...}, ...] }
         } else {
             window.logToConsole('parseTsArray received non-array input with unexpected structure.', arr, 'warning');
             return { times: [], values: [] }; // Return empty if structure is unknown
@@ -66,6 +100,10 @@ function parseTsArray(arr) {
             result.times.push(time);
             // Ensure nulls are explicitly pushed if value is missing or undefined
             result.values.push(value === undefined ? null : value);
+        } else if (typeof obj === 'number') {
+            // Special case: array of direct values without timestamps
+            result.times.push(null); // No timestamp available
+            result.values.push(obj);
         } else {
             // Handle cases where array elements are not objects
             window.logToConsole('parseTsArray found non-object element in array:', obj, 'warning');
@@ -117,8 +155,41 @@ async function fetchTimeSeriesData(deviceId, hours) {
         const properties = device.thing.properties || [];
 
         // Find relevant properties
-        const tempProperty = properties.find(p => p.name === 'cloudtemp');
-        const flowProperty = properties.find(p => p.name === 'cloudflowrate');
+        let tempProperty = properties.find(p => p.name === 'cloudtemp');
+        let flowProperty = properties.find(p => p.name === 'cloudflowrate');
+
+        // ENHANCED DEBUGGING: Check if properties were found or use fallbacks
+        if (!tempProperty) {
+            // Fallback to check for other common temperature property names
+            const fallbackTempProperty = properties.find(p => 
+                p.type === 'TEMPERATURE' || 
+                p.name.toLowerCase().includes('temp')
+            );
+            
+            if (fallbackTempProperty) {
+                logToConsole(`No 'cloudtemp' property found, using fallback temperature property: ${fallbackTempProperty.name} (${fallbackTempProperty.id})`, 'warning');
+                tempProperty = fallbackTempProperty;
+            } else {
+                logToConsole(`WARNING: No temperature property found for device ${deviceId}`, 'error');
+            }
+        }
+
+        // Add fallback for flow property too
+        if (!flowProperty) {
+            // Fallback to check for other common flow property names
+            const fallbackFlowProperty = properties.find(p => 
+                p.type === 'FLOW_RATE' || 
+                p.type === 'FLOAT' || 
+                p.name.toLowerCase().includes('flow')
+            );
+            
+            if (fallbackFlowProperty) {
+                logToConsole(`No 'cloudflowrate' property found, using fallback flow property: ${fallbackFlowProperty.name} (${fallbackFlowProperty.id})`, 'warning');
+                flowProperty = fallbackFlowProperty;
+            } else {
+                logToConsole(`WARNING: No flow property found for device ${deviceId}`, 'error');
+            }
+        }
 
         // Log request details for debugging
         logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
@@ -175,19 +246,60 @@ async function fetchTimeSeriesData(deviceId, hours) {
         logToConsole('Fetching Temperature Data...', 'info');
         let tempData = { data: [] }; // Default empty
         if (tempProperty) {
+            const tempApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`;
+            logToConsole(`Attempting to fetch temperature from: ${tempApiUrl}`, 'info'); // Log URL
             try {
                 const tempResponse = await fetch(
-                    `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`,
+                    tempApiUrl, // Use the logged URL
                     fetchOptions
                 );
                 if (!tempResponse.ok) {
                     const errorText = await tempResponse.text();
-                    throw new Error(`Temperature fetch failed: ${tempResponse.status} - ${errorText}`);
+                    // Log the error text along with the status
+                    logToConsole(`Temperature fetch failed: ${tempResponse.status} - Response Text: ${errorText}`, 'error'); 
+                    throw new Error(`Temperature fetch failed: ${tempResponse.status}`); // Throw simpler error for general catch
                 }
-                tempData = await tempResponse.json();
-                window.logToConsole('Raw temperature response:', tempData, 'info');
+                
+                // Enhanced logging to see exactly what's returned
+                const responseText = await tempResponse.text();
+                logToConsole(`Temperature raw response text: ${responseText.substring(0, 200)}...`, 'info');
+                
+                // Try to parse the JSON
+                try {
+                    tempData = JSON.parse(responseText);
+                } catch (parseError) {
+                    logToConsole(`Failed to parse temperature JSON: ${parseError.message}`, 'error');
+                    throw parseError;
+                }
+                
+                // Log different JSON structures we might expect
+                logToConsole('Temperature response structure:', {
+                    hasDataArray: Array.isArray(tempData?.data),
+                    dataLength: tempData?.data?.length || 0,
+                    hasTimestamps: Array.isArray(tempData?.timestamps),
+                    timestampsLength: tempData?.timestamps?.length || 0,
+                    hasValues: Array.isArray(tempData?.values),
+                    valuesLength: tempData?.values?.length || 0,
+                    topLevelKeys: Object.keys(tempData || {})
+                }, 'info');
+                
+                // If we have timestamps/values array but no data array, convert format
+                if (!tempData.data && Array.isArray(tempData.timestamps) && Array.isArray(tempData.values)) {
+                    logToConsole('Converting timestamps/values format to data array format', 'info');
+                    const length = Math.min(tempData.timestamps.length, tempData.values.length);
+                    tempData.data = Array(length).fill().map((_, i) => ({
+                        time: tempData.timestamps[i],
+                        value: tempData.values[i]
+                    }));
+                }
+                
+                window.logToConsole('Processed temperature response:', {
+                    dataLength: tempData?.data?.length || 0,
+                    sample: tempData?.data?.slice(0, 3) || []
+                }, 'info');
             } catch (error) {
-                logToConsole(`Error during temperature fetch: ${error.message}`, 'error');
+                // Log the error message from the fetch attempt or the re-thrown error
+                logToConsole(`Error during temperature fetch operation: ${error.message}`, 'error'); 
                 // Keep default empty tempData
             }
         }
@@ -235,14 +347,14 @@ async function fetchTimeSeriesData(deviceId, hours) {
             temperature: {
                 total: tempData.data?.length || 0,
                 sample: tempData.data?.slice(0, 5)?.map(d => ({
-                    time: new Date(d.time).toLocaleString(),
+                    time: d.time ? new Date(d.time).toLocaleString() : 'null',
                     value: d.value !== null ? `${d.value.toFixed(2)}°C (${((d.value * 9/5) + 32).toFixed(2)}°F)` : 'null'
                 }))
             },
             flow: {
                 total: flowData.data?.length || 0,
                 sample: flowData.data?.slice(0, 5)?.map(d => ({
-                    time: new Date(d.time).toLocaleString(),
+                    time: d.time ? new Date(d.time).toLocaleString() : 'null',
                     value: d.value !== null ? `${d.value.toFixed(3)} L/min` : 'null'
                 }))
             }
@@ -255,13 +367,13 @@ async function fetchTimeSeriesData(deviceId, hours) {
             processedData: {
                 temperature: {
                     sample: tempResult.values.slice(0, 5).map((v, i) => ({
-                        time: new Date(tempResult.times[i]).toLocaleString(),
+                        time: tempResult.times[i] ? new Date(tempResult.times[i]).toLocaleString() : 'null',
                         value: v !== null ? `${v.toFixed(2)}°C (${((v * 9/5) + 32).toFixed(2)}°F)` : 'null'
                     }))
                 },
                 flow: {
                     sample: flowResult.values.slice(0, 5).map((v, i) => ({
-                        time: new Date(flowResult.times[i]).toLocaleString(),
+                        time: flowResult.times[i] ? new Date(flowResult.times[i]).toLocaleString() : 'null',
                         value: v !== null ? `${v.toFixed(3)} L/min` : 'null'
                     }))
                 }
