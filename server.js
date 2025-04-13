@@ -371,10 +371,12 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
         const cacheKey = `${thingId}-${propertyId}-${from}-${to}-${interval}`;
         
         // Check cache first
-        const cachedData = timeSeriesCache.get(cacheKey);
-        if (cachedData && cachedData.timestamp > Date.now() - TIME_SERIES_CACHE_TTL) {
-            return res.json(cachedData.data);
-        }
+        // const cachedData = timeSeriesCache.get(cacheKey);
+        // if (cachedData && cachedData.timestamp > Date.now() - TIME_SERIES_CACHE_TTL) {
+        //     console.log(`[Cache HIT] Serving cached data for ${cacheKey}`); // Log cache hit
+        //     return res.json(cachedData.data);
+        // }
+        // console.log(`[Cache MISS] Fetching fresh data for ${cacheKey}`); // Log cache miss
 
         const token = await getToken();
         const ArduinoIotClient = require('@arduino/arduino-iot-client');
@@ -392,8 +394,14 @@ app.get('/api/proxy/timeseries/:thingId/:propertyId', async (req, res) => {
         if (interval) opts.interval = parseInt(interval);
         if (req.headers['x-organization']) opts['X-Organization'] = req.headers['x-organization'];
 
+        // Log the options being sent to Arduino Cloud
+        console.log(`Fetching Arduino time series with options for ${thingId}/${propertyId}:`, opts);
+
         const timeseriesData = await propsApi.propertiesV2Timeseries(thingId, propertyId, opts);
         
+        // Log the raw response from Arduino Cloud
+        console.log(`Raw Arduino time series response for ${thingId}/${propertyId}:`, JSON.stringify(timeseriesData));
+
         // Cache the response
         timeSeriesCache.set(cacheKey, {
             timestamp: Date.now(),
