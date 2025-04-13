@@ -1056,6 +1056,10 @@ function initializeGraphs(deviceIdx) {
      window.logToConsole(`Initializing graphs for device index: ${deviceIdx}`, 'info');
     currentDeviceIndex = deviceIdx; // Set the current device index
 
+    // Clear the client-side cache
+    timeSeriesDataCache.clear();
+    window.logToConsole('Client-side time series cache cleared.', 'info');
+
     // Reset visibility toggles to default
     iceLevelVisible = true;
     tempLineVisible = true;
