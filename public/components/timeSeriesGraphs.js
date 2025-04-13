@@ -207,7 +207,20 @@ async function fetchTimeSeriesData(deviceId, hours) {
         window.logToConsole('Raw flow rate response:', flowData, 'info');
 
         // 6) Process the responses
+        window.logToConsole('Before parsing temperature:', { 
+            tempDataExists: !!tempData, 
+            tempDataKeys: tempData ? Object.keys(tempData) : null,
+            tempDataDataIsArray: Array.isArray(tempData?.data),
+            tempDataDataLength: tempData?.data?.length 
+        }, 'info');
         const tempResult = parseTsArray(tempData.data || []);
+        
+        window.logToConsole('Before parsing flow:', { 
+            flowDataExists: !!flowData, 
+            flowDataKeys: flowData ? Object.keys(flowData) : null,
+            flowDataDataIsArray: Array.isArray(flowData?.data),
+            flowDataDataLength: flowData?.data?.length 
+        }, 'info');
         const flowResult = parseTsArray(flowData.data || []);
 
         // Log the raw API responses with sample data
