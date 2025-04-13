@@ -246,92 +246,37 @@ async function fetchTimeSeriesData(deviceId, hours) {
         logToConsole('Fetching Temperature Data...', 'info');
         let tempData = { data: [] }; // Default empty
         if (tempProperty) {
-            // First try the standard proxy endpoint
             const tempApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`;
             logToConsole(`Attempting to fetch temperature from: ${tempApiUrl}`, 'info'); // Log URL
             
             try {
-                // Attempt to fetch using the proxy endpoint
-                let tempResponse = await fetch(tempApiUrl, fetchOptions);
+                // Fetch using the standard endpoint
+                const tempResponse = await fetch(tempApiUrl, fetchOptions);
                 
-                // If the first endpoint fails or returns empty data, try an alternative endpoint
                 if (!tempResponse.ok) {
                     const errorText = await tempResponse.text();
-                    logToConsole(`Primary temperature endpoint failed: ${tempResponse.status} - ${errorText}`, 'warning');
+                    logToConsole(`Temperature fetch failed: ${tempResponse.status} - ${errorText}`, 'warning');
+                    // Don't throw, continue with empty data
+                } else {
+                    // Enhanced logging to see exactly what's returned
+                    const responseText = await tempResponse.text();
                     
-                    // Try alternative endpoint format (direct IoT API)
-                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${tempProperty.id}/timeseries?${queryParams}`;
-                    logToConsole(`Trying alternative temperature endpoint: ${altApiUrl}`, 'warning');
+                    // Log deviceId and first part of response for debugging
+                    logToConsole(`Temperature response for device ${deviceId} (${thingId}):`, 'info');
+                    logToConsole(`First 200 chars: ${responseText.substring(0, 200)}...`, 'info');
                     
-                    tempResponse = await fetch(altApiUrl, fetchOptions);
-                    if (!tempResponse.ok) {
-                        const altErrorText = await tempResponse.text();
-                        logToConsole(`Alternative temperature endpoint also failed: ${tempResponse.status} - ${altErrorText}`, 'error');
-                        throw new Error(`Temperature fetch failed on both endpoints: ${tempResponse.status}`);
-                    }
-                }
-                
-                // Enhanced logging to see exactly what's returned
-                const responseText = await tempResponse.text();
-                
-                // Log deviceId and first part of response for debugging
-                logToConsole(`Temperature response for device ${deviceId} (${thingId}):`, 'info');
-                logToConsole(`First 200 chars: ${responseText.substring(0, 200)}...`, 'info');
-                
-                // For the specific problematic device, log more details
-                if (deviceId === '9b849c2d-0ccc-4fe3-bb66-a619c946b3dd') {
-                    logToConsole(`FULL TEMP RESPONSE for problematic device:`, 'info');
-                    // If response is large, split it into chunks to avoid console truncation
-                    const maxChunkSize = 1000;
-                    if (responseText.length > maxChunkSize) {
-                        for (let i = 0; i < responseText.length; i += maxChunkSize) {
-                            logToConsole(`Chunk ${Math.floor(i/maxChunkSize) + 1}:`, responseText.substring(i, i + maxChunkSize), 'info');
-                        }
-                    } else {
+                    // For the specific problematic device, log more details
+                    if (deviceId === '9b849c2d-0ccc-4fe3-bb66-a619c946b3dd') {
+                        logToConsole(`FULL TEMP RESPONSE for problematic device:`, 'info');
                         logToConsole(responseText, 'info');
                     }
-                }
-                
-                // Try to parse the JSON
-                try {
-                    tempData = JSON.parse(responseText);
-                } catch (parseError) {
-                    logToConsole(`Failed to parse temperature JSON: ${parseError.message}`, 'error');
-                    throw parseError;
-                }
-                
-                // Check if response is empty or contains no relevant data
-                const isEmptyResponse = (
-                    (!tempData?.data || tempData.data.length === 0) && 
-                    (!tempData?.timestamps || tempData.timestamps.length === 0)
-                );
-                
-                // Try alternative endpoint if first attempt returned empty data
-                if (isEmptyResponse && !tempApiUrl.includes('/api/iot/v2/')) {
-                    logToConsole('First endpoint returned empty data, trying alternative endpoint', 'warning');
                     
-                    // Try alternative endpoint format (direct IoT API)
-                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${tempProperty.id}/timeseries?${queryParams}`;
-                    logToConsole(`Trying alternative temperature endpoint: ${altApiUrl}`, 'warning');
-                    
-                    const altResponse = await fetch(altApiUrl, fetchOptions);
-                    if (!altResponse.ok) {
-                        const altErrorText = await altResponse.text();
-                        logToConsole(`Alternative temperature endpoint failed: ${altResponse.status} - ${altErrorText}`, 'warning');
-                    } else {
-                        const altResponseText = await altResponse.text();
-                        logToConsole(`Alternative endpoint response first 200 chars: ${altResponseText.substring(0, 200)}...`, 'info');
-                        
-                        try {
-                            const altData = JSON.parse(altResponseText);
-                            if ((altData?.data && altData.data.length > 0) || 
-                                (altData?.timestamps && altData.timestamps.length > 0)) {
-                                logToConsole('Using data from alternative endpoint', 'info');
-                                tempData = altData;
-                            }
-                        } catch (altParseError) {
-                            logToConsole(`Failed to parse alternative JSON: ${altParseError.message}`, 'warning');
-                        }
+                    // Try to parse the JSON
+                    try {
+                        tempData = JSON.parse(responseText);
+                    } catch (parseError) {
+                        logToConsole(`Failed to parse temperature JSON: ${parseError.message}`, 'error');
+                        // Don't throw, continue with empty data
                     }
                 }
                 
@@ -371,75 +316,28 @@ async function fetchTimeSeriesData(deviceId, hours) {
         logToConsole('Fetching Flow Data...', 'info');
         let flowData = { data: [] }; // Default empty
         if (flowProperty) {
-            // First try the standard proxy endpoint
             const flowApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`;
             logToConsole(`Attempting to fetch flow from: ${flowApiUrl}`, 'info');
             
             try {
-                // Attempt to fetch using the proxy endpoint
-                let flowResponse = await fetch(flowApiUrl, fetchOptions);
+                // Fetch using the standard endpoint
+                const flowResponse = await fetch(flowApiUrl, fetchOptions);
                 
-                // If the first endpoint fails, try an alternative endpoint
                 if (!flowResponse.ok) {
                     const errorText = await flowResponse.text();
-                    logToConsole(`Primary flow endpoint failed: ${flowResponse.status} - ${errorText}`, 'warning');
+                    logToConsole(`Flow fetch failed: ${flowResponse.status} - ${errorText}`, 'warning');
+                    // Don't throw, continue with empty data
+                } else {
+                    // Get response as text first for logging
+                    const responseText = await flowResponse.text();
+                    logToConsole(`Flow response first 200 chars: ${responseText.substring(0, 200)}...`, 'info');
                     
-                    // Try alternative endpoint format (direct IoT API)
-                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${flowProperty.id}/timeseries?${queryParams}`;
-                    logToConsole(`Trying alternative flow endpoint: ${altApiUrl}`, 'warning');
-                    
-                    flowResponse = await fetch(altApiUrl, fetchOptions);
-                    if (!flowResponse.ok) {
-                        const altErrorText = await flowResponse.text();
-                        logToConsole(`Alternative flow endpoint also failed: ${flowResponse.status} - ${altErrorText}`, 'error');
-                        throw new Error(`Flow fetch failed on both endpoints: ${flowResponse.status}`);
-                    }
-                }
-                
-                // Get response as text first for logging
-                const responseText = await flowResponse.text();
-                logToConsole(`Flow response first 200 chars: ${responseText.substring(0, 200)}...`, 'info');
-                
-                // Parse JSON
-                try {
-                    flowData = JSON.parse(responseText);
-                } catch (parseError) {
-                    logToConsole(`Failed to parse flow JSON: ${parseError.message}`, 'error');
-                    throw parseError;
-                }
-                
-                // Check if response is empty or contains no relevant data
-                const isEmptyResponse = (
-                    (!flowData?.data || flowData.data.length === 0) && 
-                    (!flowData?.timestamps || flowData.timestamps.length === 0)
-                );
-                
-                // Try alternative endpoint if first attempt returned empty data
-                if (isEmptyResponse && !flowApiUrl.includes('/api/iot/v2/')) {
-                    logToConsole('First endpoint returned empty flow data, trying alternative endpoint', 'warning');
-                    
-                    // Try alternative endpoint format (direct IoT API)
-                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${flowProperty.id}/timeseries?${queryParams}`;
-                    logToConsole(`Trying alternative flow endpoint: ${altApiUrl}`, 'warning');
-                    
-                    const altResponse = await fetch(altApiUrl, fetchOptions);
-                    if (!altResponse.ok) {
-                        const altErrorText = await altResponse.text();
-                        logToConsole(`Alternative flow endpoint failed: ${altResponse.status} - ${altErrorText}`, 'warning');
-                    } else {
-                        const altResponseText = await altResponse.text();
-                        logToConsole(`Alternative flow endpoint response first 200 chars: ${altResponseText.substring(0, 200)}...`, 'info');
-                        
-                        try {
-                            const altData = JSON.parse(altResponseText);
-                            if ((altData?.data && altData.data.length > 0) || 
-                                (altData?.timestamps && altData.timestamps.length > 0)) {
-                                logToConsole('Using data from alternative flow endpoint', 'info');
-                                flowData = altData;
-                            }
-                        } catch (altParseError) {
-                            logToConsole(`Failed to parse alternative flow JSON: ${altParseError.message}`, 'warning');
-                        }
+                    // Parse JSON
+                    try {
+                        flowData = JSON.parse(responseText);
+                    } catch (parseError) {
+                        logToConsole(`Failed to parse flow JSON: ${parseError.message}`, 'error');
+                        // Don't throw, continue with empty data
                     }
                 }
                 
