@@ -88,11 +88,15 @@ function parseTsArray(arr) {
 // Replace the entire function with the user-provided version
 async function fetchTimeSeriesData(deviceId, hours) {
     // Check cache first
-    const cacheKey = `${deviceId}-${hours}`;
-    if (timeSeriesDataCache.has(cacheKey)) {
-        logToConsole('Using cached time series data', 'info');
-        return timeSeriesDataCache.get(cacheKey);
-    }
+    // const cacheKey = `${deviceId}-${hours}`;
+    // if (timeSeriesDataCache.has(cacheKey)) {
+    //     logToConsole('Using cached time series data', 'info');
+    //     return timeSeriesDataCache.get(cacheKey);
+    // }
+    // --- Force fetch for debugging --- 
+    const cacheKey = `${deviceId}-${hours}`; // Still need cacheKey for storing result
+    logToConsole(`[DEBUG] Bypassing cache check, forcing fetch for: ${cacheKey}`, 'warning');
+    // --------------------------------
 
     try {
         const now = new Date();
@@ -567,12 +571,6 @@ async function updateTempGraph(deviceIdx, selectedDays) {
         return;
     }
 
-    // Destroy existing chart
-    if (charts.tempChart) {
-        charts.tempChart.destroy();
-        charts.tempChart = null;
-    }
-
     // Process data for each selected day and accumulate datasets
     let combinedDatasets = [];
     let deviceThresholdF = 34; // Default
@@ -622,77 +620,94 @@ async function updateTempGraph(deviceIdx, selectedDays) {
         noDataMessage.innerHTML = `<p class="text-lg font-medium">No temperature data available</p><p class="text-sm">for the selected period</p>`;
         chartContainer.style.position = 'relative'; // Ensure container is positioned
         chartContainer.appendChild(noDataMessage);
-         return; // Don't create the chart if no data
+        // If chart exists, clear its data
+        if (charts.tempChart) {
+            charts.tempChart.data.labels = [];
+            charts.tempChart.data.datasets = [];
+            charts.tempChart.update();
+        }
+         return; // Don't create or update the chart if no data
     }
 
-    // --- Create Chart ---
-    charts.tempChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: hourLabels,
-            datasets: combinedDatasets // Use the combined datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        title: (context) => `Hour: ${context[0].label}`,
-                        label: (context) => {
-                            const datasetLabel = context.dataset.label || '';
-                            const value = context.raw;
-                            if (value === null || value === undefined) return `${datasetLabel}: No data`;
-
-                             if (datasetLabel.includes('Ice Level')) {
-                                const device = window.lastDevicesData[currentDeviceIndex];
-                                const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
-                                const placementPercent = (sensorPlacement * 100).toFixed(0);
-                                return `Ice Level: ${value === 1 ? `> ${placementPercent}%` : `< ${placementPercent}%`} full`;
-                             } else if (datasetLabel === 'Temperature Threshold') {
-                                return `Threshold: ${value.toFixed(1)}°F`;
-                            } else { // Must be Temperature
-                                return `Temp: ${value.toFixed(1)}°F`;
-                            }
-                        }
-                    },
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleFont: { size: 13 }, bodyFont: { size: 12 }, padding: 10
-                },
-                legend: {
-                    position: 'top',
-                    labels: { usePointStyle: true, padding: 15, boxWidth: 10, font: { size: 11 } }
-                }
+    // If chart exists, update it; otherwise, create it
+    if (charts.tempChart) {
+        window.logToConsole('Updating existing temperature chart', 'info');
+        charts.tempChart.data.labels = hourLabels;
+        charts.tempChart.data.datasets = combinedDatasets;
+        // Ensure axes visibility is updated based on current state
+        charts.tempChart.options.scales['y-temp'].display = tempLineVisible;
+        charts.tempChart.options.scales['y-ice'].display = iceLevelVisible;
+        charts.tempChart.update();
+    } else {
+        window.logToConsole('Creating new temperature chart', 'info');
+        charts.tempChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: hourLabels,
+                datasets: combinedDatasets // Use the combined datasets
             },
-            scales: {
-                x: {
-                    title: { display: true, text: 'Hour of Day' },
-                    grid: { drawOnChartArea: true, color: 'rgba(0,0,0,0.05)' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: (context) => `Hour: ${context[0].label}`,
+                            label: (context) => {
+                                const datasetLabel = context.dataset.label || '';
+                                const value = context.raw;
+                                if (value === null || value === undefined) return `${datasetLabel}: No data`;
+
+                                 if (datasetLabel.includes('Ice Level')) {
+                                    const device = window.lastDevicesData[currentDeviceIndex];
+                                    const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
+                                    const placementPercent = (sensorPlacement * 100).toFixed(0);
+                                    return `Ice Level: ${value === 1 ? `> ${placementPercent}%` : `< ${placementPercent}%`} full`;
+                                 } else if (datasetLabel === 'Temperature Threshold') {
+                                    return `Threshold: ${value.toFixed(1)}°F`;
+                                } else { // Must be Temperature
+                                    return `Temp: ${value.toFixed(1)}°F`;
+                                }
+                            }
+                        },
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { size: 13 }, bodyFont: { size: 12 }, padding: 10
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: { usePointStyle: true, padding: 15, boxWidth: 10, font: { size: 11 } }
+                    }
                 },
-                'y-temp': {
-                    type: 'linear',
-                    display: tempLineVisible, // Conditionally display axis
-                    position: 'left',
-                    title: { display: true, text: 'Temperature (°F)' },
-                    grid: { drawOnChartArea: true, color: 'rgba(0,0,0,0.05)' }, // Primary axis grid
-                    ticks: { callback: value => `${value.toFixed(0)}°F` }
-                },
-                'y-ice': {
-                    type: 'linear',
-                    display: iceLevelVisible, // Conditionally display axis
-                    position: 'right',
-                    title: { display: true, text: 'Ice Level' },
-                    min: -0.1, max: 1.1,
-                    grid: { drawOnChartArea: false }, // No grid lines for secondary axis
-                    ticks: {
-                        stepSize: 1,
-                        callback: value => value === 1 ? 'Above' : value === 0 ? 'Below' : ''
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Hour of Day' },
+                        grid: { drawOnChartArea: true, color: 'rgba(0,0,0,0.05)' }
+                    },
+                    'y-temp': {
+                        type: 'linear',
+                        display: tempLineVisible, // Conditionally display axis
+                        position: 'left',
+                        title: { display: true, text: 'Temperature (°F)' },
+                        grid: { drawOnChartArea: true, color: 'rgba(0,0,0,0.05)' }, // Primary axis grid
+                        ticks: { callback: value => `${value.toFixed(0)}°F` }
+                    },
+                    'y-ice': {
+                        type: 'linear',
+                        display: iceLevelVisible, // Conditionally display axis
+                        position: 'right',
+                        title: { display: true, text: 'Ice Level' },
+                        min: -0.1, max: 1.1,
+                        grid: { drawOnChartArea: false }, // No grid lines for secondary axis
+                        ticks: {
+                            stepSize: 1,
+                            callback: value => value === 1 ? 'Above' : value === 0 ? 'Below' : ''
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 }
 
 /**
@@ -965,20 +980,6 @@ async function updateFlowGraph(deviceIndex, selectedDay) {
                 return;
             }
 
-            // Destroy existing chart if it exists
-            const chartElement = document.getElementById('flowChart');
-            const existingChart = Chart.getChart(chartElement);
-            if (existingChart) {
-                existingChart.destroy();
-            }
-
-            // Remove any existing no-data message
-            const chartContainer = chartElement.parentElement;
-            const existingMessage = chartContainer.querySelector('.no-data-message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-
             // Process flow data for each selected day
             const allDatasets = [];
             let hasAnyData = false;
@@ -1000,87 +1001,23 @@ async function updateFlowGraph(deviceIndex, selectedDay) {
                 }
             }
 
+            // --- Chart Update/Creation ---
+            const ctx = document.getElementById('flowChart').getContext('2d');
+            const chartContainer = ctx.canvas.parentElement;
+
+            // Remove any existing no-data message
+            const existingMessage = chartContainer.querySelector('.no-data-message');
+            if (existingMessage) {
+                existingMessage.remove();
+            }
+
             // Create hour labels (00:00 to 23:00)
             const hourLabels = Array.from({ length: 24 }, (_, i) => 
                 `${i.toString().padStart(2, '0')}:00`
             );
 
-            // Create the chart
-            const ctx = chartElement.getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: hourLabels,
-                    datasets: allDatasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: {
-                        mode: 'index',
-                        intersect: false
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                title: (context) => {
-                                    const hour = parseInt(context[0].label);
-                                    const nextHour = (hour + 1) % 24;
-                                    return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
-                                },
-                                label: (context) => {
-                                    const value = context.raw;
-                                    if (value === null) return `${context.dataset.label}: No data`;
-                                    return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
-                                }
-                            },
-                            titleAlign: 'center',
-                            bodyAlign: 'left',
-                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleFont: { size: 13, weight: 'bold' },
-                            bodyFont: { size: 12 },
-                            padding: 12
-                        },
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                usePointStyle: true,
-                                padding: 15
-                            }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Hour of Day'
-                            },
-                            grid: {
-                                display: true,
-                                drawOnChartArea: true
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            title: {
-                                display: true,
-                                text: 'Flow Rate (L/min)',
-                                font: { size: 12 }
-                            },
-                            grid: {
-                                display: true,
-                                drawOnChartArea: true
-                            },
-                            ticks: {
-                                callback: value => `${value.toFixed(1)} L/min`
-                            }
-                        }
-                    }
-                }
-            });
-
-            // If there's no data for any selected day, show a message
             if (!hasAnyData) {
+                logToConsole('No flow data available for any selected days.', 'warning');
                 const noDataMessage = document.createElement('div');
                 noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
                 noDataMessage.innerHTML = `
@@ -1089,7 +1026,96 @@ async function updateFlowGraph(deviceIndex, selectedDay) {
                         <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
                     </div>
                 `;
+                chartContainer.style.position = 'relative'; // Ensure container is positioned
                 chartContainer.appendChild(noDataMessage);
+                // If chart exists, clear its data
+                if (charts.flowChart) {
+                    charts.flowChart.data.labels = [];
+                    charts.flowChart.data.datasets = [];
+                    charts.flowChart.update();
+                }
+                return; // Don't create or update the chart if no data
+            }
+
+            // If chart exists, update it; otherwise, create it
+            if (charts.flowChart) {
+                window.logToConsole('Updating existing flow chart', 'info');
+                charts.flowChart.data.labels = hourLabels;
+                charts.flowChart.data.datasets = allDatasets;
+                charts.flowChart.update();
+            } else {
+                window.logToConsole('Creating new flow chart', 'info');
+                charts.flowChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hourLabels,
+                        datasets: allDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        const hour = parseInt(context[0].label);
+                                        const nextHour = (hour + 1) % 24;
+                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
+                                    },
+                                    label: (context) => {
+                                        const value = context.raw;
+                                        if (value === null) return `${context.dataset.label}: No data`;
+                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
+                                    }
+                                },
+                                titleAlign: 'center',
+                                bodyAlign: 'left',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hour of Day'
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Flow Rate (L/min)',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                },
+                                ticks: {
+                                    callback: value => `${value.toFixed(1)} L/min`
+                                }
+                            }
+                        }
+                    }
+                });
             }
         }
 
