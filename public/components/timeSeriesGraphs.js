@@ -163,26 +163,8 @@ async function fetchTimeSeriesData(deviceId, hours) {
         ]);
 
         // Log raw response data
-        logToConsole('Raw temperature response:', tempData, 'info');
-        logToConsole('Temperature data details:', {
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty?.id}?${queryParams}`,
-            tempPropertyId: tempProperty?.id,
-            responseStatus: tempData ? 'Success' : 'No data',
-            dataPoints: tempData?.data?.length || 0,
-            tempProperty: tempProperty,
-            rawResponse: tempData
-        }, 'info');
-
-        // Add logging for flow rate data
-        logToConsole('Raw flow rate response:', flowData, 'info');
-        logToConsole('Flow data details:', {
-            endpoint: `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty?.id}?${queryParams}`,
-            flowPropertyId: flowProperty?.id,
-            responseStatus: flowData ? 'Success' : 'No data',
-            dataPoints: flowData?.data?.length || 0,
-            flowProperty: flowProperty,
-            rawResponse: flowData
-        }, 'info');
+        window.logToConsole('Raw temperature response:', tempData, 'info');
+        window.logToConsole('Raw flow rate response:', flowData, 'info');
 
         // 6) Process the responses
         const tempResult = parseTsArray(tempData.data || []);
