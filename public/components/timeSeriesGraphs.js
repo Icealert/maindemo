@@ -736,127 +736,124 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
  * @returns {object} Object containing datasets for Chart.js and a noData flag.
  */
 function processFlowByHour(timestamps, flowValues, selectedDay) {
-     window.logToConsole(`Processing flow data for day ${selectedDay}`, 'info');
+            logToConsole('Processing flow data:', 'info');
+            logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+            logToConsole(`Flow values received: ${flowValues.length}`, 'info');
+            logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
-    const hourlyData = {};
-    const now = new Date();
-    const currentHour = now.getHours();
+            const hourlyData = {};
+            const now = new Date();
+            const currentHour = now.getHours();
+            
+            const dayStart = new Date(now);
+            dayStart.setDate(dayStart.getDate() - selectedDay);
+            dayStart.setHours(0, 0, 0, 0);
+            
+            const dayEnd = new Date(dayStart);
+            dayEnd.setHours(23, 59, 59, 999);
 
-    const dayStart = new Date(now);
-    dayStart.setDate(dayStart.getDate() - selectedDay);
-    dayStart.setHours(0, 0, 0, 0);
+            // Track if we have any data for this day
+            let hasDataForDay = false;
+            let allFlowsForDay = [];
 
-    const dayEnd = new Date(dayStart);
-    dayEnd.setHours(23, 59, 59, 999);
+            // Process each flow reading
+            for (let i = 0; i < timestamps.length; i++) {
+                const timestamp = new Date(timestamps[i]);
+                const flow = flowValues[i];
+                
+                if (flow === null || flow === undefined) continue;
+                
+                if (timestamp < dayStart || timestamp > dayEnd) continue;
+                
+                const hour = timestamp.getHours();
+                if (selectedDay === 0 && hour > currentHour) continue;
+                
+                hasDataForDay = true;
+                allFlowsForDay.push(flow);
 
-    let hasDataForDay = false;
-    let allFlowsForDay = [];
-    let lastFlowTime = null;
+                if (!hourlyData[hour]) {
+                    hourlyData[hour] = {
+                        flows: [],
+                        hour,
+                        date: new Date(timestamp)
+                    };
+                }
+                
+                hourlyData[hour].flows.push(flow);
+            }
 
+            // Update statistics if we have data
+            if (hasDataForDay) {
+                // Calculate daily range
+                const minFlow = Math.min(...allFlowsForDay);
+                const maxFlow = Math.max(...allFlowsForDay);
+                document.getElementById('flowRange').textContent = 
+                    `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
 
-    for (let i = 0; i < timestamps.length; i++) {
-        const timestamp = new Date(timestamps[i]);
-        const flow = flowValues[i];
+                // Calculate total flow
+                const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
+                document.getElementById('flowTotal').textContent = 
+                    `${totalFlow.toFixed(3)} L/min`;
 
-        if (flow === null || flow === undefined || isNaN(flow)) continue;
-        if (timestamp < dayStart || timestamp > dayEnd) continue;
+                // Calculate standard deviation
+                const stdDev = calculateStdDev(allFlowsForDay);
+                document.getElementById('flowStdDev').textContent = 
+                    `±${stdDev.toFixed(3)} L/min`;
 
-        const hour = timestamp.getHours();
-        if (selectedDay === 0 && hour > currentHour) continue;
+                // Update frequency
+                document.getElementById('flowFrequency').textContent = 
+                    `${allFlowsForDay.length} points`;
 
-        hasDataForDay = true;
-        allFlowsForDay.push(flow);
-         if (flow > 0) { // Track time of last positive flow
-             lastFlowTime = timestamp;
-         }
+                // Update time since last flow if it's today
+                if (selectedDay === 0 && allFlowsForDay.length > 0) {
+                    const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
+                    const lastFlowTime = new Date(timestamps[timestamps.length - 1]);
+                    const timeSinceFlow = now - lastFlowTime;
+                    timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
+                }
+            }
 
+            // If no data for this day, return empty datasets
+            if (!hasDataForDay) {
+                return {
+                    datasets: [],
+                    noData: true
+                };
+            }
 
-        if (!hourlyData[hour]) {
-            hourlyData[hour] = { flows: [], hour };
+            // Create hourly averages
+            const hourlyAverages = Array(24).fill(null);
+            Object.values(hourlyData).forEach(hourData => {
+                if (hourData.flows.length > 0) {
+                    const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
+                    hourlyAverages[hourData.hour] = avgFlow;
+                }
+            });
+
+            // Create dataset
+            const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
+            const colors = [
+                { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
+                { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
+                { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
+            ];
+
+            const datasets = [{
+                label: `Flow Rate (${dayLabels[selectedDay]})`,
+                data: hourlyAverages,
+                borderColor: colors[selectedDay].border,
+                backgroundColor: colors[selectedDay].background,
+                tension: 0.1,
+                fill: true,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }];
+
+            return {
+                datasets,
+                noData: false
+            };
         }
-        hourlyData[hour].flows.push(flow);
-    }
-
-    // Update statistics if data exists for the day
-    const statsContainer = document.getElementById('flowStats');
-    if (statsContainer && hasDataForDay) {
-        const minFlow = Math.min(...allFlowsForDay);
-        const maxFlow = Math.max(...allFlowsForDay);
-        document.getElementById('flowRange').textContent = `${minFlow.toFixed(2)} - ${maxFlow.toFixed(2)} L/min`;
-
-        // Calculate total flow *duration* (approximation assuming interval represents duration)
-        // This requires knowing the interval, which isn't directly passed here.
-        // Let's calculate average flow rate instead.
-         const avgFlow = allFlowsForDay.reduce((a, b) => a + b, 0) / allFlowsForDay.length;
-         // Total Flow might be misleading, perhaps Average Rate is better
-         document.getElementById('flowTotal').textContent = `${avgFlow.toFixed(2)} L/min (Avg)`;
-
-
-        const stdDev = calculateStdDev(allFlowsForDay);
-        document.getElementById('flowStdDev').textContent = `±${stdDev.toFixed(2)} L/min`;
-
-        // Frequency (number of data points with flow > 0)
-        const flowPointsCount = allFlowsForDay.filter(f => f > 0).length;
-        document.getElementById('flowFrequency').textContent = `${flowPointsCount} points > 0`;
-
-        // Time Since Last Flow
-         const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-         if (lastFlowTime) {
-            timeSinceLastFlowEl.textContent = formatTimeDuration(now - lastFlowTime);
-         } else {
-             // If no flow recorded today, calculate from start of day or last known flow
-             timeSinceLastFlowEl.textContent = 'N/A'; // Or calculate based on full dataset if needed
-         }
-
-         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
-
-    } else if (statsContainer) {
-         // Clear stats if no data
-         document.getElementById('flowRange').textContent = '-';
-         document.getElementById('flowTotal').textContent = '-';
-         document.getElementById('flowStdDev').textContent = '-';
-         document.getElementById('flowFrequency').textContent = '-';
-         document.getElementById('timeSinceLastFlow').textContent = '-';
-         // Optionally add opacity
-         // statsContainer.classList.add('opacity-50', 'pointer-events-none');
-    }
-
-
-    if (!hasDataForDay) {
-        return { datasets: [], noData: true };
-    }
-
-    // Calculate hourly averages
-    const hourlyAvgFlows = Array(24).fill(null);
-    Object.values(hourlyData).forEach(data => {
-        if (data.flows.length > 0) {
-            hourlyAvgFlows[data.hour] = data.flows.reduce((a, b) => a + b, 0) / data.flows.length;
-        }
-    });
-
-    // --- Create Datasets ---
-    const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
-    const colors = [
-        { border: 'rgb(34, 197, 94)', background: 'rgba(34, 197, 94, 0.1)' },
-        { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
-        { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
-    ];
-    const dayColor = colors[selectedDay % colors.length];
-
-
-    const datasets = [{
-        label: `Flow Rate (${dayLabels[selectedDay]})`,
-        data: hourlyAvgFlows,
-        borderColor: dayColor.border,
-        backgroundColor: dayColor.background,
-        tension: 0.1,
-        fill: true,
-        pointRadius: 3,
-        pointHoverRadius: 5
-    }];
-
-    return { datasets, noData: false };
-}
 
 
 /**
@@ -864,106 +861,159 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
  * @param {number} deviceIdx - The index of the device.
  * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
  */
-async function updateFlowGraph(deviceIdx, selectedDay) {
-    currentDeviceIndex = deviceIdx; // Store index
-    const device = window.lastDevicesData[deviceIdx];
-    updateTimeRangeButtons('flow-time-range', selectedDay);
+async function updateFlowGraph(deviceIndex, selectedDay) {
+            const device = window.lastDevicesData[deviceIndex];
+            updateTimeRangeButtons('flow-time-range', selectedDay);
+            
+            // Get the stats container
+            const statsContainer = document.getElementById('flowStats');
 
-    // Manage stats display based on selection (only single day supported for now)
-    const statsContainer = document.getElementById('flowStats');
-    if (statsContainer) {
-        // Flow graph currently only shows one day at a time
-        statsContainer.classList.remove('opacity-50', 'pointer-events-none');
-        // Stats will be updated by processFlowByHour
-    }
-
-    // Fetch data
-    const maxHours = (selectedDay + 1) * 24;
-    const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
-
-    // Use timeSeriesData.timeSinceFlow (which corresponds to flow rate in the new structure)
-    if (!timeSeriesData || !timeSeriesData.timeSinceFlow) { 
-        window.logToConsole('Failed to get time series data (or flow data) for flow graph', 'error');
-        return;
-    }
-
-    // Destroy existing chart
-    if (charts.flowChart) {
-        charts.flowChart.destroy();
-        charts.flowChart = null;
-    }
-
-    // Process data for the selected day
-    // Pass timeSeriesData.timeSinceFlow as the values
-    const { datasets, noData } = processFlowByHour(timeSeriesData.timestamps, timeSeriesData.timeSinceFlow, selectedDay); 
-
-
-    const ctx = document.getElementById('flowChart').getContext('2d');
-    const chartContainer = ctx.canvas.parentElement;
-
-    // Remove previous 'no data' message if it exists
-    const existingNoDataMsg = chartContainer.querySelector('.no-data-message');
-    if (existingNoDataMsg) {
-        existingNoDataMsg.remove();
-    }
-
-    if (noData) {
-        window.logToConsole(`No flow data available for day ${selectedDay}.`, 'warning');
-        // Display no data message
-        const noDataMessage = document.createElement('div');
-        noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
-        noDataMessage.innerHTML = `<p class="text-lg font-medium">No flow rate data available</p><p class="text-sm">for the selected period</p>`;
-        chartContainer.style.position = 'relative'; // Ensure container is positioned
-        chartContainer.appendChild(noDataMessage);
-        return; // Don't create the chart
-    }
-
-
-    // Create hour labels
-    const hourLabels = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
-
-    // Create the chart
-    charts.flowChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: hourLabels,
-            datasets: datasets
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        title: (context) => `Hour: ${context[0].label}`,
-                        label: (context) => {
-                            const value = context.raw;
-                            return `Flow: ${value !== null ? value.toFixed(2) + ' L/min' : 'No data'}`;
-                        }
-                    },
-                     backgroundColor: 'rgba(0, 0, 0, 0.8)', padding: 10
-                },
-                legend: {
-                    position: 'top',
-                     display: datasets.length > 1 // Only show legend if both are displayed
-                }
-            },
-            scales: {
-                x: {
-                    title: { display: true, text: 'Hour of Day' },
-                     grid: { color: 'rgba(0,0,0,0.05)' }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Flow Rate (L/min)' },
-                     grid: { color: 'rgba(0,0,0,0.05)' },
-                    ticks: { callback: value => `${value.toFixed(1)}` }
-                }
+            // Hide or show stats based on number of selected days
+            const selectedDays = Array.from(document.querySelectorAll('#flow-time-range button.active'))
+                .map(btn => parseInt(btn.dataset.days));
+            
+            if (selectedDays.length > 1) {
+                statsContainer.classList.add('opacity-50', 'pointer-events-none');
+                // Clear stats when multiple days are selected
+                document.getElementById('flowRange').textContent = '-';
+                document.getElementById('flowTotal').textContent = '-';
+                document.getElementById('flowStdDev').textContent = '-';
+                document.getElementById('flowFrequency').textContent = '-';
+            } else {
+                statsContainer.classList.remove('opacity-50', 'pointer-events-none');
             }
+            
+            fetchTimeSeriesData(device.id, 72).then(data => {
+                if (!data) {
+                    logToConsole('No data returned from fetchTimeSeriesData', 'error');
+                    return;
+                }
+
+                // Destroy existing chart if it exists
+                const chartElement = document.getElementById('flowChart');
+                const existingChart = Chart.getChart(chartElement);
+                if (existingChart) {
+                    existingChart.destroy();
+                }
+
+                // Remove any existing no-data message
+                const chartContainer = chartElement.parentElement;
+                const existingMessage = chartContainer.querySelector('.no-data-message');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+
+                // Process flow data for each selected day
+                const allDatasets = [];
+                let hasAnyData = false;
+
+                for (const day of selectedDays) {
+                    const { datasets, noData } = processFlowByHour(data.timestamps, data.timeSinceFlow, day);
+                    
+                    if (noData) {
+                        const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+                        logToConsole(`No flow data available for ${dayLabel}`, 'warning');
+                    } else {
+                        hasAnyData = true;
+                        allDatasets.push(...datasets);
+                    }
+                }
+
+                // Create hour labels (00:00 to 23:00)
+                const hourLabels = Array.from({ length: 24 }, (_, i) => 
+                    `${i.toString().padStart(2, '0')}:00`
+                );
+
+                // Create the chart
+                const ctx = chartElement.getContext('2d');
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: hourLabels,
+                        datasets: allDatasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: (context) => {
+                                        const hour = parseInt(context[0].label);
+                                        const nextHour = (hour + 1) % 24;
+                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
+                                    },
+                                    label: (context) => {
+                                        const value = context.raw;
+                                        if (value === null) return `${context.dataset.label}: No data`;
+                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
+                                    }
+                                },
+                                titleAlign: 'center',
+                                bodyAlign: 'left',
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                titleFont: { size: 13, weight: 'bold' },
+                                bodyFont: { size: 12 },
+                                padding: 12
+                            },
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Hour of Day'
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Flow Rate (L/min)',
+                                    font: { size: 12 }
+                                },
+                                grid: {
+                                    display: true,
+                                    drawOnChartArea: true
+                                },
+                                ticks: {
+                                    callback: value => `${value.toFixed(1)} L/min`
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // If there's no data for any selected day, show a message
+                if (!hasAnyData) {
+                    const noDataMessage = document.createElement('div');
+                    noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
+                    noDataMessage.innerHTML = `
+                        <div class="text-gray-500 text-center">
+                            <p class="text-lg font-medium">No flow rate data available</p>
+                            <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
+                        </div>
+                    `;
+                    chartContainer.appendChild(noDataMessage);
+                }
+            }).catch(error => {
+                logToConsole(`Error updating flow graph: ${error.message}`, 'error');
+            });
         }
-    });
-}
 
 
 /**
