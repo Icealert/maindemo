@@ -246,23 +246,51 @@ async function fetchTimeSeriesData(deviceId, hours) {
         logToConsole('Fetching Temperature Data...', 'info');
         let tempData = { data: [] }; // Default empty
         if (tempProperty) {
+            // First try the standard proxy endpoint
             const tempApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`;
             logToConsole(`Attempting to fetch temperature from: ${tempApiUrl}`, 'info'); // Log URL
+            
             try {
-                const tempResponse = await fetch(
-                    tempApiUrl, // Use the logged URL
-                    fetchOptions
-                );
+                // Attempt to fetch using the proxy endpoint
+                let tempResponse = await fetch(tempApiUrl, fetchOptions);
+                
+                // If the first endpoint fails or returns empty data, try an alternative endpoint
                 if (!tempResponse.ok) {
                     const errorText = await tempResponse.text();
-                    // Log the error text along with the status
-                    logToConsole(`Temperature fetch failed: ${tempResponse.status} - Response Text: ${errorText}`, 'error'); 
-                    throw new Error(`Temperature fetch failed: ${tempResponse.status}`); // Throw simpler error for general catch
+                    logToConsole(`Primary temperature endpoint failed: ${tempResponse.status} - ${errorText}`, 'warning');
+                    
+                    // Try alternative endpoint format (direct IoT API)
+                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${tempProperty.id}/timeseries?${queryParams}`;
+                    logToConsole(`Trying alternative temperature endpoint: ${altApiUrl}`, 'warning');
+                    
+                    tempResponse = await fetch(altApiUrl, fetchOptions);
+                    if (!tempResponse.ok) {
+                        const altErrorText = await tempResponse.text();
+                        logToConsole(`Alternative temperature endpoint also failed: ${tempResponse.status} - ${altErrorText}`, 'error');
+                        throw new Error(`Temperature fetch failed on both endpoints: ${tempResponse.status}`);
+                    }
                 }
                 
                 // Enhanced logging to see exactly what's returned
                 const responseText = await tempResponse.text();
-                logToConsole(`Temperature raw response text: ${responseText.substring(0, 200)}...`, 'info');
+                
+                // Log deviceId and first part of response for debugging
+                logToConsole(`Temperature response for device ${deviceId} (${thingId}):`, 'info');
+                logToConsole(`First 200 chars: ${responseText.substring(0, 200)}...`, 'info');
+                
+                // For the specific problematic device, log more details
+                if (deviceId === '9b849c2d-0ccc-4fe3-bb66-a619c946b3dd') {
+                    logToConsole(`FULL TEMP RESPONSE for problematic device:`, 'info');
+                    // If response is large, split it into chunks to avoid console truncation
+                    const maxChunkSize = 1000;
+                    if (responseText.length > maxChunkSize) {
+                        for (let i = 0; i < responseText.length; i += maxChunkSize) {
+                            logToConsole(`Chunk ${Math.floor(i/maxChunkSize) + 1}:`, responseText.substring(i, i + maxChunkSize), 'info');
+                        }
+                    } else {
+                        logToConsole(responseText, 'info');
+                    }
+                }
                 
                 // Try to parse the JSON
                 try {
@@ -270,6 +298,41 @@ async function fetchTimeSeriesData(deviceId, hours) {
                 } catch (parseError) {
                     logToConsole(`Failed to parse temperature JSON: ${parseError.message}`, 'error');
                     throw parseError;
+                }
+                
+                // Check if response is empty or contains no relevant data
+                const isEmptyResponse = (
+                    (!tempData?.data || tempData.data.length === 0) && 
+                    (!tempData?.timestamps || tempData.timestamps.length === 0)
+                );
+                
+                // Try alternative endpoint if first attempt returned empty data
+                if (isEmptyResponse && !tempApiUrl.includes('/api/iot/v2/')) {
+                    logToConsole('First endpoint returned empty data, trying alternative endpoint', 'warning');
+                    
+                    // Try alternative endpoint format (direct IoT API)
+                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${tempProperty.id}/timeseries?${queryParams}`;
+                    logToConsole(`Trying alternative temperature endpoint: ${altApiUrl}`, 'warning');
+                    
+                    const altResponse = await fetch(altApiUrl, fetchOptions);
+                    if (!altResponse.ok) {
+                        const altErrorText = await altResponse.text();
+                        logToConsole(`Alternative temperature endpoint failed: ${altResponse.status} - ${altErrorText}`, 'warning');
+                    } else {
+                        const altResponseText = await altResponse.text();
+                        logToConsole(`Alternative endpoint response first 200 chars: ${altResponseText.substring(0, 200)}...`, 'info');
+                        
+                        try {
+                            const altData = JSON.parse(altResponseText);
+                            if ((altData?.data && altData.data.length > 0) || 
+                                (altData?.timestamps && altData.timestamps.length > 0)) {
+                                logToConsole('Using data from alternative endpoint', 'info');
+                                tempData = altData;
+                            }
+                        } catch (altParseError) {
+                            logToConsole(`Failed to parse alternative JSON: ${altParseError.message}`, 'warning');
+                        }
+                    }
                 }
                 
                 // Log different JSON structures we might expect
@@ -308,16 +371,99 @@ async function fetchTimeSeriesData(deviceId, hours) {
         logToConsole('Fetching Flow Data...', 'info');
         let flowData = { data: [] }; // Default empty
         if (flowProperty) {
-             try {
-                const flowResponse = await fetch(
-                    `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`,
-                    fetchOptions
-                );
+            // First try the standard proxy endpoint
+            const flowApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`;
+            logToConsole(`Attempting to fetch flow from: ${flowApiUrl}`, 'info');
+            
+            try {
+                // Attempt to fetch using the proxy endpoint
+                let flowResponse = await fetch(flowApiUrl, fetchOptions);
+                
+                // If the first endpoint fails, try an alternative endpoint
                 if (!flowResponse.ok) {
                     const errorText = await flowResponse.text();
-                    throw new Error(`Flow rate fetch failed: ${flowResponse.status} - ${errorText}`);
+                    logToConsole(`Primary flow endpoint failed: ${flowResponse.status} - ${errorText}`, 'warning');
+                    
+                    // Try alternative endpoint format (direct IoT API)
+                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${flowProperty.id}/timeseries?${queryParams}`;
+                    logToConsole(`Trying alternative flow endpoint: ${altApiUrl}`, 'warning');
+                    
+                    flowResponse = await fetch(altApiUrl, fetchOptions);
+                    if (!flowResponse.ok) {
+                        const altErrorText = await flowResponse.text();
+                        logToConsole(`Alternative flow endpoint also failed: ${flowResponse.status} - ${altErrorText}`, 'error');
+                        throw new Error(`Flow fetch failed on both endpoints: ${flowResponse.status}`);
+                    }
                 }
-                flowData = await flowResponse.json();
+                
+                // Get response as text first for logging
+                const responseText = await flowResponse.text();
+                logToConsole(`Flow response first 200 chars: ${responseText.substring(0, 200)}...`, 'info');
+                
+                // Parse JSON
+                try {
+                    flowData = JSON.parse(responseText);
+                } catch (parseError) {
+                    logToConsole(`Failed to parse flow JSON: ${parseError.message}`, 'error');
+                    throw parseError;
+                }
+                
+                // Check if response is empty or contains no relevant data
+                const isEmptyResponse = (
+                    (!flowData?.data || flowData.data.length === 0) && 
+                    (!flowData?.timestamps || flowData.timestamps.length === 0)
+                );
+                
+                // Try alternative endpoint if first attempt returned empty data
+                if (isEmptyResponse && !flowApiUrl.includes('/api/iot/v2/')) {
+                    logToConsole('First endpoint returned empty flow data, trying alternative endpoint', 'warning');
+                    
+                    // Try alternative endpoint format (direct IoT API)
+                    const altApiUrl = `${API_URL}/api/iot/v2/things/${thingId}/properties/${flowProperty.id}/timeseries?${queryParams}`;
+                    logToConsole(`Trying alternative flow endpoint: ${altApiUrl}`, 'warning');
+                    
+                    const altResponse = await fetch(altApiUrl, fetchOptions);
+                    if (!altResponse.ok) {
+                        const altErrorText = await altResponse.text();
+                        logToConsole(`Alternative flow endpoint failed: ${altResponse.status} - ${altErrorText}`, 'warning');
+                    } else {
+                        const altResponseText = await altResponse.text();
+                        logToConsole(`Alternative flow endpoint response first 200 chars: ${altResponseText.substring(0, 200)}...`, 'info');
+                        
+                        try {
+                            const altData = JSON.parse(altResponseText);
+                            if ((altData?.data && altData.data.length > 0) || 
+                                (altData?.timestamps && altData.timestamps.length > 0)) {
+                                logToConsole('Using data from alternative flow endpoint', 'info');
+                                flowData = altData;
+                            }
+                        } catch (altParseError) {
+                            logToConsole(`Failed to parse alternative flow JSON: ${altParseError.message}`, 'warning');
+                        }
+                    }
+                }
+                
+                // Log the structure for debugging
+                logToConsole('Flow response structure:', {
+                    hasDataArray: Array.isArray(flowData?.data),
+                    dataLength: flowData?.data?.length || 0,
+                    hasTimestamps: Array.isArray(flowData?.timestamps),
+                    timestampsLength: flowData?.timestamps?.length || 0,
+                    hasValues: Array.isArray(flowData?.values),
+                    valuesLength: flowData?.values?.length || 0,
+                    topLevelKeys: Object.keys(flowData || {})
+                }, 'info');
+                
+                // If we have timestamps/values array but no data array, convert format
+                if (!flowData.data && Array.isArray(flowData.timestamps) && Array.isArray(flowData.values)) {
+                    logToConsole('Converting flow timestamps/values format to data array format', 'info');
+                    const length = Math.min(flowData.timestamps.length, flowData.values.length);
+                    flowData.data = Array(length).fill().map((_, i) => ({
+                        time: flowData.timestamps[i],
+                        value: flowData.values[i]
+                    }));
+                }
+                
                 window.logToConsole('Raw flow rate response:', flowData, 'info');
             } catch (error) {
                 logToConsole(`Error during flow fetch: ${error.message}`, 'error');
@@ -474,20 +620,27 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
     window.logToConsole(`Processing temperature data for day ${selectedDay}`, 'info');
     window.logToConsole(`Inputs: ${timestamps?.length} timestamps, ${temperatures?.length} temps`, 'info');
 
+    // Handle empty input case
+    if (!timestamps || !temperatures || timestamps.length === 0 || temperatures.length === 0) {
+        window.logToConsole('Empty input data for temperature processing', 'warning');
+        return { datasets: [], thresholdF: 34, noData: true };
+    }
+
     // --- Work with UTC dates for consistency --- 
     const now = new Date();
     const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    window.logToConsole(`Today in UTC: ${todayUtc.toISOString()}`, 'info');
 
     // Calculate the start of the target day in UTC
     const dayStartUtc = new Date(todayUtc);
     dayStartUtc.setUTCDate(todayUtc.getUTCDate() - selectedDay);
-    // dayStartUtc is now 00:00:00 UTC of the target day
-
+    
     // Calculate the end of the target day in UTC (start of the next day)
     const dayEndUtc = new Date(dayStartUtc);
     dayEndUtc.setUTCDate(dayStartUtc.getUTCDate() + 1);
-    // dayEndUtc is now 00:00:00 UTC of the *next* day
 
+    window.logToConsole(`Day ${selectedDay} boundaries: ${dayStartUtc.toISOString()} to ${dayEndUtc.toISOString()}`, 'info');
+    
     // Get current hour in UTC for filtering today's future hours
     const currentUtcHour = now.getUTCHours();
     // --- End UTC Date Setup ---
@@ -501,26 +654,57 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
 
     let hasDataForDay = false;
     let allTempsForDayF = []; // Store temps in Fahrenheit for stats
+    let dataPointsProcessed = 0;
+    let dataPointsForDay = 0;
 
     for (let i = 0; i < timestamps.length; i++) {
         const timestampStr = timestamps[i];
         const tempC = temperatures[i];
+        dataPointsProcessed++;
 
         // Skip invalid data points
-        if (tempC === null || tempC === undefined || isNaN(tempC) || !timestampStr) continue;
+        if (tempC === null || tempC === undefined || isNaN(tempC) || !timestampStr) {
+            continue;
+        }
 
+        // Ensure consistent UTC date parsing
         const timestamp = new Date(timestampStr); // Assume timestampStr is ISO/UTC
+        if (isNaN(timestamp.getTime())) {
+            window.logToConsole(`Invalid timestamp at index ${i}: ${timestampStr}`, 'warning');
+            continue;
+        }
+
+        // Debug timestamp parsing
+        if (i < 5 || i % 100 === 0) { // Log first 5 and every 100th
+            window.logToConsole(`Timestamp ${i}: ${timestampStr} parsed as ${timestamp.toISOString()} (UTC hour: ${timestamp.getUTCHours()})`, 'info');
+        }
 
         // Compare timestamps directly with UTC boundaries
-        if (timestamp.getTime() < dayStartUtc.getTime() || timestamp.getTime() >= dayEndUtc.getTime()) continue;
+        const timestampMs = timestamp.getTime();
+        const startMs = dayStartUtc.getTime();
+        const endMs = dayEndUtc.getTime();
+        
+        if (timestampMs < startMs || timestampMs >= endMs) {
+            continue; // Skip if outside day boundaries
+        }
 
+        dataPointsForDay++;
         const hourUtc = timestamp.getUTCHours(); // Get hour in UTC
 
         // For today (selectedDay === 0), only include hours up to the current UTC hour
-        if (selectedDay === 0 && hourUtc > currentUtcHour) continue;
+        if (selectedDay === 0 && hourUtc > currentUtcHour) {
+            continue;
+        }
 
         hasDataForDay = true;
         const tempF = celsiusToFahrenheit(tempC); // Use global conversion
+        
+        // Skip invalid temperature values
+        if (tempF === null || tempF === undefined || isNaN(tempF)) {
+            window.logToConsole(`Invalid temperature conversion at index ${i}: ${tempC}°C`, 'warning');
+            continue;
+        }
+        
         allTempsForDayF.push(tempF);
 
         if (!hourlyData[hourUtc]) {
@@ -529,7 +713,16 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
         hourlyData[hourUtc].tempsF.push(tempF);
     }
 
-    window.logToConsole(`Processed hourly temperature data for day ${selectedDay}:`, hourlyData);
+    window.logToConsole(`Processed ${dataPointsProcessed} data points, found ${dataPointsForDay} for day ${selectedDay}`, 'info');
+    window.logToConsole(`Valid temperature readings for day ${selectedDay}: ${allTempsForDayF.length}`, 'info');
+    
+    if (hasDataForDay) {
+        window.logToConsole(`Hourly breakdown for day ${selectedDay}:`, 
+            Object.entries(hourlyData).map(([hour, data]) => 
+                `Hour ${hour}: ${data.tempsF.length} readings (avg: ${data.tempsF.reduce((a,b) => a+b, 0) / data.tempsF.length}°F)`
+            ),
+        'info');
+    }
 
     // Update statistics display if it's a single day view and data exists
     const statsContainer = document.getElementById('tempStats');
@@ -621,7 +814,6 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
         };
      }
 
-
     // Threshold Dataset (Only create once, maybe outside this function or check if exists)
     const thresholdData = {
         label: 'Temperature Threshold',
@@ -634,7 +826,6 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
         order: 0 // Draw threshold line behind everything
     };
 
-
     // Combine datasets, conditionally including ice level and temp line
     let finalDatasets = [thresholdData];
     if (tempLineVisible) {
@@ -643,7 +834,6 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
      if (iceLevelVisible && iceLevelData) { // Check if iceLevelData was created
          finalDatasets.push(iceLevelData);
      }
-
 
     return { datasets: finalDatasets, thresholdF, noData: false };
 }
@@ -661,6 +851,15 @@ async function updateTempGraph(deviceIdx, selectedDays) {
         selectedDays = [0]; // Default to today if invalid
     }
     selectedDays.sort((a,b) => a-b); // Ensure days are sorted
+
+    // Log what we're trying to display
+    window.logToConsole(`Updating temperature graph for days: ${selectedDays.join(', ')}`, 'info');
+
+    // If today (day 0) is selected, ensure it gets special treatment
+    const showingTodayData = selectedDays.includes(0);
+    if (showingTodayData) {
+        window.logToConsole('Today is selected - ensuring fresh data fetch', 'info');
+    }
 
     // Manage stats display based on selection
     const statsContainer = document.getElementById('tempStats');
@@ -684,17 +883,18 @@ async function updateTempGraph(deviceIdx, selectedDays) {
         return;
     }
 
+    // Consider clearing cache for "today" data to ensure fresh data
+    if (showingTodayData) {
+        const cacheKey = `${device.id}-72`; // The typical cache key for 72-hour data
+        if (timeSeriesDataCache.has(cacheKey)) {
+            window.logToConsole('Clearing cache for today data to ensure freshness', 'info');
+            timeSeriesDataCache.delete(cacheKey);
+        }
+    }
+
     // Fetch data for the maximum required range (always 72 hours)
     const maxHours = 72; 
     window.logToConsole(`Fetching ${maxHours} hours of data for temperature graph.`, 'info');
-
-    // --- Force fetch for debugging --- Remove cache clearing within updateTempGraph
-    // const cacheKey = `${device.id}-${maxHours}`;
-    // if (timeSeriesDataCache.has(cacheKey)) {
-    //     window.logToConsole(`Clearing cache entry for key: ${cacheKey}`, 'info');
-    //     timeSeriesDataCache.delete(cacheKey);
-    // }
-    // Fetching is now forced within fetchTimeSeriesData itself
 
     const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
 
@@ -736,6 +936,8 @@ async function updateTempGraph(deviceIdx, selectedDays) {
             // Add other datasets (temp, ice level)
             combinedDatasets.push(...datasets.filter(ds => ds.label !== 'Temperature Threshold'));
             deviceThresholdF = thresholdF; // Update threshold from processed data
+         } else {
+            window.logToConsole(`No temperature data found for day ${day}`, 'warning');
          }
     }
 
@@ -750,7 +952,6 @@ async function updateTempGraph(deviceIdx, selectedDays) {
     if (existingNoDataMsg) {
         existingNoDataMsg.remove();
     }
-
 
     if (!hasAnyData) {
          window.logToConsole('No temperature data available for selected days.', 'warning');
@@ -789,6 +990,9 @@ async function updateTempGraph(deviceIdx, selectedDays) {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: {
+                    duration: 300 // Faster animation for better responsiveness when toggling
+                },
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     tooltip: {
@@ -867,12 +1071,29 @@ function toggleTempGraph(deviceIdx, day) {
     if (button.classList.contains('active') && activeButtons.length === 1) {
         return;
     }
+    
+    // Force-clear the cache for this device to ensure fresh data when toggling
+    const device = window.lastDevicesData[deviceIdx];
+    if (device?.id) {
+        const cacheKeysToRemove = [];
+        for (const key of timeSeriesDataCache.keys()) {
+            if (key.startsWith(device.id)) {
+                cacheKeysToRemove.push(key);
+            }
+        }
+        cacheKeysToRemove.forEach(key => {
+            logToConsole(`Clearing cache for toggle: ${key}`, 'info');
+            timeSeriesDataCache.delete(key);
+        });
+    }
 
     button.classList.toggle('active');
 
     // Get all newly active days
     const newActiveDays = Array.from(buttonContainer.querySelectorAll('button.active'))
         .map(btn => parseInt(btn.dataset.days));
+        
+    logToConsole(`Temperature graph toggled to days: ${newActiveDays.join(', ')}`, 'info');
 
     // Update the graph
     updateTempGraph(deviceIdx, newActiveDays);
