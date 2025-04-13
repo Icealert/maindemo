@@ -37,14 +37,10 @@ function parseTsArray(arr) {
         window.logToConsole('Array length mismatch in parseTsArray', 'error');
     }
 
-    // Remove entries where time or value is missing
-    const validIndices = result.times.map((time, i) =>
-        time && result.values[i] !== undefined && result.values[i] !== null ? i : -1
-    ).filter(i => i !== -1);
-
+    // Keep all entries, but ensure null values are explicitly null
     const cleanResult = {
-        times: validIndices.map(i => result.times[i]),
-        values: validIndices.map(i => result.values[i])
+        times: result.times.map(time => time || null), // Ensure null if time is missing (less likely)
+        values: result.values.map(value => (value === undefined || value === null) ? null : value)
     };
 
     // Log first few cleaned elements
