@@ -552,15 +552,17 @@ async function updateTempGraph(deviceIdx, selectedDays) {
         return;
     }
 
-    // Fetch data for the maximum required range (e.g., 72 hours if max day is 2)
-    const maxHours = (Math.max(...selectedDays) + 1) * 24;
+    // Fetch data for the maximum required range (always 72 hours)
+    const maxHours = 72; 
+    window.logToConsole(`Fetching ${maxHours} hours of data for temperature graph.`, 'info');
 
-    // Force cache clear for this fetch to avoid state issues when toggling days
-    const cacheKey = `${device.id}-${maxHours}`;
-    if (timeSeriesDataCache.has(cacheKey)) {
-        window.logToConsole(`Clearing cache entry for key: ${cacheKey}`, 'info');
-        timeSeriesDataCache.delete(cacheKey);
-    }
+    // --- Force fetch for debugging --- Remove cache clearing within updateTempGraph
+    // const cacheKey = `${device.id}-${maxHours}`;
+    // if (timeSeriesDataCache.has(cacheKey)) {
+    //     window.logToConsole(`Clearing cache entry for key: ${cacheKey}`, 'info');
+    //     timeSeriesDataCache.delete(cacheKey);
+    // }
+    // Fetching is now forced within fetchTimeSeriesData itself
 
     const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
 
