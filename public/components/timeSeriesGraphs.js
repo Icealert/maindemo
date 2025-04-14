@@ -757,7 +757,7 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
  * @param {number} deviceIdx - The index of the device.
  * @param {number[]} selectedDays - Array of days to display (0=Today, 1=Yesterday, ...).
  */
-async function updateTempGraph(deviceIdx, selectedDays) {
+async function updateTempGraph(deviceIdx, selectedDays, timeSeriesData = null) {
     const device = window.lastDevicesData[deviceIdx];
     if (!device?.id) {
         logToConsole('No device found for index ' + deviceIdx, 'error');
@@ -786,7 +786,10 @@ async function updateTempGraph(deviceIdx, selectedDays) {
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
 
-    const timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+    // If timeSeriesData is not provided, fetch it
+    if (!timeSeriesData) {
+        timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+    }
 
     if (!timeSeriesData || !timeSeriesData.temperature || !timeSeriesData.temperature.values) {
         logToConsole('No data returned from fetchTimeSeriesData or temperature data missing', 'error');
@@ -1049,10 +1052,15 @@ function initializeGraphs(deviceIdx) {
     updateTimeRangeButtons('status-time-range', 0);
     updateTimeRangeButtons('flow-time-range', 0);
 
-    // Initialize graphs with 'Today' data (day 0)
-    updateTempGraph(deviceIdx, [0]); // Temp graph expects an array
-    updateStatusGraph(deviceIdx, 0);
-    updateFlowGraph(deviceIdx, 0);
+    // Fetch 72 hours of data once and cache it
+    fetchTimeSeriesData(device.id, 72).then(data => {
+        if (data) {
+            // Initialize graphs with 'Today' data (day 0)
+            updateTempGraph(deviceIdx, [0], data); // Pass the fetched data
+            updateStatusGraph(deviceIdx, 0);
+            updateFlowGraph(deviceIdx, 0, data); // Pass the fetched data
+        }
+    });
 }
 
 /**
@@ -1097,10 +1105,15 @@ function toggleTempGraph(deviceIdx, day) {
         
     logToConsole(`Temperature graph toggled to days: ${newActiveDays.join(', ')}`, 'info');
 
-    // Update all graphs to maintain consistency (matching initializeGraphs behavior)
-    updateTempGraph(deviceIdx, newActiveDays);
-    updateStatusGraph(deviceIdx, newActiveDays[0]);
-    updateFlowGraph(deviceIdx, newActiveDays[0]);
+    // Fetch data once and use it for all updates
+    fetchTimeSeriesData(device.id, 72).then(data => {
+        if (data) {
+            // Update all graphs with the same data
+            updateTempGraph(deviceIdx, newActiveDays, data);
+            updateStatusGraph(deviceIdx, newActiveDays[0]);
+            updateFlowGraph(deviceIdx, newActiveDays[0], data);
+        }
+    });
 }
 
 /**
@@ -1316,7 +1329,7 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
  * @param {number} deviceIdx - The index of the device.
  * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
  */
-async function updateFlowGraph(deviceIndex, selectedDay) {
+async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) {
     const device = window.lastDevicesData[deviceIndex];
     if (!device?.id) {
         logToConsole('No device found for index ' + deviceIndex, 'error');
@@ -1347,7 +1360,10 @@ async function updateFlowGraph(deviceIndex, selectedDay) {
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
     
-    const timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+    // If timeSeriesData is not provided, fetch it
+    if (!timeSeriesData) {
+        timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+    }
 
     if (!timeSeriesData || !timeSeriesData.flow || !timeSeriesData.flow.values) {
         logToConsole('No data returned from fetchTimeSeriesData or flow data missing', 'error');
