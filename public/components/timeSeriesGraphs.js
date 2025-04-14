@@ -1088,14 +1088,6 @@ function toggleTempGraph(deviceIdx, day) {
         return;
     }
 
-    // Clear device cache and destroy ALL existing charts (matching initializeGraphs behavior)
-    clearDeviceCache(device.id);
-    logToConsole('Cleared device cache for toggle', 'info');
-
-    // Clear ALL existing chart instances (matching initializeGraphs behavior)
-    Object.values(charts).forEach(chart => chart?.destroy());
-    charts = {};
-
     button.classList.toggle('active');
 
     // Get all newly active days
@@ -1105,15 +1097,27 @@ function toggleTempGraph(deviceIdx, day) {
         
     logToConsole(`Temperature graph toggled to days: ${newActiveDays.join(', ')}`, 'info');
 
-    // Fetch data once and use it for all updates
-    fetchTimeSeriesData(device.id, 72).then(data => {
-        if (data) {
-            // Update all graphs with the same data
-            updateTempGraph(deviceIdx, newActiveDays, data);
-            updateStatusGraph(deviceIdx, newActiveDays[0]);
-            updateFlowGraph(deviceIdx, newActiveDays[0], data);
-        }
-    });
+    // Check if we have cached data
+    const cacheKey = `${device.id}-72`;
+    let timeSeriesData = timeSeriesDataCache.get(cacheKey);
+
+    // If we have cached data, use it directly
+    if (timeSeriesData) {
+        logToConsole('Using cached time series data for toggle', 'info');
+        updateTempGraph(deviceIdx, newActiveDays, timeSeriesData);
+        updateStatusGraph(deviceIdx, newActiveDays[0]);
+        updateFlowGraph(deviceIdx, newActiveDays[0], timeSeriesData);
+    } else {
+        // If no cached data, fetch it once and use it
+        logToConsole('No cached data found, fetching new data', 'info');
+        fetchTimeSeriesData(device.id, 72).then(data => {
+            if (data) {
+                updateTempGraph(deviceIdx, newActiveDays, data);
+                updateStatusGraph(deviceIdx, newActiveDays[0]);
+                updateFlowGraph(deviceIdx, newActiveDays[0], data);
+            }
+        });
+    }
 }
 
 /**
