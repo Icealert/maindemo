@@ -409,6 +409,43 @@ function calculateStdDev(values) {
 }
 
 /**
+ * Calculates total flow volume for a given array of flow rates (L/min)
+ * @param {number[]} flowRates - Array of flow rates in L/min
+ * @param {number} intervalMinutes - Time interval between readings in minutes
+ * @returns {number} Total flow volume in liters
+ */
+function calculateTotalFlow(flowRates, intervalMinutes) {
+    if (!flowRates || flowRates.length === 0) return 0;
+    // Each flow rate represents L/min, multiply by interval to get volume
+    return flowRates.reduce((sum, rate) => sum + (rate * intervalMinutes), 0);
+}
+
+/**
+ * Calculates flow frequency (number of flow events per hour)
+ * @param {number[]} flowRates - Array of flow rates
+ * @returns {number} Average number of flow events per hour
+ */
+function calculateFlowFrequency(flowRates) {
+    if (!flowRates || flowRates.length === 0) return 0;
+    
+    // Count transitions from zero to non-zero flow
+    let flowEvents = 0;
+    let wasFlowing = false;
+    
+    flowRates.forEach(rate => {
+        if (rate > 0 && !wasFlowing) {
+            flowEvents++;
+            wasFlowing = true;
+        } else if (rate === 0) {
+            wasFlowing = false;
+        }
+    });
+    
+    // Convert to events per hour (assuming 24-hour period)
+    return flowEvents / 24;
+}
+
+/**
  * Processes flow rate data for a specific day.
  * @param {string[]} timestamps - Array of ISO timestamp strings.
  * @param {number[]} flowValues - Array of flow rate values (L/min).
@@ -519,6 +556,38 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
         return { datasets: [], noData: true };
     }
 
+    // Calculate statistics for the day
+    let stats = {
+        min: null,
+        max: null,
+        total: null,
+        stdDev: null,
+        frequency: null,
+        timeSinceLastFlow: null,
+        lastFlowTime: null
+    };
+
+    if (allFlowsForDay.length > 0) {
+        // Basic statistics
+        stats.min = Math.min(...allFlowsForDay);
+        stats.max = Math.max(...allFlowsForDay);
+        
+        // Calculate total flow (assuming 1-minute intervals between readings)
+        stats.total = calculateTotalFlow(allFlowsForDay, 1);
+        
+        // Calculate standard deviation
+        stats.stdDev = calculateStdDev(allFlowsForDay);
+        
+        // Calculate flow frequency
+        stats.frequency = calculateFlowFrequency(allFlowsForDay);
+        
+        // Time since last flow
+        if (lastFlowTime) {
+            stats.lastFlowTime = lastFlowTime;
+            stats.timeSinceLastFlow = new Date() - lastFlowTime;
+        }
+    }
+
     // Create hourly averages
     const hourlyAverages = Array(24).fill(null);
     Object.values(hourlyData).forEach(hourData => {
@@ -557,7 +626,8 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
     return {
         datasets,
         noData: false,
-        hourLabels
+        hourLabels,
+        stats
     };
 }
 
@@ -589,6 +659,7 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
         document.getElementById('flowTotal').textContent = '-';
         document.getElementById('flowStdDev').textContent = '-';
         document.getElementById('flowFrequency').textContent = '-';
+        document.getElementById('timeSinceLastFlow').textContent = '-';
     } else {
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
@@ -616,10 +687,9 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
     let hourLabels = null; // Store hour labels from first valid day
 
     for (const day of selectedDays) {
-        // Pass flow-specific timestamps and values
-        const { datasets, noData, hourLabels: dayHourLabels } = processFlowByHour(
-            timeSeriesData.flow.timestamps, 
-            timeSeriesData.flow.values, 
+        const { datasets, noData, hourLabels: dayHourLabels, stats } = processFlowByHour(
+            timeSeriesData.flow.timestamps,
+            timeSeriesData.flow.values,
             day
         );
         
@@ -630,7 +700,41 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
             hasAnyData = true;
             allDatasets.push(...datasets);
             if (!hourLabels) {
-                hourLabels = dayHourLabels; // Use hour labels from first valid day
+                hourLabels = dayHourLabels;
+            }
+
+            // Update statistics display if single day selected
+            if (selectedDays.length === 1 && stats) {
+                // Daily Range
+                document.getElementById('flowRange').textContent = 
+                    stats.min !== null && stats.max !== null ? 
+                    `${stats.min.toFixed(2)} - ${stats.max.toFixed(2)} L/min` : '-';
+
+                // Total Flow
+                document.getElementById('flowTotal').textContent = 
+                    stats.total !== null ? 
+                    `${stats.total.toFixed(1)} L` : '-';
+
+                // Standard Deviation
+                document.getElementById('flowStdDev').textContent = 
+                    stats.stdDev !== null ? 
+                    `±${stats.stdDev.toFixed(2)} L/min` : '-';
+
+                // Flow Frequency
+                document.getElementById('flowFrequency').textContent = 
+                    stats.frequency !== null ? 
+                    `${stats.frequency.toFixed(1)} events/hr` : '-';
+
+                // Time Since Last Flow
+                if (stats.lastFlowTime) {
+                    const timeSinceLastFlow = formatDuration(stats.timeSinceLastFlow);
+                    document.getElementById('timeSinceLastFlow').textContent = timeSinceLastFlow;
+                    document.getElementById('lastFlowTimestamp').textContent = 
+                        new Date(stats.lastFlowTime).toLocaleString();
+                } else {
+                    document.getElementById('timeSinceLastFlow').textContent = '-';
+                    document.getElementById('lastFlowTimestamp').textContent = '-';
+                }
             }
         }
     }
