@@ -5,6 +5,12 @@ let timeSeriesDataCache = new Map();
 let currentDeviceIndex; // Store the index of the device currently shown in the modal
 let charts = {}; // Store chart instances { temperatureChart: null, flowChart: null }
 
+// Add visibility state tracking
+let graphVisibility = {
+    temperature: true,
+    iceLevel: true
+};
+
 /**
  * Local utility function to convert Celsius to Fahrenheit with validation
  * @param {number} celsius - Temperature in Celsius
@@ -374,6 +380,16 @@ function initializeGraphs(deviceIdx) {
             updateFlowGraph(deviceIdx, [0], data);
         }
     });
+
+    // Reset visibility state
+    graphVisibility = {
+        temperature: true,
+        iceLevel: true
+    };
+
+    // Reset checkbox states
+    document.getElementById('showTemperature').checked = true;
+    document.getElementById('showIceLevel').checked = true;
 }
 
 /**
@@ -962,7 +978,7 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         pointRadius: 3,
         pointHoverRadius: 5,
         yAxisID: 'y',
-        type: 'temperature'  // Add type identifier
+        hidden: !graphVisibility.temperature
     }];
 
     // Add ice level dataset
@@ -988,7 +1004,7 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
             pointRadius: 2,
             pointHoverRadius: 4,
             yAxisID: 'y1',
-            type: 'icelevel'  // Add type identifier
+            hidden: !graphVisibility.iceLevel
         });
     }
 
@@ -1153,7 +1169,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
         // Get sensor placement for y-axis configuration
         const device = window.lastDevicesData[deviceIndex];
         const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
-        const sensorPercentage = sensorPlacement ? sensorPlacement * 100 : 50;
+        const sensorPercentage = sensorPlacement ? sensorPlacement * 100 : 50; // Default to 50% if not set
 
         charts.temperatureChart = new Chart(ctx, {
             type: 'line',
@@ -1202,33 +1218,6 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                     },
                     legend: {
                         position: 'top',
-                        onClick: function(e, legendItem, legend) {
-                            const index = legendItem.datasetIndex;
-                            const chart = legend.chart;
-                            
-                            // Get the type of dataset being toggled
-                            const datasetType = chart.data.datasets[index].type;
-                            
-                            // Count how many of each type are currently visible
-                            const visibleTypes = chart.data.datasets.reduce((acc, dataset) => {
-                                if (!dataset.hidden) {
-                                    acc[dataset.type] = (acc[dataset.type] || 0) + 1;
-                                }
-                                return acc;
-                            }, {});
-                            
-                            // If this is the last visible dataset of its type and the other type is hidden,
-                            // prevent toggling
-                            if (!chart.data.datasets[index].hidden && 
-                                visibleTypes[datasetType] === 1 && 
-                                !Object.values(visibleTypes).some((count, i) => i !== index && count > 0)) {
-                                return; // Do nothing if this would hide the last visible line
-                            }
-                            
-                            // Toggle the clicked dataset
-                            chart.setDatasetVisibility(index, !chart.isDatasetVisible(index));
-                            chart.update();
-                        },
                         labels: {
                             usePointStyle: true,
                             padding: 15,
@@ -1237,7 +1226,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                                 
                                 // Add custom label for hourly average explanation
                                 defaultLabels.push({
-                                    text: 'Click legend items to toggle lines (one must remain visible)',
+                                    text: 'Each point shows the average temperature and estimated ice level relative to sensor placement',
                                     fillStyle: 'transparent',
                                     strokeStyle: 'transparent',
                                     lineWidth: 0,
@@ -1342,11 +1331,47 @@ function updateTimeRangeButtons(containerId, selectedValue) {
     });
 }
 
+/**
+ * Handles visibility toggle for temperature and ice level lines
+ * @param {string} type - Either 'temperature' or 'iceLevel'
+ * @param {number} deviceIndex - The index of the device
+ */
+function handleVisibilityToggle(type, deviceIndex) {
+    const checkbox = document.getElementById(`show${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    graphVisibility[type] = checkbox.checked;
+
+    // Update chart visibility
+    if (charts.temperatureChart) {
+        if (type === 'temperature') {
+            // Temperature is always the first dataset
+            charts.temperatureChart.data.datasets[0].hidden = !graphVisibility.temperature;
+        } else {
+            // Ice level is always the second dataset if it exists
+            if (charts.temperatureChart.data.datasets.length > 1) {
+                charts.temperatureChart.data.datasets[1].hidden = !graphVisibility.iceLevel;
+            }
+        }
+        charts.temperatureChart.update();
+    }
+
+    // Update y-axis visibility
+    if (charts.temperatureChart) {
+        const options = charts.temperatureChart.options;
+        if (type === 'temperature') {
+            options.scales.y.display = graphVisibility.temperature;
+        } else {
+            options.scales.y1.display = graphVisibility.iceLevel;
+        }
+        charts.temperatureChart.update('none'); // Update without animation
+    }
+}
+
 // Expose necessary functions to the global scope
 window.initializeGraphs = initializeGraphs;
 window.updateTemperatureGraph = updateTemperatureGraph;
 window.updateFlowGraph = updateFlowGraph;
 window.handleTimeRangeClick = handleTimeRangeClick;
+window.handleVisibilityToggle = handleVisibilityToggle;
 
 // Helper function to format milliseconds into h/m/s string
 function formatDuration(ms) {
