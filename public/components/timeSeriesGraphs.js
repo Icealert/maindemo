@@ -3,9 +3,7 @@
 // Module-level variables
 let timeSeriesDataCache = new Map();
 let currentDeviceIndex; // Store the index of the device currently shown in the modal
-let iceLevelVisible = true; // Default visibility state for ice level line
-let tempLineVisible = true; // Default visibility state for temperature line
-let charts = {}; // Store chart instances { tempChart: null, statusChart: null, flowChart: null }
+let charts = {}; // Store chart instances { statusChart: null, flowChart: null }
 
 /**
  * Local utility function to convert Celsius to Fahrenheit with validation
@@ -1038,31 +1036,17 @@ function initializeGraphs(deviceIdx) {
     clearDeviceCache(device.id);
     logToConsole('Cleared device cache for initialization', 'info');
 
-    // Reset visibility toggles to default
-    iceLevelVisible = true;
-    tempLineVisible = true;
-    const tempToggle = document.getElementById('temp-line-toggle');
-    const iceToggle = document.getElementById('ice-level-toggle');
-    if (tempToggle) tempToggle.checked = true;
-    if (iceToggle) iceToggle.checked = true;
-
     // Clear any existing chart instances
     Object.values(charts).forEach(chart => chart?.destroy());
     charts = {};
 
     // Update time range buttons to show 'Today' as active
-    updateTimeRangeButtons('temp-time-range', 0);
-    document.querySelectorAll('#temp-time-range button').forEach(btn => {
-        if (parseInt(btn.dataset.days) === 0) btn.classList.add('active');
-        else btn.classList.remove('active');
-    });
     updateTimeRangeButtons('status-time-range', 0);
     updateTimeRangeButtons('flow-time-range', 0);
 
     // Fetch data once and use it for all graphs
     fetchTimeSeriesData(device.id, 72).then(data => {
         if (data) {
-            updateTempGraph(deviceIdx, [0], data);
             updateStatusGraph(deviceIdx, 0);
             updateFlowGraph(deviceIdx, 0, data);
         }
@@ -1080,13 +1064,6 @@ function toggleTempGraph(deviceIdx, day) {
     const button = buttonContainer.querySelector(`button[data-days="${day}"]`);
     if (!button) return;
 
-    const activeButtons = buttonContainer.querySelectorAll('button.active');
-
-    // If clicking an active button and it's the only one active, do nothing
-    if (button.classList.contains('active') && activeButtons.length === 1) {
-        return;
-    }
-
     // Get device and validate
     const device = window.lastDevicesData[deviceIdx];
     if (!device?.id) {
@@ -1094,14 +1071,19 @@ function toggleTempGraph(deviceIdx, day) {
         return;
     }
 
-    button.classList.toggle('active');
+    // Update button states - set clicked button as active, others as inactive
+    document.querySelectorAll('#temp-time-range button').forEach(btn => {
+        if (parseInt(btn.dataset.days) === day) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
 
-    // Get all newly active days
-    const newActiveDays = Array.from(buttonContainer.querySelectorAll('button.active'))
-        .map(btn => parseInt(btn.dataset.days))
-        .sort((a, b) => a - b); // Sort days to maintain consistent order
-        
-    logToConsole(`Temperature graph toggled to days: ${newActiveDays.join(', ')}`, 'info');
+    // Update time range buttons for all graphs to maintain consistency
+    updateTimeRangeButtons('temp-time-range', day);
+    updateTimeRangeButtons('status-time-range', day);
+    updateTimeRangeButtons('flow-time-range', day);
 
     // Check if we have cached data
     const cacheKey = `${device.id}-72`;
@@ -1110,17 +1092,17 @@ function toggleTempGraph(deviceIdx, day) {
     // If we have cached data, use it directly
     if (timeSeriesData) {
         logToConsole('Using cached time series data for toggle', 'info');
-        updateTempGraph(deviceIdx, newActiveDays, timeSeriesData);
-        updateStatusGraph(deviceIdx, newActiveDays[0]);
-        updateFlowGraph(deviceIdx, newActiveDays[0], timeSeriesData);
+        updateTempGraph(deviceIdx, [day], timeSeriesData);
+        updateStatusGraph(deviceIdx, day);
+        updateFlowGraph(deviceIdx, day, timeSeriesData);
     } else {
         // If no cached data, fetch it once and use it
         logToConsole('No cached data found, fetching new data', 'info');
         fetchTimeSeriesData(device.id, 72).then(data => {
             if (data) {
-                updateTempGraph(deviceIdx, newActiveDays, data);
-                updateStatusGraph(deviceIdx, newActiveDays[0]);
-                updateFlowGraph(deviceIdx, newActiveDays[0], data);
+                updateTempGraph(deviceIdx, [day], data);
+                updateStatusGraph(deviceIdx, day);
+                updateFlowGraph(deviceIdx, day, data);
             }
         });
     }
