@@ -1054,19 +1054,13 @@ function toggleTempGraph(deviceIdx, day) {
         return;
     }
 
-    // Clear cache and destroy existing charts (matching initializeGraphs behavior)
+    // Clear device cache and destroy ALL existing charts (matching initializeGraphs behavior)
     clearDeviceCache(device.id);
     logToConsole('Cleared device cache for toggle', 'info');
 
-    // Clear existing charts to force fresh render
-    if (charts.tempChart) {
-        charts.tempChart.destroy();
-        charts.tempChart = null;
-    }
-    if (charts.flowChart) {
-        charts.flowChart.destroy();
-        charts.flowChart = null;
-    }
+    // Clear ALL existing chart instances (matching initializeGraphs behavior)
+    Object.values(charts).forEach(chart => chart?.destroy());
+    charts = {};
 
     button.classList.toggle('active');
 
@@ -1077,9 +1071,10 @@ function toggleTempGraph(deviceIdx, day) {
         
     logToConsole(`Temperature graph toggled to days: ${newActiveDays.join(', ')}`, 'info');
 
-    // Update both temperature and flow graphs to maintain consistency
+    // Update all graphs to maintain consistency (matching initializeGraphs behavior)
     updateTempGraph(deviceIdx, newActiveDays);
-    updateFlowGraph(deviceIdx, newActiveDays[0]); // Use first selected day for flow graph
+    updateStatusGraph(deviceIdx, newActiveDays[0]);
+    updateFlowGraph(deviceIdx, newActiveDays[0]);
 }
 
 /**
