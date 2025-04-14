@@ -1368,9 +1368,9 @@
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-sm font-medium text-gray-700">Temperature</h4>
                                 <div class="time-range-selector" id="temperature-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateTemperatureGraph(${index}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateTemperatureGraph(${index}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateTemperatureGraph(${index}, 2)">2 Days Ago</button>
+                                    <button class="time-range-button active" data-days="0" onclick="updateTemperatureGraph(${deviceIndex}, 0)">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="updateTemperatureGraph(${deviceIndex}, 1)">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="updateTemperatureGraph(${deviceIndex}, 2)">2 Days Ago</button>
                                 </div>
                             </div>
                             <!-- Add Temperature Statistics Summary Box -->
@@ -1383,7 +1383,7 @@
                                     </p>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
                                     <div class="stat-box">
                                         <h5 class="text-xs font-medium text-gray-500">
                                             Daily Range
@@ -1400,15 +1400,11 @@
                                     </div>
                                     <div class="stat-box">
                                         <h5 class="text-xs font-medium text-gray-500">Average</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="tempAverage">-</p>
+                                        <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
                                     </div>
                                     <div class="stat-box">
                                         <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
                                         <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
-                                    </div>
-                                    <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Trend</h5>
-                                        <p class="text-sm font-bold text-gray-900" id="tempTrend">-</p>
                                     </div>
                                 </div>
                             </div>
