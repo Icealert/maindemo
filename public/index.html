@@ -2090,7 +2090,7 @@
                             class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                             data-device-id="${deviceId}"
                             data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                            id="sensorPlacement_${device.id}"
+                            id="sensorPlacement_${deviceId}"
                         >
                             <option value="" ${!currentValue ? 'selected' : ''}>Select sensor placement</option>
                             <option value="0.10" ${currentValue === 10 ? 'selected' : ''}>10% from bottom</option>
@@ -2100,7 +2100,7 @@
                         </select>
                         <button 
                             onclick="handleUpdateButtonClick(event)"
-                            data-device-id="${device.id}"
+                            data-device-id="${deviceId}"
                             data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
                             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
                             type="button"
