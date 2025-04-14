@@ -960,8 +960,36 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         tension: 0.1,
         fill: true,
         pointRadius: 3,
-        pointHoverRadius: 5
+        pointHoverRadius: 5,
+        yAxisID: 'y'
     }];
+
+    // Add ice level dataset
+    const device = window.lastDevicesData[currentDeviceIndex];
+    const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
+    const tempThresholdMax = device.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+
+    if (sensorPlacement !== undefined && tempThresholdMax !== undefined) {
+        const iceLevelData = hourlyAverages.map(temp => {
+            if (temp === null) return null;
+            // If temperature is ≤ threshold, ice is above the sensor placement
+            // If temperature is > threshold, ice is below the sensor placement
+            return temp <= tempThresholdMax ? 100 : (sensorPlacement * 100);
+        });
+
+        datasets.push({
+            label: `Ice Level (${dayLabels[selectedDay]})`,
+            data: iceLevelData,
+            borderColor: 'rgba(59, 130, 246, 0.8)',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            borderDash: [5, 5],
+            tension: 0.1,
+            fill: false,
+            pointRadius: 2,
+            pointHoverRadius: 4,
+            yAxisID: 'y1'
+        });
+    }
 
     // Create hour labels with hour range format (e.g., "10:00-11:00 AM")
     const hourLabels = Array(24).fill().map((_, i) => {
@@ -1146,7 +1174,12 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                             label: (context) => {
                                 const value = context.raw;
                                 if (value === null) return `${context.dataset.label}: No data`;
-                                return `Average Temperature: ${value?.toFixed(1) || 'No data'}°F`;
+                                
+                                if (context.dataset.yAxisID === 'y') {
+                                    return `Temperature: ${value?.toFixed(1) || 'No data'}°F`;
+                                } else {
+                                    return `Ice Level: ${value?.toFixed(0) || 'No data'}%`;
+                                }
                             }
                         },
                         titleAlign: 'center',
@@ -1166,12 +1199,12 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                                 
                                 // Add custom label for hourly average explanation
                                 defaultLabels.push({
-                                    text: 'Each point shows the average temperature from the start of the hour to the next',
+                                    text: 'Each point shows the average temperature and estimated ice level from the start of the hour to the next',
                                     fillStyle: 'transparent',
                                     strokeStyle: 'transparent',
                                     lineWidth: 0,
                                     fontStyle: 'italic',
-                                    fontColor: '#6B7280' // text-gray-500
+                                    fontColor: '#6B7280'
                                 });
                                 
                                 return defaultLabels;
@@ -1194,7 +1227,6 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                             maxRotation: 45,
                             minRotation: 45,
                             callback: function(value, index) {
-                                // Show shorter labels on axis but keep full range in tooltips
                                 const fullLabel = this.getLabelForValue(value);
                                 const [start] = fullLabel.split('–');
                                 return start;
@@ -1202,7 +1234,9 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                         }
                     },
                     y: {
-                        beginAtZero: false,
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
                         title: {
                             display: true,
                             text: 'Temperature (°F)',
@@ -1214,6 +1248,24 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                         },
                         ticks: {
                             callback: value => `${value.toFixed(1)}°F`
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Ice Level (%)',
+                            font: { size: 12 }
+                        },
+                        min: 0,
+                        max: 100,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            callback: value => `${value}%`
                         }
                     }
                 }
