@@ -1395,4 +1395,73 @@ window.addEventListener('error', function(event) {
 
 window.addEventListener('unhandledrejection', function(event) {
     window.logToConsole(`Unhandled Promise Rejection: ${event.reason}`, 'error');
-}); 
+});
+
+async function handleUpdateButtonClick(event) {
+    event.preventDefault(); // Prevent any default button behavior
+    const button = event.target;
+    const deviceId = button.dataset.deviceId;
+    
+    try {
+        const property = JSON.parse(button.dataset.property);
+        
+        // Get the input value based on property type
+        let input;
+        if (property.name === 'sensorplacement') {
+            input = document.getElementById(`sensorPlacement_${deviceId}`);
+        } else {
+            input = button.previousElementSibling;
+        }
+
+        // Add validation for Last_Maintenance property
+        if (property.name === 'Last_Maintenance') {
+            if (!isValidMaintenanceDate(input.value)) {
+                showError('Please enter a valid date in MM/DD/YYYY format. Date cannot be in the future.');
+                return;
+            }
+        }
+        
+        // Disable input and button during update
+        input.disabled = true;
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="animate-spin">⌛</span>';
+        
+        // Set the new value based on input type
+        if (property.name === 'sensorplacement') {
+            property.new_value = parseFloat(input.value);
+        } else {
+            property.new_value = input.type === 'checkbox' ? input.checked : input.value;
+        }
+        
+        // Log the update attempt
+        logToConsole({
+            message: 'Attempting to update property via button click',
+            deviceId: deviceId,
+            propertyName: property.name,
+            currentValue: property.last_value,
+            newValue: property.new_value
+        }, 'info');
+        
+        await updatePropertyValue(deviceId, property);
+        
+        // Show success toast
+        showToast('Property updated successfully. Refreshing...', 'success');
+        
+        // Small delay to show success state
+        setTimeout(() => {
+            // Force reload from server, not cache
+            window.location.href = window.location.href.split('#')[0];
+            window.location.reload(true);
+        }, 1000);
+        
+    } catch (error) {
+        // Re-enable input and button
+        input.disabled = false;
+        button.disabled = false;
+        button.innerHTML = originalText;
+        
+        logToConsole(`Error handling property input: ${error.message}`, 'error');
+        showError(`Failed to update property: ${error.message}`);
+    }
+} 
