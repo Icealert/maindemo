@@ -5,8 +5,11 @@ let timeSeriesDataCache = new Map();
 let currentDeviceIndex; // Store the index of the device currently shown in the modal
 let charts = {}; // Store chart instances { temperatureChart: null, flowChart: null }
 
-// Update visibility state tracking to be device-specific
-let graphVisibility = {};
+// Add visibility state tracking
+let graphVisibility = {
+    temperature: true,
+    iceLevel: true
+};
 
 /**
  * Local utility function to convert Celsius to Fahrenheit with validation
@@ -311,12 +314,32 @@ function clearDeviceCache(deviceId) {
 }
 
 /**
+ * Handles visibility toggle for temperature and ice level lines
+ * @param {string} type - Either 'temperature' or 'iceLevel'
+ */
+function handleVisibilityToggle(type) {
+    const checkbox = document.getElementById(`show${type.charAt(0).toUpperCase() + type.slice(1)}`);
+    graphVisibility[type] = checkbox.checked;
+
+    // Get current device index from the modal
+    const deviceIndex = currentDeviceIndex;
+    if (deviceIndex === undefined) return;
+
+    // Get currently selected days
+    const selectedDays = Array.from(
+        document.querySelectorAll('#temperature-time-range .time-range-button.active')
+    ).map(btn => parseInt(btn.dataset.days));
+
+    // Update the graph with current visibility settings
+    updateTemperatureGraph(deviceIndex, selectedDays);
+}
+
+/**
  * Handles time range button clicks for both temperature and flow graphs
  * @param {Event} event - The click event
  * @param {string} type - Either 'temperature' or 'flow'
- * @param {number} deviceIndex - The index of the device
  */
-function handleTimeRangeClick(event, type, deviceIndex) {
+function handleTimeRangeClick(event, type) {
     event.preventDefault();
     const button = event.target;
     
@@ -343,6 +366,10 @@ function handleTimeRangeClick(event, type, deviceIndex) {
         selectedDays.push(parseInt(button.dataset.days));
     }
 
+    // Get current device index from the modal
+    const deviceIndex = currentDeviceIndex;
+    if (deviceIndex === undefined) return;
+
     // Update the appropriate graph
     if (type === 'temperature') {
         updateTemperatureGraph(deviceIndex, selectedDays);
@@ -367,20 +394,8 @@ function initializeGraphs(deviceIdx) {
     Object.values(charts).forEach(chart => chart?.destroy());
     charts = {};
 
-    // Initialize visibility state for this device
-    if (!graphVisibility[deviceIdx]) {
-        graphVisibility[deviceIdx] = {
-            temperature: true,
-            iceLevel: true
-        };
-    }
-
-    // Reset checkbox states for this device
-    document.getElementById(`showTemperature_${deviceIdx}`).checked = true;
-    document.getElementById(`showIceLevel_${deviceIdx}`).checked = true;
-
     // Initialize with today selected
-    document.querySelectorAll(`#temperature-time-range_${deviceIdx} .time-range-button[data-days="0"]`)
+    document.querySelectorAll('#temperature-time-range .time-range-button[data-days="0"], #flow-time-range .time-range-button[data-days="0"]')
         .forEach(btn => btn.classList.add('active'));
 
     fetchTimeSeriesData(device.id, 72).then(data => {
@@ -967,44 +982,49 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
     ];
 
-    const datasets = [{
-        label: `Temperature (${dayLabels[selectedDay]})`,
-        data: hourlyAverages.map(temp => temp !== null ? celsiusToFahrenheit(temp) : null),
-        borderColor: colors[selectedDay].border,
-        backgroundColor: colors[selectedDay].background,
-        tension: 0.1,
-        fill: true,
-        pointRadius: 3,
-        pointHoverRadius: 5,
-        yAxisID: 'y',
-        hidden: !graphVisibility[currentDeviceIndex]?.temperature
-    }];
+    const datasets = [];
 
-    // Add ice level dataset
-    const device = window.lastDevicesData[currentDeviceIndex];
-    const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
-    const tempThresholdMax = device.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-
-    if (sensorPlacement !== undefined && tempThresholdMax !== undefined) {
-        const sensorPercentage = sensorPlacement * 100;
-        const iceLevelData = hourlyAverages.map(temp => {
-            if (temp === null) return null;
-            return temp <= tempThresholdMax ? sensorPercentage + 10 : sensorPercentage - 10;
-        });
-
+    // Add temperature dataset if visible
+    if (graphVisibility.temperature) {
         datasets.push({
-            label: `Ice Level (${dayLabels[selectedDay]})`,
-            data: iceLevelData,
-            borderColor: 'rgba(59, 130, 246, 0.8)',
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            borderDash: [5, 5],
+            label: `Temperature (${dayLabels[selectedDay]})`,
+            data: hourlyAverages.map(temp => temp !== null ? celsiusToFahrenheit(temp) : null),
+            borderColor: colors[selectedDay].border,
+            backgroundColor: colors[selectedDay].background,
             tension: 0.1,
-            fill: false,
-            pointRadius: 2,
-            pointHoverRadius: 4,
-            yAxisID: 'y1',
-            hidden: !graphVisibility[currentDeviceIndex]?.iceLevel
+            fill: true,
+            pointRadius: 3,
+            pointHoverRadius: 5,
+            yAxisID: 'y'
         });
+    }
+
+    // Add ice level dataset if visible
+    if (graphVisibility.iceLevel) {
+        const device = window.lastDevicesData[currentDeviceIndex];
+        const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
+        const tempThresholdMax = device.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
+
+        if (sensorPlacement !== undefined && tempThresholdMax !== undefined) {
+            const sensorPercentage = sensorPlacement * 100;
+            const iceLevelData = hourlyAverages.map(temp => {
+                if (temp === null) return null;
+                return temp <= tempThresholdMax ? sensorPercentage + 10 : sensorPercentage - 10;
+            });
+
+            datasets.push({
+                label: `Ice Level (${dayLabels[selectedDay]})`,
+                data: iceLevelData,
+                borderColor: 'rgba(59, 130, 246, 0.8)',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                borderDash: [5, 5],
+                tension: 0.1,
+                fill: false,
+                pointRadius: 2,
+                pointHoverRadius: 4,
+                yAxisID: 'y1'
+            });
+        }
     }
 
     // Create hour labels with hour range format (e.g., "10:00-11:00 AM")
@@ -1170,138 +1190,139 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
         const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
         const sensorPercentage = sensorPlacement ? sensorPlacement * 100 : 50; // Default to 50% if not set
 
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 300
+            },
+            interaction: {
+                mode: 'index',
+                intersect: false
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        title: (context) => {
+                            const timeRange = context[0].label;
+                            return `Time Range: ${timeRange}`;
+                        },
+                        label: (context) => {
+                            const value = context.raw;
+                            if (value === null) return `${context.dataset.label}: No data`;
+                            
+                            if (context.dataset.yAxisID === 'y') {
+                                return `Temperature: ${value?.toFixed(1) || 'No data'}°F`;
+                            } else {
+                                // For ice level, show "more than X%" or "less than X%"
+                                const sensorPercentage = (sensorPlacement * 100).toFixed(0);
+                                return value > sensorPercentage ? 
+                                    `Ice Level: More than ${sensorPercentage}%` : 
+                                    `Ice Level: Less than ${sensorPercentage}%`;
+                            }
+                        }
+                    },
+                    titleAlign: 'center',
+                    bodyAlign: 'left',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    padding: 12
+                },
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        generateLabels: (chart) => {
+                            const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                            
+                            // Add custom label for hourly average explanation
+                            defaultLabels.push({
+                                text: 'Each point shows the average temperature and estimated ice level relative to sensor placement',
+                                fillStyle: 'transparent',
+                                strokeStyle: 'transparent',
+                                lineWidth: 0,
+                                fontStyle: 'italic',
+                                fontColor: '#6B7280'
+                            });
+                            
+                            return defaultLabels;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Time Range (Hourly Intervals)',
+                        font: { size: 12 }
+                    },
+                    grid: {
+                        display: true,
+                        drawOnChartArea: true
+                    },
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        callback: function(value, index) {
+                            const fullLabel = this.getLabelForValue(value);
+                            const [start] = fullLabel.split('–');
+                            return start;
+                        }
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: graphVisibility.temperature,  // Only show temperature axis if temperature is visible
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Temperature (°F)',
+                        font: { size: 12 }
+                    },
+                    grid: {
+                        display: true,
+                        drawOnChartArea: graphVisibility.temperature
+                    },
+                    ticks: {
+                        callback: value => `${value.toFixed(1)}°F`
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: graphVisibility.iceLevel,  // Only show ice level axis if ice level is visible
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Ice Level',
+                        font: { size: 12 }
+                    },
+                    min: Math.max(0, sensorPercentage - 20),
+                    max: Math.min(100, sensorPercentage + 20),
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            if (value === sensorPercentage + 10) return `More than ${sensorPercentage.toFixed(0)}%`;
+                            if (value === sensorPercentage - 10) return `Less than ${sensorPercentage.toFixed(0)}%`;
+                            return '';
+                        },
+                        count: 2
+                    }
+                }
+            }
+        };
+
         charts.temperatureChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: hourLabels,
                 datasets: allDatasets
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                animation: {
-                    duration: 300
-                },
-                interaction: {
-                    mode: 'index',
-                    intersect: false
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            title: (context) => {
-                                const timeRange = context[0].label;
-                                return `Time Range: ${timeRange}`;
-                            },
-                            label: (context) => {
-                                const value = context.raw;
-                                if (value === null) return `${context.dataset.label}: No data`;
-                                
-                                if (context.dataset.yAxisID === 'y') {
-                                    return `Temperature: ${value?.toFixed(1) || 'No data'}°F`;
-                                } else {
-                                    // For ice level, show "more than X%" or "less than X%"
-                                    const sensorPercentage = (sensorPlacement * 100).toFixed(0);
-                                    return value > sensorPercentage ? 
-                                        `Ice Level: More than ${sensorPercentage}%` : 
-                                        `Ice Level: Less than ${sensorPercentage}%`;
-                                }
-                            }
-                        },
-                        titleAlign: 'center',
-                        bodyAlign: 'left',
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleFont: { size: 13, weight: 'bold' },
-                        bodyFont: { size: 12 },
-                        padding: 12
-                    },
-                    legend: {
-                        position: 'top',
-                        labels: {
-                            usePointStyle: true,
-                            padding: 15,
-                            generateLabels: (chart) => {
-                                const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                                
-                                // Add custom label for hourly average explanation
-                                defaultLabels.push({
-                                    text: 'Each point shows the average temperature and estimated ice level relative to sensor placement',
-                                    fillStyle: 'transparent',
-                                    strokeStyle: 'transparent',
-                                    lineWidth: 0,
-                                    fontStyle: 'italic',
-                                    fontColor: '#6B7280'
-                                });
-                                
-                                return defaultLabels;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Time Range (Hourly Intervals)',
-                            font: { size: 12 }
-                        },
-                        grid: {
-                            display: true,
-                            drawOnChartArea: true
-                        },
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45,
-                            callback: function(value, index) {
-                                const fullLabel = this.getLabelForValue(value);
-                                const [start] = fullLabel.split('–');
-                                return start;
-                            }
-                        }
-                    },
-                    y: {
-                        type: 'linear',
-                        display: true,
-                        position: 'left',
-                        title: {
-                            display: true,
-                            text: 'Temperature (°F)',
-                            font: { size: 12 }
-                        },
-                        grid: {
-                            display: true,
-                            drawOnChartArea: true
-                        },
-                        ticks: {
-                            callback: value => `${value.toFixed(1)}°F`
-                        }
-                    },
-                    y1: {
-                        type: 'linear',
-                        display: true,
-                        position: 'right',
-                        title: {
-                            display: true,
-                            text: 'Ice Level',
-                            font: { size: 12 }
-                        },
-                        min: Math.max(0, sensorPercentage - 20),  // Show range around sensor placement
-                        max: Math.min(100, sensorPercentage + 20),
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            // Custom ticks to show only "More than X%" and "Less than X%"
-                            callback: function(value) {
-                                if (value === sensorPercentage + 10) return `More than ${sensorPercentage.toFixed(0)}%`;
-                                if (value === sensorPercentage - 10) return `Less than ${sensorPercentage.toFixed(0)}%`;
-                                return '';  // Hide other tick labels
-                            },
-                            count: 2  // Only show two ticks
-                        }
-                    }
-                }
-            }
+            options: chartOptions
         });
     }
 }
@@ -1328,50 +1349,6 @@ function updateTimeRangeButtons(containerId, selectedValue) {
             button.classList.remove('active');
         }
     });
-}
-
-/**
- * Handles visibility toggle for temperature and ice level lines
- * @param {string} type - Either 'temperature' or 'iceLevel'
- * @param {number} deviceIndex - The index of the device
- */
-function handleVisibilityToggle(type, deviceIndex) {
-    const checkbox = document.getElementById(`show${type.charAt(0).toUpperCase() + type.slice(1)}_${deviceIndex}`);
-    
-    // Initialize visibility state for this device if it doesn't exist
-    if (!graphVisibility[deviceIndex]) {
-        graphVisibility[deviceIndex] = {
-            temperature: true,
-            iceLevel: true
-        };
-    }
-    
-    graphVisibility[deviceIndex][type] = checkbox.checked;
-
-    // Update chart visibility
-    if (charts.temperatureChart) {
-        if (type === 'temperature') {
-            // Temperature is always the first dataset
-            charts.temperatureChart.data.datasets[0].hidden = !graphVisibility[deviceIndex].temperature;
-        } else {
-            // Ice level is always the second dataset if it exists
-            if (charts.temperatureChart.data.datasets.length > 1) {
-                charts.temperatureChart.data.datasets[1].hidden = !graphVisibility[deviceIndex].iceLevel;
-            }
-        }
-        charts.temperatureChart.update();
-    }
-
-    // Update y-axis visibility
-    if (charts.temperatureChart) {
-        const options = charts.temperatureChart.options;
-        if (type === 'temperature') {
-            options.scales.y.display = graphVisibility[deviceIndex].temperature;
-        } else {
-            options.scales.y1.display = graphVisibility[deviceIndex].iceLevel;
-        }
-        charts.temperatureChart.update('none'); // Update without animation
-    }
 }
 
 // Expose necessary functions to the global scope

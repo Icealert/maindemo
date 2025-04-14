@@ -968,35 +968,12 @@
                         
                         <!-- Temperature -->
                         <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${isTempCritical ? 'border-2 border-red-500' : ''} ${tempParentStyleClass}">
-                            <div class="flex flex-wrap justify-between items-center gap-4 mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Temperature</h4>
-                                <div class="flex items-center gap-6">
-                                    <!-- Visibility Controls -->
-                                    <div class="flex items-center gap-4">
-                                        <label class="flex items-center gap-2 text-sm text-gray-600">
-                                            <input type="checkbox" 
-                                                class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showTemperature_${index}" 
-                                                checked 
-                                                onchange="handleVisibilityToggle('temperature', ${index})">
-                                            Show Temperature
-                                        </label>
-                                        <label class="flex items-center gap-2 text-sm text-gray-600">
-                                            <input type="checkbox" 
-                                                class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showIceLevel_${index}" 
-                                                checked 
-                                                onchange="handleVisibilityToggle('iceLevel', ${index})">
-                                            Show Ice Level
-                                        </label>
-                                    </div>
-                                    <!-- Time Range Selector -->
-                                    <div class="time-range-selector" id="temperature-time-range_${index}">
-                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Today</button>
-                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Yesterday</button>
-                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${index})">2 Days Ago</button>
-                                    </div>
-                                </div>
+                            <div class="flex items-center mb-1">
+                                <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13V5a4 4 0 118 0v8a6 6 0 11-8 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13a4 4 0 118 0 4 4 0 01-8 0z" />
+                                </svg>
+                            <p class="text-blue-800 font-medium text-xs">Temperature</p>
                             </div>
                             <p class="text-sm font-bold leading-tight text-blue-900">${formatTemperature(status.cloudTemp)}</p>
                             <p class="text-[10px] text-blue-600 mt-0.5 flex items-center">
@@ -1388,33 +1365,31 @@
 
                         <!-- Temperature Graph -->
                         <div class="mb-6">
-                            <div class="flex flex-wrap justify-between items-center gap-4 mb-2">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
                                 <h4 class="text-sm font-medium text-gray-700">Temperature</h4>
-                                <div class="flex items-center gap-6">
-                                    <!-- Visibility Controls -->
-                                    <div class="flex items-center gap-4">
-                                        <label class="flex items-center gap-2 text-sm text-gray-600">
+                                <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                                    <div class="flex items-center space-x-4">
+                                        <label class="inline-flex items-center">
                                             <input type="checkbox" 
                                                 class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showTemperature_${index}" 
+                                                id="showTemperature" 
                                                 checked 
-                                                onchange="handleVisibilityToggle('temperature', ${index})">
-                                            Show Temperature
+                                                onchange="handleVisibilityToggle('temperature')">
+                                            <span class="ml-2 text-sm text-gray-700">Show Temperature</span>
                                         </label>
-                                        <label class="flex items-center gap-2 text-sm text-gray-600">
+                                        <label class="inline-flex items-center">
                                             <input type="checkbox" 
                                                 class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showIceLevel_${index}" 
+                                                id="showIceLevel" 
                                                 checked 
-                                                onchange="handleVisibilityToggle('iceLevel', ${index})">
-                                            Show Ice Level
+                                                onchange="handleVisibilityToggle('iceLevel')">
+                                            <span class="ml-2 text-sm text-gray-700">Show Ice Level</span>
                                         </label>
                                     </div>
-                                    <!-- Time Range Selector -->
-                                    <div class="time-range-selector" id="temperature-time-range_${index}">
-                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Today</button>
-                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Yesterday</button>
-                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${index})">2 Days Ago</button>
+                                    <div class="time-range-selector" id="temperature-time-range">
+                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature')">Today</button>
+                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature')">Yesterday</button>
+                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature')">2 Days Ago</button>
                                     </div>
                                 </div>
                             </div>
@@ -1497,9 +1472,9 @@
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-sm font-medium text-gray-700">Flow Rate</h4>
                                 <div class="time-range-selector" id="flow-time-range">
-                                    <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'flow', ${deviceIndex})">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'flow', ${deviceIndex})">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'flow', ${deviceIndex})">2 Days Ago</button>
+                                    <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'flow')">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'flow')">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'flow')">2 Days Ago</button>
                                 </div>
                             </div>
                             <!-- Add Flow Rate Statistics Summary Box -->
