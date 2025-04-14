@@ -524,29 +524,28 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
         return { datasets: [], thresholdF: 34, noData: true };
     }
 
-    // --- Work with UTC dates for consistency --- 
+    // --- Work with local dates for display --- 
     const now = new Date();
-    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
-    window.logToConsole(`Today in UTC: ${todayUtc.toISOString()}`, 'info');
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    window.logToConsole(`Today in local time: ${todayStart.toLocaleString()}`, 'info');
 
-    // Calculate the start of the target day in UTC
-    const dayStartUtc = new Date(todayUtc);
-    dayStartUtc.setUTCDate(todayUtc.getUTCDate() - selectedDay);
+    // Calculate the start of the target day in local time
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(todayStart.getDate() - selectedDay);
     
-    // Calculate the end of the target day in UTC (start of the next day)
-    const dayEndUtc = new Date(dayStartUtc);
-    dayEndUtc.setUTCDate(dayStartUtc.getUTCDate() + 1);
+    // Calculate the end of the target day in local time
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayStart.getDate() + 1);
 
-    window.logToConsole(`Day ${selectedDay} boundaries: ${dayStartUtc.toISOString()} to ${dayEndUtc.toISOString()}`, 'info');
+    window.logToConsole(`Day ${selectedDay} boundaries (local): ${dayStart.toLocaleString()} to ${dayEnd.toLocaleString()}`, 'info');
     
-    // Get current hour in UTC for filtering today's future hours
-    const currentUtcHour = now.getUTCHours();
-    // --- End UTC Date Setup ---
+    // Get current hour in local time for filtering today's future hours
+    const currentHour = now.getHours();
 
     const hourlyData = {};
     const device = window.lastDevicesData[currentDeviceIndex]; // Use module-level index
     const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-    const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global conversion
+    const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34;
     const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
     const placementPercent = (sensorPlacement * 100).toFixed(0);
 
@@ -565,37 +564,40 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
             continue;
         }
 
-        // Ensure consistent UTC date parsing
-        const timestamp = new Date(timestampStr); // Assume timestampStr is ISO/UTC
-        if (isNaN(timestamp.getTime())) {
+        // Parse UTC timestamp and convert to local
+        const utcTimestamp = new Date(timestampStr);
+        if (isNaN(utcTimestamp.getTime())) {
             window.logToConsole(`Invalid timestamp at index ${i}: ${timestampStr}`, 'warning');
             continue;
         }
 
-        // Debug timestamp parsing
+        // Convert UTC to local time
+        const localTimestamp = new Date(utcTimestamp.getTime() - (utcTimestamp.getTimezoneOffset() * 60000));
+
+        // Debug timestamp conversion
         if (i < 5 || i % 100 === 0) { // Log first 5 and every 100th
-            window.logToConsole(`Timestamp ${i}: ${timestampStr} parsed as ${timestamp.toISOString()} (UTC hour: ${timestamp.getUTCHours()})`, 'info');
+            window.logToConsole(`Timestamp ${i}: UTC=${utcTimestamp.toISOString()}, Local=${localTimestamp.toLocaleString()}`, 'info');
         }
 
-        // Compare timestamps directly with UTC boundaries
-        const timestampMs = timestamp.getTime();
-        const startMs = dayStartUtc.getTime();
-        const endMs = dayEndUtc.getTime();
+        // Compare with local time boundaries
+        const timestampMs = localTimestamp.getTime();
+        const startMs = dayStart.getTime();
+        const endMs = dayEnd.getTime();
         
         if (timestampMs < startMs || timestampMs >= endMs) {
             continue; // Skip if outside day boundaries
         }
 
         dataPointsForDay++;
-        const hourUtc = timestamp.getUTCHours(); // Get hour in UTC
+        const localHour = localTimestamp.getHours();
 
-        // For today (selectedDay === 0), only include hours up to the current UTC hour
-        if (selectedDay === 0 && hourUtc > currentUtcHour) {
+        // For today (selectedDay === 0), only include hours up to current local hour
+        if (selectedDay === 0 && localHour > currentHour) {
             continue;
         }
 
         hasDataForDay = true;
-        const tempF = celsiusToFahrenheit(tempC); // Use global conversion
+        const tempF = celsiusToFahrenheit(tempC);
         
         // Skip invalid temperature values
         if (tempF === null || tempF === undefined || isNaN(tempF)) {
@@ -605,10 +607,10 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
         
         allTempsForDayF.push(tempF);
 
-        if (!hourlyData[hourUtc]) {
-            hourlyData[hourUtc] = { tempsF: [], hour: hourUtc };
+        if (!hourlyData[localHour]) {
+            hourlyData[localHour] = { tempsF: [], hour: localHour };
         }
-        hourlyData[hourUtc].tempsF.push(tempF);
+        hourlyData[localHour].tempsF.push(tempF);
     }
 
     window.logToConsole(`Processed ${dataPointsProcessed} data points, found ${dataPointsForDay} for day ${selectedDay}`, 'info');
@@ -665,7 +667,7 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
     const hourlyIceLevel = Array(24).fill(null); // 1 = Above Sensor, 0 = Below Sensor
 
     for (let hour = 0; hour < 24; hour++) {
-         if (selectedDay === 0 && hour > currentUtcHour) continue; // Don't plot future hours for today
+         if (selectedDay === 0 && hour > currentHour) continue; // Don't plot future hours for today
 
         const data = hourlyData[hour];
         if (data && data.tempsF.length > 0) {
@@ -733,7 +735,20 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
          finalDatasets.push(iceLevelData);
      }
 
-    return { datasets: finalDatasets, thresholdF, noData: false };
+    // Create hour labels with AM/PM format
+    const hourLabels = Array(24).fill().map((_, i) => {
+        const hour = i % 12 || 12;
+        const ampm = i < 12 ? 'AM' : 'PM';
+        return `${hour}${ampm}`;
+    });
+
+    // Return with updated hour labels
+    return { 
+        datasets: finalDatasets, 
+        thresholdF, 
+        noData: false,
+        hourLabels // Add hourLabels to the return object
+    };
 }
 
 /**
@@ -818,7 +833,7 @@ async function updateTempGraph(deviceIdx, selectedDays) {
 
     for (const day of selectedDays) {
          // Pass timeSeriesData.temperature.timestamps and .values
-         const { datasets, thresholdF, noData } = processTemperatureByHour(
+         const { datasets, thresholdF, noData, hourLabels } = processTemperatureByHour(
             timeSeriesData.temperature.timestamps, 
             timeSeriesData.temperature.values, 
             day
@@ -838,9 +853,6 @@ async function updateTempGraph(deviceIdx, selectedDays) {
             window.logToConsole(`No temperature data found for day ${day}`, 'warning');
          }
     }
-
-     // Create hour labels (00:00 to 23:00)
-    const hourLabels = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
 
     const ctx = document.getElementById('tempChart').getContext('2d');
     const chartContainer = ctx.canvas.parentElement;
@@ -1064,109 +1076,101 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
     logToConsole(`Flow values received: ${flowValues.length}`, 'info');
     logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
 
-    // --- Work with UTC dates for consistency --- 
+    // Handle empty input case
+    if (!timestamps || !flowValues || timestamps.length === 0 || flowValues.length === 0) {
+        window.logToConsole('Empty input data for flow processing', 'warning');
+        return { datasets: [], noData: true };
+    }
+
+    // --- Work with local dates for display --- 
     const now = new Date();
-    const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    window.logToConsole(`Today in local time: ${todayStart.toLocaleString()}`, 'info');
 
-    const dayStartUtc = new Date(todayUtc);
-    dayStartUtc.setUTCDate(todayUtc.getUTCDate() - selectedDay);
+    // Calculate the start of the target day in local time
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(todayStart.getDate() - selectedDay);
+    
+    // Calculate the end of the target day in local time
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayStart.getDate() + 1);
 
-    const dayEndUtc = new Date(dayStartUtc);
-    dayEndUtc.setUTCDate(dayStartUtc.getUTCDate() + 1);
-
-    const currentUtcHour = now.getUTCHours();
-    // --- End UTC Date Setup ---
+    window.logToConsole(`Day ${selectedDay} boundaries (local): ${dayStart.toLocaleString()} to ${dayEnd.toLocaleString()}`, 'info');
+    
+    // Get current hour in local time for filtering today's future hours
+    const currentHour = now.getHours();
 
     const hourlyData = {};
-    const device = window.lastDevicesData[currentDeviceIndex];
-    const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-    const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34; // Use global conversion
-    const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
-    const placementPercent = (sensorPlacement * 100).toFixed(0);
-
     let hasDataForDay = false;
     let allFlowsForDay = [];
     let lastFlowTime = null;
+    let dataPointsProcessed = 0;
+    let dataPointsForDay = 0;
 
-    // Process each flow reading
     for (let i = 0; i < timestamps.length; i++) {
         const timestampStr = timestamps[i];
         const flow = flowValues[i];
+        dataPointsProcessed++;
         
         // Skip invalid data points
-        if (flow === null || flow === undefined || !timestampStr) continue;
+        if (flow === null || flow === undefined || !timestampStr) {
+            continue;
+        }
         
-        const timestamp = new Date(timestampStr); // Assume ISO/UTC
+        // Parse UTC timestamp and convert to local
+        const utcTimestamp = new Date(timestampStr);
+        if (isNaN(utcTimestamp.getTime())) {
+            window.logToConsole(`Invalid timestamp at index ${i}: ${timestampStr}`, 'warning');
+            continue;
+        }
 
-        // Compare timestamps directly with UTC boundaries
-        if (timestamp.getTime() < dayStartUtc.getTime() || timestamp.getTime() >= dayEndUtc.getTime()) continue;
+        // Convert UTC to local time
+        const localTimestamp = new Date(utcTimestamp.getTime() - (utcTimestamp.getTimezoneOffset() * 60000));
+
+        // Debug timestamp conversion
+        if (i < 5 || i % 100 === 0) { // Log first 5 and every 100th
+            window.logToConsole(`Flow timestamp ${i}: UTC=${utcTimestamp.toISOString()}, Local=${localTimestamp.toLocaleString()}`, 'info');
+        }
+
+        // Compare with local time boundaries
+        const timestampMs = localTimestamp.getTime();
+        const startMs = dayStart.getTime();
+        const endMs = dayEnd.getTime();
         
-        const hourUtc = timestamp.getUTCHours(); // Get hour in UTC
+        if (timestampMs < startMs || timestampMs >= endMs) {
+            continue; // Skip if outside day boundaries
+        }
 
-        // For today (selectedDay === 0), only include hours up to the current UTC hour
-        if (selectedDay === 0 && hourUtc > currentUtcHour) continue;
+        dataPointsForDay++;
+        const localHour = localTimestamp.getHours();
+
+        // For today (selectedDay === 0), only include hours up to current local hour
+        if (selectedDay === 0 && localHour > currentHour) {
+            continue;
+        }
         
         hasDataForDay = true;
         allFlowsForDay.push(flow);
         if (flow > 0) { // Track time of last positive flow
-            lastFlowTime = timestamp;
+            lastFlowTime = localTimestamp;
         }
 
-        if (!hourlyData[hourUtc]) {
-            hourlyData[hourUtc] = {
+        if (!hourlyData[localHour]) {
+            hourlyData[localHour] = {
                 flows: [],
-                hour: hourUtc,
-                date: timestamp // Store the actual Date object if needed later
+                hour: localHour,
+                date: localTimestamp
             };
         }
         
-        hourlyData[hourUtc].flows.push(flow);
+        hourlyData[localHour].flows.push(flow);
     }
 
-    // Update statistics if we have data
-    const statsContainer = document.getElementById('flowStats');
-    if (statsContainer && hasDataForDay) {
-        // Calculate daily range
-        const minFlow = Math.min(...allFlowsForDay);
-        const maxFlow = Math.max(...allFlowsForDay);
-        document.getElementById('flowRange').textContent = 
-            `${minFlow.toFixed(3)} - ${maxFlow.toFixed(3)} L/min`;
+    window.logToConsole(`Processed ${dataPointsProcessed} data points, found ${dataPointsForDay} for day ${selectedDay}`, 'info');
+    window.logToConsole(`Valid flow readings for day ${selectedDay}: ${allFlowsForDay.length}`, 'info');
 
-        // Calculate total flow
-        const totalFlow = allFlowsForDay.reduce((a, b) => a + b, 0);
-        document.getElementById('flowTotal').textContent = 
-            `${totalFlow.toFixed(3)} L/min`;
-
-        // Calculate standard deviation
-        const stdDev = calculateStdDev(allFlowsForDay);
-        document.getElementById('flowStdDev').textContent = 
-            `±${stdDev.toFixed(3)} L/min`;
-
-        // Update frequency
-        document.getElementById('flowFrequency').textContent = 
-            `${allFlowsForDay.length} points`;
-
-        // Update time since last flow if it's today
-        if (selectedDay === 0 && allFlowsForDay.length > 0) {
-            const timeSinceLastFlowEl = document.getElementById('timeSinceLastFlow');
-            const timeSinceFlow = now - lastFlowTime;
-            timeSinceLastFlowEl.textContent = formatTimeDuration(timeSinceFlow);
-        } else if (statsContainer) {
-            // Clear stats if no data
-            document.getElementById('flowRange').textContent = '-';
-            document.getElementById('flowTotal').textContent = '-';
-            document.getElementById('flowStdDev').textContent = '-';
-            document.getElementById('flowFrequency').textContent = '-';
-            document.getElementById('timeSinceLastFlow').textContent = '-';
-        }
-    }
-
-    // If no data for this day, return empty datasets
     if (!hasDataForDay) {
-        return {
-            datasets: [],
-            noData: true
-        };
+        return { datasets: [], noData: true };
     }
 
     // Create hourly averages
@@ -1174,7 +1178,7 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
     Object.values(hourlyData).forEach(hourData => {
         if (hourData.flows.length > 0) {
             const avgFlow = hourData.flows.reduce((a, b) => a + b, 0) / hourData.flows.length;
-            hourlyAverages[hourData.hour] = avgFlow; // Use hourUtc stored in hourData.hour
+            hourlyAverages[hourData.hour] = avgFlow;
         }
     });
 
@@ -1197,9 +1201,17 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
         pointHoverRadius: 5
     }];
 
+    // Create hour labels with AM/PM format
+    const hourLabels = Array(24).fill().map((_, i) => {
+        const hour = i % 12 || 12;
+        const ampm = i < 12 ? 'AM' : 'PM';
+        return `${hour}${ampm}`;
+    });
+
     return {
         datasets,
-        noData: false
+        noData: false,
+        hourLabels
     };
 }
 
@@ -1210,174 +1222,174 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
  * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
  */
 async function updateFlowGraph(deviceIndex, selectedDay) {
-            const device = window.lastDevicesData[deviceIndex];
-            updateTimeRangeButtons('flow-time-range', selectedDay);
-            
-            // Get the stats container
-            const statsContainer = document.getElementById('flowStats');
+    const device = window.lastDevicesData[deviceIndex];
+    updateTimeRangeButtons('flow-time-range', selectedDay);
+    
+    // Get the stats container
+    const statsContainer = document.getElementById('flowStats');
 
-            // Hide or show stats based on number of selected days
-            const selectedDays = Array.from(document.querySelectorAll('#flow-time-range button.active'))
-                .map(btn => parseInt(btn.dataset.days));
-            
-            if (selectedDays.length > 1) {
-                statsContainer.classList.add('opacity-50', 'pointer-events-none');
-                // Clear stats when multiple days are selected
-                document.getElementById('flowRange').textContent = '-';
-                document.getElementById('flowTotal').textContent = '-';
-                document.getElementById('flowStdDev').textContent = '-';
-                document.getElementById('flowFrequency').textContent = '-';
-            } else {
-                statsContainer.classList.remove('opacity-50', 'pointer-events-none');
-            }
-            
-            const timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+    // Hide or show stats based on number of selected days
+    const selectedDays = Array.from(document.querySelectorAll('#flow-time-range button.active'))
+        .map(btn => parseInt(btn.dataset.days));
+    
+    if (selectedDays.length > 1) {
+        statsContainer.classList.add('opacity-50', 'pointer-events-none');
+        // Clear stats when multiple days are selected
+        document.getElementById('flowRange').textContent = '-';
+        document.getElementById('flowTotal').textContent = '-';
+        document.getElementById('flowStdDev').textContent = '-';
+        document.getElementById('flowFrequency').textContent = '-';
+    } else {
+        statsContainer.classList.remove('opacity-50', 'pointer-events-none');
+    }
+    
+    const timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
 
-            if (!timeSeriesData || !timeSeriesData.flow || !timeSeriesData.flow.values) {
-                logToConsole('No data returned from fetchTimeSeriesData or flow data missing', 'error');
-                // Handle no data display (might need refinement based on overall structure)
-                return;
-            }
+    if (!timeSeriesData || !timeSeriesData.flow || !timeSeriesData.flow.values) {
+        logToConsole('No data returned from fetchTimeSeriesData or flow data missing', 'error');
+        // Handle no data display (might need refinement based on overall structure)
+        return;
+    }
 
-            // Process flow data for each selected day
-            const allDatasets = [];
-            let hasAnyData = false;
+    // Process flow data for each selected day
+    const allDatasets = [];
+    let hasAnyData = false;
+    let hourLabels = null; // Store hour labels from first valid day
 
-            for (const day of selectedDays) {
-                // Pass flow-specific timestamps and values
-                const { datasets, noData } = processFlowByHour(
-                    timeSeriesData.flow.timestamps, 
-                    timeSeriesData.flow.values, 
-                    day
-                );
-                
-                if (noData) {
-                    const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
-                    logToConsole(`No flow data available for ${dayLabel}`, 'warning');
-                } else {
-                    hasAnyData = true;
-                    allDatasets.push(...datasets);
-                }
-            }
-
-            // --- Chart Update/Creation ---
-            const ctx = document.getElementById('flowChart').getContext('2d');
-            const chartContainer = ctx.canvas.parentElement;
-
-            // Remove any existing no-data message
-            const existingMessage = chartContainer.querySelector('.no-data-message');
-            if (existingMessage) {
-                existingMessage.remove();
-            }
-
-            // Create hour labels (00:00 to 23:00)
-            const hourLabels = Array.from({ length: 24 }, (_, i) => 
-                `${i.toString().padStart(2, '0')}:00`
-            );
-
-            if (!hasAnyData) {
-                logToConsole('No flow data available for any selected days.', 'warning');
-                const noDataMessage = document.createElement('div');
-                noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
-                noDataMessage.innerHTML = `
-                    <div class="text-gray-500 text-center">
-                        <p class="text-lg font-medium">No flow rate data available</p>
-                        <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
-                    </div>
-                `;
-                chartContainer.style.position = 'relative'; // Ensure container is positioned
-                chartContainer.appendChild(noDataMessage);
-                // If chart exists, clear its data
-                if (charts.flowChart) {
-                    charts.flowChart.data.labels = [];
-                    charts.flowChart.data.datasets = [];
-                    charts.flowChart.update();
-                }
-                return; // Don't create or update the chart if no data
-            }
-
-            // If chart exists, update it; otherwise, create it
-            if (charts.flowChart) {
-                window.logToConsole('Updating existing flow chart', 'info');
-                charts.flowChart.data.labels = hourLabels;
-                charts.flowChart.data.datasets = allDatasets;
-                charts.flowChart.update();
-            } else {
-                window.logToConsole('Creating new flow chart', 'info');
-                charts.flowChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: hourLabels,
-                        datasets: allDatasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        interaction: {
-                            mode: 'index',
-                            intersect: false
-                        },
-                        plugins: {
-                            tooltip: {
-                                callbacks: {
-                                    title: (context) => {
-                                        const hour = parseInt(context[0].label);
-                                        const nextHour = (hour + 1) % 24;
-                                        return `Hour: ${hour}:00 - ${nextHour.toString().padStart(2, '0')}:00`;
-                                    },
-                                    label: (context) => {
-                                        const value = context.raw;
-                                        if (value === null) return `${context.dataset.label}: No data`;
-                                        return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
-                                    }
-                                },
-                                titleAlign: 'center',
-                                bodyAlign: 'left',
-                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                titleFont: { size: 13, weight: 'bold' },
-                                bodyFont: { size: 12 },
-                                padding: 12
-                            },
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 15
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                title: {
-                                    display: true,
-                                    text: 'Hour of Day'
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                }
-                            },
-                            y: {
-                                beginAtZero: true,
-                                title: {
-                                    display: true,
-                                    text: 'Flow Rate (L/min)',
-                                    font: { size: 12 }
-                                },
-                                grid: {
-                                    display: true,
-                                    drawOnChartArea: true
-                                },
-                                ticks: {
-                                    callback: value => `${value.toFixed(1)} L/min`
-                                }
-                            }
-                        }
-                    }
-                });
+    for (const day of selectedDays) {
+        // Pass flow-specific timestamps and values
+        const { datasets, noData, hourLabels: dayHourLabels } = processFlowByHour(
+            timeSeriesData.flow.timestamps, 
+            timeSeriesData.flow.values, 
+            day
+        );
+        
+        if (noData) {
+            const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+            logToConsole(`No flow data available for ${dayLabel}`, 'warning');
+        } else {
+            hasAnyData = true;
+            allDatasets.push(...datasets);
+            if (!hourLabels) {
+                hourLabels = dayHourLabels; // Use hour labels from first valid day
             }
         }
+    }
 
+    // --- Chart Update/Creation ---
+    const ctx = document.getElementById('flowChart').getContext('2d');
+    const chartContainer = ctx.canvas.parentElement;
+
+    // Remove any existing no-data message
+    const existingMessage = chartContainer.querySelector('.no-data-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+
+    if (!hasAnyData) {
+        logToConsole('No flow data available for any selected days.', 'warning');
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
+        noDataMessage.innerHTML = `
+            <div class="text-gray-500 text-center">
+                <p class="text-lg font-medium">No flow rate data available</p>
+                <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
+            </div>
+        `;
+        chartContainer.style.position = 'relative'; // Ensure container is positioned
+        chartContainer.appendChild(noDataMessage);
+        // If chart exists, clear its data
+        if (charts.flowChart) {
+            charts.flowChart.data.labels = [];
+            charts.flowChart.data.datasets = [];
+            charts.flowChart.update();
+        }
+        return; // Don't create or update the chart if no data
+    }
+
+    // If chart exists, update it; otherwise, create it
+    if (charts.flowChart) {
+        window.logToConsole('Updating existing flow chart', 'info');
+        charts.flowChart.data.labels = hourLabels;
+        charts.flowChart.data.datasets = allDatasets;
+        charts.flowChart.update();
+    } else {
+        window.logToConsole('Creating new flow chart', 'info');
+        charts.flowChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: hourLabels,
+                datasets: allDatasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 300 // Faster animation for better responsiveness
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: (context) => {
+                                const hour = context[0].label;
+                                return `Time: ${hour}`;
+                            },
+                            label: (context) => {
+                                const value = context.raw;
+                                if (value === null) return `${context.dataset.label}: No data`;
+                                return `Flow Rate: ${value?.toFixed(3) || 'No data'} L/min`;
+                            }
+                        },
+                        titleAlign: 'center',
+                        bodyAlign: 'left',
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 12
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Hour of Day'
+                        },
+                        grid: {
+                            display: true,
+                            drawOnChartArea: true
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Flow Rate (L/min)',
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            display: true,
+                            drawOnChartArea: true
+                        },
+                        ticks: {
+                            callback: value => `${value.toFixed(1)} L/min`
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
 
 /**
  * Updates the active state of time range buttons within a specific container.
