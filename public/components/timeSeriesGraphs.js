@@ -970,11 +970,12 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
     const tempThresholdMax = device.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
 
     if (sensorPlacement !== undefined && tempThresholdMax !== undefined) {
+        const sensorPercentage = sensorPlacement * 100;
         const iceLevelData = hourlyAverages.map(temp => {
             if (temp === null) return null;
             // If temperature is ≤ threshold, ice is above the sensor placement
             // If temperature is > threshold, ice is below the sensor placement
-            return temp <= tempThresholdMax ? 100 : (sensorPlacement * 100);
+            return temp <= tempThresholdMax ? sensorPercentage + 10 : sensorPercentage - 10;
         });
 
         datasets.push({
@@ -1148,6 +1149,12 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
         charts.temperatureChart.update();
     } else {
         window.logToConsole('Creating new temperature chart', 'info');
+        
+        // Get sensor placement for y-axis configuration
+        const device = window.lastDevicesData[deviceIndex];
+        const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
+        const sensorPercentage = sensorPlacement ? sensorPlacement * 100 : 50; // Default to 50% if not set
+
         charts.temperatureChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -1178,7 +1185,11 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                                 if (context.dataset.yAxisID === 'y') {
                                     return `Temperature: ${value?.toFixed(1) || 'No data'}°F`;
                                 } else {
-                                    return `Ice Level: ${value?.toFixed(0) || 'No data'}%`;
+                                    // For ice level, show "more than X%" or "less than X%"
+                                    const sensorPercentage = (sensorPlacement * 100).toFixed(0);
+                                    return value > sensorPercentage ? 
+                                        `Ice Level: More than ${sensorPercentage}%` : 
+                                        `Ice Level: Less than ${sensorPercentage}%`;
                                 }
                             }
                         },
@@ -1199,7 +1210,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                                 
                                 // Add custom label for hourly average explanation
                                 defaultLabels.push({
-                                    text: 'Each point shows the average temperature and estimated ice level from the start of the hour to the next',
+                                    text: 'Each point shows the average temperature and estimated ice level relative to sensor placement',
                                     fillStyle: 'transparent',
                                     strokeStyle: 'transparent',
                                     lineWidth: 0,
@@ -1256,16 +1267,22 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                         position: 'right',
                         title: {
                             display: true,
-                            text: 'Ice Level (%)',
+                            text: 'Ice Level',
                             font: { size: 12 }
                         },
-                        min: 0,
-                        max: 100,
+                        min: Math.max(0, sensorPercentage - 20),  // Show range around sensor placement
+                        max: Math.min(100, sensorPercentage + 20),
                         grid: {
                             display: false
                         },
                         ticks: {
-                            callback: value => `${value}%`
+                            // Custom ticks to show only "More than X%" and "Less than X%"
+                            callback: function(value) {
+                                if (value === sensorPercentage + 10) return `More than ${sensorPercentage.toFixed(0)}%`;
+                                if (value === sensorPercentage - 10) return `Less than ${sensorPercentage.toFixed(0)}%`;
+                                return '';  // Hide other tick labels
+                            },
+                            count: 2  // Only show two ticks
                         }
                     }
                 }
