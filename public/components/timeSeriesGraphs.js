@@ -3,7 +3,7 @@
 // Module-level variables
 let timeSeriesDataCache = new Map();
 let currentDeviceIndex; // Store the index of the device currently shown in the modal
-let charts = {}; // Store chart instances { statusChart: null, flowChart: null }
+let charts = {}; // Store chart instances { temperatureChart: null, flowChart: null }
 
 /**
  * Local utility function to convert Celsius to Fahrenheit with validation
@@ -307,10 +307,6 @@ function clearDeviceCache(deviceId) {
     }
 }
 
-/**
- * Initializes all graphs for a given device index
- * @param {number} deviceIdx - The index of the device.
- */
 function initializeGraphs(deviceIdx) {
     window.logToConsole(`Initializing graphs for device index: ${deviceIdx}`, 'info');
     currentDeviceIndex = deviceIdx;
@@ -327,41 +323,15 @@ function initializeGraphs(deviceIdx) {
     Object.values(charts).forEach(chart => chart?.destroy());
     charts = {};
 
-    updateTimeRangeButtons('status-time-range', 0);
-    updateTimeRangeButtons('flow-time-range', 0);
     updateTimeRangeButtons('temperature-time-range', 0);
+    updateTimeRangeButtons('flow-time-range', 0);
 
     fetchTimeSeriesData(device.id, 72).then(data => {
         if (data) {
-            updateStatusGraph(deviceIdx, 0);
-            updateFlowGraph(deviceIdx, 0, data);
             updateTemperatureGraph(deviceIdx, 0, data);
+            updateFlowGraph(deviceIdx, 0, data);
         }
     });
-}
-
-/**
- * Updates the device status timeline graph for a selected day.
- * @param {number} deviceIdx - The index of the device.
- * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
- */
-async function updateStatusGraph(deviceIdx, selectedDay) {
-    currentDeviceIndex = deviceIdx; // Store index
-    const device = window.lastDevicesData[deviceIdx];
-    updateTimeRangeButtons('status-time-range', selectedDay);
-
-    window.logToConsole(`Updating status graph for day ${selectedDay}`, 'info');
-
-    // Display unavailable message as status data is not fetched by the current fetchTimeSeriesData
-    window.logToConsole('Status data not available with current fetchTimeSeriesData version.', 'warning');
-    const noDataMessage = document.createElement('div');
-    noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
-    noDataMessage.innerHTML = `<p class="text-lg font-medium">Status history not available</p>`;
-    const ctx = document.getElementById('statusChart').getContext('2d');
-    const chartContainer = ctx.canvas.parentElement;
-    chartContainer.style.position = 'relative'; 
-    chartContainer.appendChild(noDataMessage);
-    return; // Exit
 }
 
 /**
@@ -1242,9 +1212,8 @@ function updateTimeRangeButtons(containerId, selectedValue) {
 
 // Expose necessary functions to the global scope
 window.initializeGraphs = initializeGraphs;
-window.updateStatusGraph = updateStatusGraph;
-window.updateFlowGraph = updateFlowGraph;
 window.updateTemperatureGraph = updateTemperatureGraph;
+window.updateFlowGraph = updateFlowGraph;
 
 // Helper function to format milliseconds into h/m/s string
 function formatDuration(ms) {

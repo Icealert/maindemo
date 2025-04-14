@@ -1447,21 +1447,6 @@
                             </div>
                         </div>
 
-                        <!-- Status Graph -->
-                        <div class="mb-6">
-                            <div class="flex justify-between items-center mb-2">
-                                <h4 class="text-sm font-medium text-gray-700">Device Status</h4>
-                                <div class="time-range-selector" id="status-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateStatusGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateStatusGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateStatusGraph(${deviceIndex}, 2)">2 Days Ago</button>
-                                </div>
-                            </div>
-                            <div class="chart-container">
-                                <canvas id="statusChart"></canvas>
-                            </div>
-                        </div>
-
                         <!-- Flow Time Graph -->
                         <div class="mb-6">
                             <div class="flex justify-between items-center mb-2">
