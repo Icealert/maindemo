@@ -965,6 +965,71 @@ async function updateTempGraph(deviceIdx, selectedDays) {
 }
 
 /**
+ * Clears cache for a specific device
+ * @param {string} deviceId - The ID of the device to clear cache for
+ */
+function clearDeviceCache(deviceId) {
+    if (!deviceId) return;
+    
+    const cacheKeysToRemove = [];
+    for (const key of timeSeriesDataCache.keys()) {
+        if (key.startsWith(deviceId)) {
+            cacheKeysToRemove.push(key);
+        }
+    }
+    cacheKeysToRemove.forEach(key => {
+        logToConsole(`Clearing cache for device ${deviceId}: ${key}`, 'info');
+        timeSeriesDataCache.delete(key);
+    });
+}
+
+/**
+ * Initializes all graphs for a given device index, typically when the modal opens.
+ * Defaults to showing 'Today's data.
+ * @param {number} deviceIdx - The index of the device.
+ */
+function initializeGraphs(deviceIdx) {
+    window.logToConsole(`Initializing graphs for device index: ${deviceIdx}`, 'info');
+    currentDeviceIndex = deviceIdx; // Set the current device index
+
+    const device = window.lastDevicesData[deviceIdx];
+    if (!device?.id) {
+        logToConsole('No device found for index ' + deviceIdx, 'error');
+        return;
+    }
+
+    // Clear only this device's cache
+    clearDeviceCache(device.id);
+    logToConsole('Cleared device cache for initialization', 'info');
+
+    // Reset visibility toggles to default
+    iceLevelVisible = true;
+    tempLineVisible = true;
+    const tempToggle = document.getElementById('temp-line-toggle');
+    const iceToggle = document.getElementById('ice-level-toggle');
+    if (tempToggle) tempToggle.checked = true;
+    if (iceToggle) iceToggle.checked = true;
+
+    // Clear any existing chart instances
+    Object.values(charts).forEach(chart => chart?.destroy());
+    charts = {};
+
+    // Update time range buttons to show 'Today' as active
+    updateTimeRangeButtons('temp-time-range', 0);
+    document.querySelectorAll('#temp-time-range button').forEach(btn => {
+        if (parseInt(btn.dataset.days) === 0) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
+    updateTimeRangeButtons('status-time-range', 0);
+    updateTimeRangeButtons('flow-time-range', 0);
+
+    // Initialize graphs with 'Today' data (day 0)
+    updateTempGraph(deviceIdx, [0]); // Temp graph expects an array
+    updateStatusGraph(deviceIdx, 0);
+    updateFlowGraph(deviceIdx, 0);
+}
+
+/**
  * Toggles the active state of a temperature graph time range button and updates the graph.
  * Ensures at least one button remains active.
  * @param {number} deviceIdx - The index of the device.
@@ -981,32 +1046,40 @@ function toggleTempGraph(deviceIdx, day) {
     if (button.classList.contains('active') && activeButtons.length === 1) {
         return;
     }
-    
-    // Force-clear the cache for this device to ensure fresh data when toggling
+
+    // Get device and validate
     const device = window.lastDevicesData[deviceIdx];
-    if (device?.id) {
-        const cacheKeysToRemove = [];
-        for (const key of timeSeriesDataCache.keys()) {
-            if (key.startsWith(device.id)) {
-                cacheKeysToRemove.push(key);
-            }
-        }
-        cacheKeysToRemove.forEach(key => {
-            logToConsole(`Clearing cache for toggle: ${key}`, 'info');
-            timeSeriesDataCache.delete(key);
-        });
+    if (!device?.id) {
+        logToConsole('No device found for index ' + deviceIdx, 'error');
+        return;
+    }
+
+    // Clear cache and destroy existing charts (matching initializeGraphs behavior)
+    clearDeviceCache(device.id);
+    logToConsole('Cleared device cache for toggle', 'info');
+
+    // Clear existing charts to force fresh render
+    if (charts.tempChart) {
+        charts.tempChart.destroy();
+        charts.tempChart = null;
+    }
+    if (charts.flowChart) {
+        charts.flowChart.destroy();
+        charts.flowChart = null;
     }
 
     button.classList.toggle('active');
 
     // Get all newly active days
     const newActiveDays = Array.from(buttonContainer.querySelectorAll('button.active'))
-        .map(btn => parseInt(btn.dataset.days));
+        .map(btn => parseInt(btn.dataset.days))
+        .sort((a, b) => a - b); // Sort days to maintain consistent order
         
     logToConsole(`Temperature graph toggled to days: ${newActiveDays.join(', ')}`, 'info');
 
-    // Update the graph
+    // Update both temperature and flow graphs to maintain consistency
     updateTempGraph(deviceIdx, newActiveDays);
+    updateFlowGraph(deviceIdx, newActiveDays[0]); // Use first selected day for flow graph
 }
 
 /**
@@ -1223,6 +1296,15 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
  */
 async function updateFlowGraph(deviceIndex, selectedDay) {
     const device = window.lastDevicesData[deviceIndex];
+    if (!device?.id) {
+        logToConsole('No device found for index ' + deviceIndex, 'error');
+        return;
+    }
+
+    // Clear device cache before updating
+    clearDeviceCache(device.id);
+    logToConsole('Cleared device cache for flow graph update', 'info');
+    
     updateTimeRangeButtons('flow-time-range', selectedDay);
     
     // Get the stats container
@@ -1414,48 +1496,6 @@ function updateTimeRangeButtons(containerId, selectedValue) {
         }
     });
 }
-
-/**
- * Initializes all graphs for a given device index, typically when the modal opens.
- * Defaults to showing 'Today's data.
- * @param {number} deviceIdx - The index of the device.
- */
-function initializeGraphs(deviceIdx) {
-     window.logToConsole(`Initializing graphs for device index: ${deviceIdx}`, 'info');
-    currentDeviceIndex = deviceIdx; // Set the current device index
-
-    // Clear the client-side cache
-    timeSeriesDataCache.clear();
-    window.logToConsole('Client-side time series cache cleared.', 'info');
-
-    // Reset visibility toggles to default
-    iceLevelVisible = true;
-    tempLineVisible = true;
-     const tempToggle = document.getElementById('temp-line-toggle');
-     const iceToggle = document.getElementById('ice-level-toggle');
-     if (tempToggle) tempToggle.checked = true;
-     if (iceToggle) iceToggle.checked = true;
-
-
-    // Clear any existing chart instances
-    Object.values(charts).forEach(chart => chart?.destroy());
-    charts = {};
-
-    // Update time range buttons to show 'Today' as active
-    updateTimeRangeButtons('temp-time-range', 0); // For temp graph (multi-select handled separately)
-    document.querySelectorAll('#temp-time-range button').forEach(btn => {
-        if (parseInt(btn.dataset.days) === 0) btn.classList.add('active');
-        else btn.classList.remove('active');
-    });
-    updateTimeRangeButtons('status-time-range', 0);
-    updateTimeRangeButtons('flow-time-range', 0);
-
-    // Initialize graphs with 'Today' data (day 0)
-    updateTempGraph(deviceIdx, [0]); // Temp graph expects an array
-    updateStatusGraph(deviceIdx, 0);
-    updateFlowGraph(deviceIdx, 0);
-}
-
 
 // Expose necessary functions to the global scope
 window.initializeGraphs = initializeGraphs;
