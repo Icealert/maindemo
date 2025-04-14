@@ -365,6 +365,50 @@ async function updateStatusGraph(deviceIdx, selectedDay) {
 }
 
 /**
+ * Calculates the mode (most frequent value) from an array of numbers
+ * @param {number[]} values - Array of numbers
+ * @returns {number|null} The mode, or null if no mode exists
+ */
+function calculateMode(values) {
+    if (!values || values.length === 0) return null;
+
+    // Round values to 1 decimal place for more meaningful mode calculation
+    const roundedValues = values.map(v => Math.round(v * 10) / 10);
+    
+    const frequency = {};
+    let maxFreq = 0;
+    let mode = null;
+
+    roundedValues.forEach(value => {
+        frequency[value] = (frequency[value] || 0) + 1;
+        if (frequency[value] > maxFreq) {
+            maxFreq = frequency[value];
+            mode = value;
+        }
+    });
+
+    // Only return mode if it occurs more than once
+    return maxFreq > 1 ? mode : null;
+}
+
+/**
+ * Calculates standard deviation for an array of numbers
+ * @param {number[]} values - Array of numbers
+ * @returns {number|null} The standard deviation, or null if insufficient data
+ */
+function calculateStdDev(values) {
+    if (!values || values.length < 2) return null;
+
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const squareDiffs = values.map(value => {
+        const diff = value - mean;
+        return diff * diff;
+    });
+    const avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / squareDiffs.length;
+    return Math.sqrt(avgSquareDiff);
+}
+
+/**
  * Processes flow rate data for a specific day.
  * @param {string[]} timestamps - Array of ISO timestamp strings.
  * @param {number[]} flowValues - Array of flow rate values (L/min).
@@ -813,6 +857,26 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         return { datasets: [], noData: true };
     }
 
+    // Calculate statistics for the day
+    let stats = {
+        min: null,
+        max: null,
+        avg: null,
+        stdDev: null,
+        mode: null
+    };
+
+    if (allTempsForDay.length > 0) {
+        // Convert all temperatures to Fahrenheit for statistics
+        const tempsFahrenheit = allTempsForDay.map(temp => celsiusToFahrenheit(temp));
+        
+        stats.min = Math.min(...tempsFahrenheit);
+        stats.max = Math.max(...tempsFahrenheit);
+        stats.avg = tempsFahrenheit.reduce((a, b) => a + b, 0) / tempsFahrenheit.length;
+        stats.stdDev = calculateStdDev(tempsFahrenheit);
+        stats.mode = calculateMode(tempsFahrenheit);
+    }
+
     // Create hourly averages
     const hourlyAverages = Array(24).fill(null);
     Object.values(hourlyData).forEach(hourData => {
@@ -851,7 +915,8 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
     return {
         datasets,
         noData: false,
-        hourLabels
+        hourLabels,
+        stats
     };
 }
 
@@ -882,6 +947,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
         document.getElementById('tempRange').textContent = '-';
         document.getElementById('tempAvg').textContent = '-';
         document.getElementById('tempStdDev').textContent = '-';
+        document.getElementById('tempMode').textContent = '-';
     } else {
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
@@ -909,7 +975,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
 
     for (const day of selectedDays) {
         // Pass temperature-specific timestamps and values
-        const { datasets, noData, hourLabels: dayHourLabels } = processTemperatureByHour(
+        const { datasets, noData, hourLabels: dayHourLabels, stats } = processTemperatureByHour(
             timeSeriesData.temperature.timestamps, 
             timeSeriesData.temperature.values, 
             day
@@ -922,7 +988,33 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
             hasAnyData = true;
             allDatasets.push(...datasets);
             if (!hourLabels) {
-                hourLabels = dayHourLabels; // Use hour labels from first valid day
+                hourLabels = dayHourLabels;
+            }
+            
+            // Update statistics display if single day selected
+            if (selectedDays.length === 1) {
+                if (stats) {
+                    document.getElementById('tempRange').textContent = 
+                        stats.min !== null && stats.max !== null ? 
+                        `${stats.min.toFixed(1)}°F - ${stats.max.toFixed(1)}°F` : '-';
+                    
+                    document.getElementById('tempAvg').textContent = 
+                        stats.avg !== null ? 
+                        `${stats.avg.toFixed(1)}°F` : '-';
+                    
+                    document.getElementById('tempStdDev').textContent = 
+                        stats.stdDev !== null ? 
+                        `±${stats.stdDev.toFixed(1)}°F` : '-';
+                    
+                    document.getElementById('tempMode').textContent = 
+                        stats.mode !== null ? 
+                        `${stats.mode.toFixed(1)}°F` : 'No mode';
+                } else {
+                    document.getElementById('tempRange').textContent = '-';
+                    document.getElementById('tempAvg').textContent = '-';
+                    document.getElementById('tempStdDev').textContent = '-';
+                    document.getElementById('tempMode').textContent = '-';
+                }
             }
         }
     }
