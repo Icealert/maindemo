@@ -125,17 +125,17 @@ function parseTsArray(arr) {
 
 // Replace the entire function with the user-provided version
 async function fetchTimeSeriesData(deviceId, hours) {
+    // Create cache key
+    const cacheKey = `${deviceId}-${hours}`;
+    
     // Check cache first
-    // const cacheKey = `${deviceId}-${hours}`;
-    // if (timeSeriesDataCache.has(cacheKey)) {
-    //     logToConsole('Using cached time series data', 'info');
-    //     return timeSeriesDataCache.get(cacheKey);
-    // }
-    // --- Force fetch for debugging --- 
-    const cacheKey = `${deviceId}-${hours}`; // Still need cacheKey for storing result
-    logToConsole(`[DEBUG] Bypassing cache check, forcing fetch for: ${cacheKey}`, 'warning');
-    // --------------------------------
+    if (timeSeriesDataCache.has(cacheKey)) {
+        logToConsole('Using cached time series data', 'info');
+        return timeSeriesDataCache.get(cacheKey);
+    }
 
+    logToConsole(`[DEBUG] Fetching new data for: ${cacheKey}`, 'info');
+    
     try {
         const now = new Date();
         // Correct date subtraction
@@ -764,10 +764,6 @@ async function updateTempGraph(deviceIdx, selectedDays, timeSeriesData = null) {
         return;
     }
 
-    // Clear device cache before updating
-    clearDeviceCache(device.id);
-    logToConsole('Cleared device cache for temperature graph update', 'info');
-
     // Ensure selectedDays is an array and sorted
     selectedDays = Array.isArray(selectedDays) ? selectedDays.sort((a, b) => a - b) : [selectedDays];
     
@@ -786,9 +782,15 @@ async function updateTempGraph(deviceIdx, selectedDays, timeSeriesData = null) {
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
 
-    // If timeSeriesData is not provided, fetch it
+    // If timeSeriesData is not provided, try to get from cache first
     if (!timeSeriesData) {
-        timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+        const cacheKey = `${device.id}-72`;
+        timeSeriesData = timeSeriesDataCache.get(cacheKey);
+        
+        // If not in cache, fetch it
+        if (!timeSeriesData) {
+            timeSeriesData = await fetchTimeSeriesData(device.id, 72);
+        }
     }
 
     if (!timeSeriesData || !timeSeriesData.temperature || !timeSeriesData.temperature.values) {
@@ -998,6 +1000,8 @@ async function updateTempGraph(deviceIdx, selectedDays, timeSeriesData = null) {
  * @param {string} deviceId - The ID of the device to clear cache for
  */
 function clearDeviceCache(deviceId) {
+    // Only clear cache when explicitly needed (e.g., when new data is available)
+    // Do not clear cache during normal graph updates
     if (!deviceId) return;
     
     const cacheKeysToRemove = [];
@@ -1006,10 +1010,13 @@ function clearDeviceCache(deviceId) {
             cacheKeysToRemove.push(key);
         }
     }
-    cacheKeysToRemove.forEach(key => {
-        logToConsole(`Clearing cache for device ${deviceId}: ${key}`, 'info');
-        timeSeriesDataCache.delete(key);
-    });
+    
+    if (cacheKeysToRemove.length > 0) {
+        cacheKeysToRemove.forEach(key => {
+            logToConsole(`Clearing cache for device ${deviceId}: ${key}`, 'info');
+            timeSeriesDataCache.delete(key);
+        });
+    }
 }
 
 /**
@@ -1019,7 +1026,7 @@ function clearDeviceCache(deviceId) {
  */
 function initializeGraphs(deviceIdx) {
     window.logToConsole(`Initializing graphs for device index: ${deviceIdx}`, 'info');
-    currentDeviceIndex = deviceIdx; // Set the current device index
+    currentDeviceIndex = deviceIdx;
 
     const device = window.lastDevicesData[deviceIdx];
     if (!device?.id) {
@@ -1027,7 +1034,7 @@ function initializeGraphs(deviceIdx) {
         return;
     }
 
-    // Clear only this device's cache
+    // Clear cache only on initial load
     clearDeviceCache(device.id);
     logToConsole('Cleared device cache for initialization', 'info');
 
@@ -1052,13 +1059,12 @@ function initializeGraphs(deviceIdx) {
     updateTimeRangeButtons('status-time-range', 0);
     updateTimeRangeButtons('flow-time-range', 0);
 
-    // Fetch 72 hours of data once and cache it
+    // Fetch data once and use it for all graphs
     fetchTimeSeriesData(device.id, 72).then(data => {
         if (data) {
-            // Initialize graphs with 'Today' data (day 0)
-            updateTempGraph(deviceIdx, [0], data); // Pass the fetched data
+            updateTempGraph(deviceIdx, [0], data);
             updateStatusGraph(deviceIdx, 0);
-            updateFlowGraph(deviceIdx, 0, data); // Pass the fetched data
+            updateFlowGraph(deviceIdx, 0, data);
         }
     });
 }
@@ -1340,10 +1346,6 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
         return;
     }
 
-    // Clear device cache before updating
-    clearDeviceCache(device.id);
-    logToConsole('Cleared device cache for flow graph update', 'info');
-    
     updateTimeRangeButtons('flow-time-range', selectedDay);
     
     // Get the stats container
@@ -1364,9 +1366,15 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
     
-    // If timeSeriesData is not provided, fetch it
+    // If timeSeriesData is not provided, try to get from cache first
     if (!timeSeriesData) {
-        timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+        const cacheKey = `${device.id}-72`;
+        timeSeriesData = timeSeriesDataCache.get(cacheKey);
+        
+        // If not in cache, fetch it
+        if (!timeSeriesData) {
+            timeSeriesData = await fetchTimeSeriesData(device.id, 72);
+        }
     }
 
     if (!timeSeriesData || !timeSeriesData.flow || !timeSeriesData.flow.values) {
