@@ -753,139 +753,130 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
 
 /**
  * Updates the temperature/ice level chart with data for the selected days.
- * @param {number} deviceIdx - The index of the device in window.lastDevicesData.
+ * @param {number} deviceIdx - The index of the device.
  * @param {number[]} selectedDays - Array of days to display (0=Today, 1=Yesterday, ...).
  */
 async function updateTempGraph(deviceIdx, selectedDays) {
-    currentDeviceIndex = deviceIdx; // Store index for helpers like formatTempValue
-
-    if (!Array.isArray(selectedDays) || selectedDays.length === 0) {
-        window.logToConsole('updateTempGraph called with invalid selectedDays', 'warning');
-        selectedDays = [0]; // Default to today if invalid
-    }
-    selectedDays.sort((a,b) => a-b); // Ensure days are sorted
-
-    // Log what we're trying to display
-    window.logToConsole(`Updating temperature graph for days: ${selectedDays.join(', ')}`, 'info');
-
-    // If today (day 0) is selected, ensure it gets special treatment
-    const showingTodayData = selectedDays.includes(0);
-    if (showingTodayData) {
-        window.logToConsole('Today is selected - ensuring fresh data fetch', 'info');
-    }
-
-    // Manage stats display based on selection
-    const statsContainer = document.getElementById('tempStats');
-    if (statsContainer) {
-        if (selectedDays.length > 1) {
-            statsContainer.classList.add('opacity-50', 'pointer-events-none');
-             // Clear stats when multiple days selected
-             document.getElementById('tempRange').textContent = '-';
-             document.getElementById('tempAvg').textContent = '-';
-             document.getElementById('tempStdDev').textContent = '-';
-             document.getElementById('tempMode').textContent = '-';
-        } else {
-            statsContainer.classList.remove('opacity-50', 'pointer-events-none');
-            // Stats will be updated by processTemperatureByHour
-        }
-    }
-
     const device = window.lastDevicesData[deviceIdx];
-    if (!device) {
-        window.logToConsole('Device not found for temperature graph', 'error');
+    if (!device?.id) {
+        logToConsole('No device found for index ' + deviceIdx, 'error');
         return;
     }
 
-    // Consider clearing cache for "today" data to ensure fresh data
-    if (showingTodayData) {
-        const cacheKey = `${device.id}-72`; // The typical cache key for 72-hour data
-        if (timeSeriesDataCache.has(cacheKey)) {
-            window.logToConsole('Clearing cache for today data to ensure freshness', 'info');
-            timeSeriesDataCache.delete(cacheKey);
+    // Clear device cache before updating
+    clearDeviceCache(device.id);
+    logToConsole('Cleared device cache for temperature graph update', 'info');
+
+    // Ensure selectedDays is an array and sorted
+    selectedDays = Array.isArray(selectedDays) ? selectedDays.sort((a, b) => a - b) : [selectedDays];
+    
+    // Get the stats container
+    const statsContainer = document.getElementById('tempStats');
+
+    // Hide or show stats based on number of selected days
+    if (selectedDays.length > 1) {
+        statsContainer.classList.add('opacity-50', 'pointer-events-none');
+        // Clear stats when multiple days are selected
+        document.getElementById('tempRange').textContent = '-';
+        document.getElementById('tempAvg').textContent = '-';
+        document.getElementById('tempStdDev').textContent = '-';
+        document.getElementById('tempMode').textContent = '-';
+    } else {
+        statsContainer.classList.remove('opacity-50', 'pointer-events-none');
+    }
+
+    const timeSeriesData = await fetchTimeSeriesData(device.id, 72); // Fetch 72 hours for consistency
+
+    if (!timeSeriesData || !timeSeriesData.temperature || !timeSeriesData.temperature.values) {
+        logToConsole('No data returned from fetchTimeSeriesData or temperature data missing', 'error');
+        // Handle no data display
+        const ctx = document.getElementById('tempChart').getContext('2d');
+        const chartContainer = ctx.canvas.parentElement;
+        
+        // Remove any existing no-data message
+        const existingMessage = chartContainer.querySelector('.no-data-message');
+        if (existingMessage) {
+            existingMessage.remove();
         }
-    }
 
-    // Fetch data for the maximum required range (always 72 hours)
-    const maxHours = 72; 
-    window.logToConsole(`Fetching ${maxHours} hours of data for temperature graph.`, 'info');
-
-    const timeSeriesData = await fetchTimeSeriesData(device.id, maxHours);
-
-    // Use timeSeriesData.temperature
-    if (!timeSeriesData || !timeSeriesData.temperature || !timeSeriesData.temperature.values) { 
-        window.logToConsole('Failed to get time series data (or temperature data) for temp graph', 'error');
-        // Optionally display an error on the chart canvas
-        return;
-    }
-
-    // Process data for each selected day and accumulate datasets
-    let combinedDatasets = [];
-    let deviceThresholdF = 34; // Default
-    let hasAnyData = false;
-    let thresholdDatasetAdded = false; // Ensure threshold is added only once
-
-    // Log the data just before processing loop
-    window.logToConsole('Temp data before processing loop:', { 
-        timestampsLength: timeSeriesData?.temperature?.timestamps?.length, 
-        valuesLength: timeSeriesData?.temperature?.values?.length,
-        selectedDays: selectedDays
-    }, 'info');
-
-    for (const day of selectedDays) {
-         // Pass timeSeriesData.temperature.timestamps and .values
-         const { datasets, thresholdF, noData, hourLabels } = processTemperatureByHour(
-            timeSeriesData.temperature.timestamps, 
-            timeSeriesData.temperature.values, 
-            day
-        );
-         if (!noData) {
-            hasAnyData = true;
-            // Add threshold dataset only once
-            const thresholdDs = datasets.find(ds => ds.label === 'Temperature Threshold');
-            if (thresholdDs && !thresholdDatasetAdded) {
-                combinedDatasets.push(thresholdDs);
-                thresholdDatasetAdded = true;
-            }
-            // Add other datasets (temp, ice level)
-            combinedDatasets.push(...datasets.filter(ds => ds.label !== 'Temperature Threshold'));
-            deviceThresholdF = thresholdF; // Update threshold from processed data
-         } else {
-            window.logToConsole(`No temperature data found for day ${day}`, 'warning');
-         }
-    }
-
-    const ctx = document.getElementById('tempChart').getContext('2d');
-    const chartContainer = ctx.canvas.parentElement;
-
-    // Remove previous 'no data' message if it exists
-    const existingNoDataMsg = chartContainer.querySelector('.no-data-message');
-    if (existingNoDataMsg) {
-        existingNoDataMsg.remove();
-    }
-
-    if (!hasAnyData) {
-         window.logToConsole('No temperature data available for selected days.', 'warning');
-        // Display no data message centrally over the canvas area
         const noDataMessage = document.createElement('div');
         noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
         noDataMessage.innerHTML = `<p class="text-lg font-medium">No temperature data available</p><p class="text-sm">for the selected period</p>`;
-        chartContainer.style.position = 'relative'; // Ensure container is positioned
+        chartContainer.style.position = 'relative';
         chartContainer.appendChild(noDataMessage);
-        // If chart exists, clear its data
+
+        // Clear existing chart if it exists
         if (charts.tempChart) {
             charts.tempChart.data.labels = [];
             charts.tempChart.data.datasets = [];
             charts.tempChart.update();
         }
-         return; // Don't create or update the chart if no data
+        return;
+    }
+
+    // Process data for each selected day
+    const allDatasets = [];
+    let hasAnyData = false;
+    let hourLabels = null;
+    let thresholdDatasetAdded = false;
+
+    for (const day of selectedDays) {
+        const { datasets, thresholdF, noData, hourLabels: dayHourLabels } = processTemperatureByHour(
+            timeSeriesData.temperature.timestamps,
+            timeSeriesData.temperature.values,
+            day
+        );
+
+        if (noData) {
+            const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+            logToConsole(`No temperature data available for ${dayLabel}`, 'warning');
+        } else {
+            hasAnyData = true;
+            // Add threshold dataset only once
+            const thresholdDs = datasets.find(ds => ds.label === 'Temperature Threshold');
+            if (thresholdDs && !thresholdDatasetAdded) {
+                allDatasets.push(thresholdDs);
+                thresholdDatasetAdded = true;
+            }
+            // Add other datasets (temp, ice level)
+            allDatasets.push(...datasets.filter(ds => ds.label !== 'Temperature Threshold'));
+            if (!hourLabels) {
+                hourLabels = dayHourLabels;
+            }
+        }
+    }
+
+    // Chart Update/Creation
+    const ctx = document.getElementById('tempChart').getContext('2d');
+    const chartContainer = ctx.canvas.parentElement;
+
+    // Remove any existing no-data message
+    const existingMessage = chartContainer.querySelector('.no-data-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+
+    if (!hasAnyData) {
+        logToConsole('No temperature data available for any selected days.', 'warning');
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'absolute inset-0 flex items-center justify-center text-center text-gray-500 no-data-message';
+        noDataMessage.innerHTML = `<p class="text-lg font-medium">No temperature data available</p><p class="text-sm">for the selected period${selectedDays.length > 1 ? 's' : ''}</p>`;
+        chartContainer.style.position = 'relative';
+        chartContainer.appendChild(noDataMessage);
+        
+        if (charts.tempChart) {
+            charts.tempChart.data.labels = [];
+            charts.tempChart.data.datasets = [];
+            charts.tempChart.update();
+        }
+        return;
     }
 
     // If chart exists, update it; otherwise, create it
     if (charts.tempChart) {
         window.logToConsole('Updating existing temperature chart', 'info');
         charts.tempChart.data.labels = hourLabels;
-        charts.tempChart.data.datasets = combinedDatasets;
-        // Ensure axes visibility is updated based on current state
+        charts.tempChart.data.datasets = allDatasets;
         charts.tempChart.options.scales['y-temp'].display = tempLineVisible;
         charts.tempChart.options.scales['y-ice'].display = iceLevelVisible;
         charts.tempChart.update();
@@ -895,15 +886,18 @@ async function updateTempGraph(deviceIdx, selectedDays) {
             type: 'line',
             data: {
                 labels: hourLabels,
-                datasets: combinedDatasets // Use the combined datasets
+                datasets: allDatasets
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                    duration: 300 // Faster animation for better responsiveness when toggling
+                    duration: 300
                 },
-                interaction: { mode: 'index', intersect: false },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 plugins: {
                     tooltip: {
                         callbacks: {
@@ -913,46 +907,77 @@ async function updateTempGraph(deviceIdx, selectedDays) {
                                 const value = context.raw;
                                 if (value === null || value === undefined) return `${datasetLabel}: No data`;
 
-                                 if (datasetLabel.includes('Ice Level')) {
-                                    const device = window.lastDevicesData[currentDeviceIndex];
+                                if (datasetLabel.includes('Ice Level')) {
+                                    const device = window.lastDevicesData[deviceIdx];
                                     const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
                                     const placementPercent = (sensorPlacement * 100).toFixed(0);
                                     return `Ice Level: ${value === 1 ? `> ${placementPercent}%` : `< ${placementPercent}%`} full`;
-                                 } else if (datasetLabel === 'Temperature Threshold') {
+                                } else if (datasetLabel === 'Temperature Threshold') {
                                     return `Threshold: ${value.toFixed(1)}°F`;
-                                } else { // Must be Temperature
+                                } else {
                                     return `Temp: ${value.toFixed(1)}°F`;
                                 }
                             }
                         },
                         backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                        titleFont: { size: 13 }, bodyFont: { size: 12 }, padding: 10
+                        titleFont: { size: 13 },
+                        bodyFont: { size: 12 },
+                        padding: 10
                     },
                     legend: {
                         position: 'top',
-                        labels: { usePointStyle: true, padding: 15, boxWidth: 10, font: { size: 11 } }
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15,
+                            boxWidth: 10,
+                            font: { size: 11 }
+                        }
                     }
                 },
                 scales: {
                     x: {
-                        title: { display: true, text: 'Hour of Day' },
-                        grid: { drawOnChartArea: true, color: 'rgba(0,0,0,0.05)' }
+                        title: {
+                            display: true,
+                            text: 'Hour of Day'
+                        },
+                        grid: {
+                            display: true,
+                            drawOnChartArea: true,
+                            color: 'rgba(0,0,0,0.05)'
+                        }
                     },
                     'y-temp': {
                         type: 'linear',
-                        display: tempLineVisible, // Conditionally display axis
+                        display: tempLineVisible,
                         position: 'left',
-                        title: { display: true, text: 'Temperature (°F)' },
-                        grid: { drawOnChartArea: true, color: 'rgba(0,0,0,0.05)' }, // Primary axis grid
-                        ticks: { callback: value => `${value.toFixed(0)}°F` }
+                        title: {
+                            display: true,
+                            text: 'Temperature (°F)',
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            display: true,
+                            drawOnChartArea: true,
+                            color: 'rgba(0,0,0,0.05)'
+                        },
+                        ticks: {
+                            callback: value => `${value.toFixed(0)}°F`
+                        }
                     },
                     'y-ice': {
                         type: 'linear',
-                        display: iceLevelVisible, // Conditionally display axis
+                        display: iceLevelVisible,
                         position: 'right',
-                        title: { display: true, text: 'Ice Level' },
-                        min: -0.1, max: 1.1,
-                        grid: { drawOnChartArea: false }, // No grid lines for secondary axis
+                        title: {
+                            display: true,
+                            text: 'Ice Level',
+                            font: { size: 12 }
+                        },
+                        min: -0.1,
+                        max: 1.1,
+                        grid: {
+                            display: false
+                        },
                         ticks: {
                             stepSize: 1,
                             callback: value => value === 1 ? 'Above' : value === 0 ? 'Below' : ''
