@@ -961,7 +961,8 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         fill: true,
         pointRadius: 3,
         pointHoverRadius: 5,
-        yAxisID: 'y'
+        yAxisID: 'y',
+        type: 'temperature'  // Add type identifier
     }];
 
     // Add ice level dataset
@@ -973,8 +974,6 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         const sensorPercentage = sensorPlacement * 100;
         const iceLevelData = hourlyAverages.map(temp => {
             if (temp === null) return null;
-            // If temperature is ≤ threshold, ice is above the sensor placement
-            // If temperature is > threshold, ice is below the sensor placement
             return temp <= tempThresholdMax ? sensorPercentage + 10 : sensorPercentage - 10;
         });
 
@@ -988,7 +987,8 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
             fill: false,
             pointRadius: 2,
             pointHoverRadius: 4,
-            yAxisID: 'y1'
+            yAxisID: 'y1',
+            type: 'icelevel'  // Add type identifier
         });
     }
 
@@ -1153,7 +1153,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
         // Get sensor placement for y-axis configuration
         const device = window.lastDevicesData[deviceIndex];
         const sensorPlacement = device.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value;
-        const sensorPercentage = sensorPlacement ? sensorPlacement * 100 : 50; // Default to 50% if not set
+        const sensorPercentage = sensorPlacement ? sensorPlacement * 100 : 50;
 
         charts.temperatureChart = new Chart(ctx, {
             type: 'line',
@@ -1202,6 +1202,33 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                     },
                     legend: {
                         position: 'top',
+                        onClick: function(e, legendItem, legend) {
+                            const index = legendItem.datasetIndex;
+                            const chart = legend.chart;
+                            
+                            // Get the type of dataset being toggled
+                            const datasetType = chart.data.datasets[index].type;
+                            
+                            // Count how many of each type are currently visible
+                            const visibleTypes = chart.data.datasets.reduce((acc, dataset) => {
+                                if (!dataset.hidden) {
+                                    acc[dataset.type] = (acc[dataset.type] || 0) + 1;
+                                }
+                                return acc;
+                            }, {});
+                            
+                            // If this is the last visible dataset of its type and the other type is hidden,
+                            // prevent toggling
+                            if (!chart.data.datasets[index].hidden && 
+                                visibleTypes[datasetType] === 1 && 
+                                !Object.values(visibleTypes).some((count, i) => i !== index && count > 0)) {
+                                return; // Do nothing if this would hide the last visible line
+                            }
+                            
+                            // Toggle the clicked dataset
+                            chart.setDatasetVisibility(index, !chart.isDatasetVisible(index));
+                            chart.update();
+                        },
                         labels: {
                             usePointStyle: true,
                             padding: 15,
@@ -1210,7 +1237,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData 
                                 
                                 // Add custom label for hourly average explanation
                                 defaultLabels.push({
-                                    text: 'Each point shows the average temperature and estimated ice level relative to sensor placement',
+                                    text: 'Click legend items to toggle lines (one must remain visible)',
                                     fillStyle: 'transparent',
                                     strokeStyle: 'transparent',
                                     lineWidth: 0,
