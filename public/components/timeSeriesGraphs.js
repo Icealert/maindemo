@@ -526,6 +526,7 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
 
     // --- Work with local dates for display --- 
     const now = new Date();
+    // Get the start of today in local time zone
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     window.logToConsole(`Today in local time: ${todayStart.toLocaleString()}`, 'info');
 
@@ -543,7 +544,7 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
     const currentHour = now.getHours();
 
     const hourlyData = {};
-    const device = window.lastDevicesData[currentDeviceIndex]; // Use module-level index
+    const device = window.lastDevicesData[currentDeviceIndex];
     const tempThresholdMaxC = device?.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
     const thresholdF = tempThresholdMaxC !== undefined ? celsiusToFahrenheit(tempThresholdMaxC) : 34;
     const sensorPlacement = device?.thing?.properties?.find(p => p.name === 'sensorplacement')?.last_value || 0;
@@ -564,22 +565,22 @@ function processTemperatureByHour(timestamps, temperatures, selectedDay) {
             continue;
         }
 
-        // Parse UTC timestamp and convert to local
+        // Parse UTC timestamp and convert to local time
         const utcTimestamp = new Date(timestampStr);
         if (isNaN(utcTimestamp.getTime())) {
             window.logToConsole(`Invalid timestamp at index ${i}: ${timestampStr}`, 'warning');
             continue;
         }
 
-        // Convert UTC to local time
-        const localTimestamp = new Date(utcTimestamp.getTime() - (utcTimestamp.getTimezoneOffset() * 60000));
+        // Convert UTC to local time by adjusting for timezone offset
+        const localTimestamp = new Date(utcTimestamp.getTime() + (utcTimestamp.getTimezoneOffset() * 60000));
 
         // Debug timestamp conversion
         if (i < 5 || i % 100 === 0) { // Log first 5 and every 100th
-            window.logToConsole(`Timestamp ${i}: UTC=${utcTimestamp.toISOString()}, Local=${localTimestamp.toLocaleString()}`, 'info');
+            window.logToConsole(`Timestamp ${i}: UTC=${timestampStr}, Local=${localTimestamp.toLocaleString()}`, 'info');
         }
 
-        // Compare with local time boundaries
+        // Compare with local time boundaries using local timestamp
         const timestampMs = localTimestamp.getTime();
         const startMs = dayStart.getTime();
         const endMs = dayEnd.getTime();
@@ -1177,6 +1178,7 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
 
     // --- Work with local dates for display --- 
     const now = new Date();
+    // Get the start of today in local time zone
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     window.logToConsole(`Today in local time: ${todayStart.toLocaleString()}`, 'info');
 
@@ -1210,22 +1212,22 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
             continue;
         }
         
-        // Parse UTC timestamp and convert to local
+        // Parse UTC timestamp and convert to local time
         const utcTimestamp = new Date(timestampStr);
         if (isNaN(utcTimestamp.getTime())) {
             window.logToConsole(`Invalid timestamp at index ${i}: ${timestampStr}`, 'warning');
             continue;
         }
 
-        // Convert UTC to local time
-        const localTimestamp = new Date(utcTimestamp.getTime() - (utcTimestamp.getTimezoneOffset() * 60000));
+        // Convert UTC to local time by adjusting for timezone offset
+        const localTimestamp = new Date(utcTimestamp.getTime() + (utcTimestamp.getTimezoneOffset() * 60000));
 
         // Debug timestamp conversion
         if (i < 5 || i % 100 === 0) { // Log first 5 and every 100th
-            window.logToConsole(`Flow timestamp ${i}: UTC=${utcTimestamp.toISOString()}, Local=${localTimestamp.toLocaleString()}`, 'info');
+            window.logToConsole(`Flow timestamp ${i}: UTC=${timestampStr}, Local=${localTimestamp.toLocaleString()}`, 'info');
         }
 
-        // Compare with local time boundaries
+        // Compare with local time boundaries using local timestamp
         const timestampMs = localTimestamp.getTime();
         const startMs = dayStart.getTime();
         const endMs = dayEnd.getTime();
