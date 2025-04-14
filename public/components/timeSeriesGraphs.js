@@ -140,6 +140,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
         const properties = device.thing.properties || [];
 
         let flowProperty = properties.find(p => p.name === 'cloudflowrate');
+        let tempProperty = properties.find(p => p.name === 'cloudtemp');
 
         if (!flowProperty) {
             const fallbackFlowProperty = properties.find(p => 
@@ -158,6 +159,7 @@ async function fetchTimeSeriesData(deviceId, hours) {
 
         logToConsole(`Fetching time series data for thing ${thingId}:`, 'info');
         if (flowProperty) logToConsole(`Flow rate property ID: ${flowProperty.id} (${flowProperty.type})`, 'info');
+        if (tempProperty) logToConsole(`Temperature property ID: ${tempProperty.id} (${tempProperty.type})`, 'info');
 
         const timeRangeSeconds = hours * 3600;
         const interval = Math.max(Math.ceil(timeRangeSeconds / 1000), 60);
@@ -185,6 +187,8 @@ async function fetchTimeSeriesData(deviceId, hours) {
         }, 'info');
 
         let flowData = { data: [] };
+        let tempData = { data: [] };
+
         if (flowProperty) {
             const flowApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`;
             logToConsole(`Attempting to fetch flow from: ${flowApiUrl}`, 'info');
@@ -220,13 +224,55 @@ async function fetchTimeSeriesData(deviceId, hours) {
                 logToConsole(`Error during flow fetch: ${error.message}`, 'error');
             }
         }
+
+        // Fetch temperature data
+        if (tempProperty) {
+            const tempApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`;
+            logToConsole(`Attempting to fetch temperature from: ${tempApiUrl}`, 'info');
+            
+            try {
+                const tempResponse = await fetch(tempApiUrl, fetchOptions);
+                
+                if (!tempResponse.ok) {
+                    const errorText = await tempResponse.text();
+                    logToConsole(`Temperature fetch failed: ${tempResponse.status} - ${errorText}`, 'warning');
+                } else {
+                    const responseText = await tempResponse.text();
+                    logToConsole(`Temperature response first 200 chars: ${responseText.substring(0, 200)}...`, 'info');
+                    
+                    try {
+                        tempData = JSON.parse(responseText);
+                    } catch (parseError) {
+                        logToConsole(`Failed to parse temperature JSON: ${parseError.message}`, 'error');
+                    }
+                }
+                
+                if (!tempData.data && Array.isArray(tempData.timestamps) && Array.isArray(tempData.values)) {
+                    logToConsole('Converting temperature timestamps/values format to data array format', 'info');
+                    const length = Math.min(tempData.timestamps.length, tempData.values.length);
+                    tempData.data = Array(length).fill().map((_, i) => ({
+                        time: tempData.timestamps[i],
+                        value: tempData.values[i]
+                    }));
+                }
+                
+                window.logToConsole('Raw temperature response:', tempData, 'info');
+            } catch (error) {
+                logToConsole(`Error during temperature fetch: ${error.message}`, 'error');
+            }
+        }
         
         const flowResult = parseTsArray(flowData.data || []);
+        const tempResult = parseTsArray(tempData.data || []);
 
         const result = {
             flow: {
                 timestamps: flowResult.times,
                 values: flowResult.values
+            },
+            temperature: {
+                timestamps: tempResult.times,
+                values: tempResult.values
             }
         };
 
@@ -282,11 +328,13 @@ function initializeGraphs(deviceIdx) {
 
     updateTimeRangeButtons('status-time-range', 0);
     updateTimeRangeButtons('flow-time-range', 0);
+    updateTimeRangeButtons('temperature-time-range', 0);
 
     fetchTimeSeriesData(device.id, 72).then(data => {
         if (data) {
             updateStatusGraph(deviceIdx, 0);
             updateFlowGraph(deviceIdx, 0, data);
+            updateTemperatureGraph(deviceIdx, 0, data);
         }
     });
 }
@@ -681,10 +729,332 @@ function updateTimeRangeButtons(containerId, selectedValue) {
     });
 }
 
+/**
+ * Updates the temperature chart with data for the selected days.
+ * @param {number} deviceIdx - The index of the device.
+ * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
+ */
+async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData = null) {
+    const device = window.lastDevicesData[deviceIndex];
+    if (!device?.id) {
+        logToConsole('No device found for index ' + deviceIndex, 'error');
+        return;
+    }
+
+    updateTimeRangeButtons('temperature-time-range', selectedDay);
+    
+    // Get the stats container
+    const statsContainer = document.getElementById('temperatureStats');
+
+    // Hide or show stats based on number of selected days
+    const selectedDays = Array.from(document.querySelectorAll('#temperature-time-range button.active'))
+        .map(btn => parseInt(btn.dataset.days));
+    
+    if (selectedDays.length > 1) {
+        statsContainer.classList.add('opacity-50', 'pointer-events-none');
+        // Clear stats when multiple days are selected
+        document.getElementById('tempRange').textContent = '-';
+        document.getElementById('tempAverage').textContent = '-';
+        document.getElementById('tempStdDev').textContent = '-';
+        document.getElementById('tempTrend').textContent = '-';
+    } else {
+        statsContainer.classList.remove('opacity-50', 'pointer-events-none');
+    }
+    
+    // If timeSeriesData is not provided, try to get from cache first
+    if (!timeSeriesData) {
+        const cacheKey = `${device.id}-72`;
+        timeSeriesData = timeSeriesDataCache.get(cacheKey);
+        
+        // If not in cache, fetch it
+        if (!timeSeriesData) {
+            timeSeriesData = await fetchTimeSeriesData(device.id, 72);
+        }
+    }
+
+    if (!timeSeriesData || !timeSeriesData.temperature || !timeSeriesData.temperature.values) {
+        logToConsole('No temperature data returned from fetchTimeSeriesData', 'error');
+        return;
+    }
+
+    // Process temperature data for each selected day
+    const allDatasets = [];
+    let hasAnyData = false;
+    let hourLabels = null;
+
+    for (const day of selectedDays) {
+        const { datasets, noData, hourLabels: dayHourLabels } = processTemperatureByHour(
+            timeSeriesData.temperature.timestamps,
+            timeSeriesData.temperature.values,
+            day
+        );
+        
+        if (noData) {
+            const dayLabel = day === 0 ? 'Today' : day === 1 ? 'Yesterday' : '2 Days Ago';
+            logToConsole(`No temperature data available for ${dayLabel}`, 'warning');
+        } else {
+            hasAnyData = true;
+            allDatasets.push(...datasets);
+            if (!hourLabels) {
+                hourLabels = dayHourLabels;
+            }
+        }
+    }
+
+    // Chart Update/Creation
+    const ctx = document.getElementById('temperatureChart').getContext('2d');
+    const chartContainer = ctx.canvas.parentElement;
+
+    // Remove any existing no-data message
+    const existingMessage = chartContainer.querySelector('.no-data-message');
+    if (existingMessage) {
+        existingMessage.remove();
+    }
+
+    if (!hasAnyData) {
+        logToConsole('No temperature data available for any selected days.', 'warning');
+        const noDataMessage = document.createElement('div');
+        noDataMessage.className = 'absolute inset-0 flex items-center justify-center no-data-message';
+        noDataMessage.innerHTML = `
+            <div class="text-gray-500 text-center">
+                <p class="text-lg font-medium">No temperature data available</p>
+                <p class="text-sm">for the selected time period${selectedDays.length > 1 ? 's' : ''}</p>
+            </div>
+        `;
+        chartContainer.style.position = 'relative';
+        chartContainer.appendChild(noDataMessage);
+        if (charts.temperatureChart) {
+            charts.temperatureChart.data.labels = [];
+            charts.temperatureChart.data.datasets = [];
+            charts.temperatureChart.update();
+        }
+        return;
+    }
+
+    if (charts.temperatureChart) {
+        window.logToConsole('Updating existing temperature chart', 'info');
+        charts.temperatureChart.data.labels = hourLabels;
+        charts.temperatureChart.data.datasets = allDatasets;
+        charts.temperatureChart.update();
+    } else {
+        window.logToConsole('Creating new temperature chart', 'info');
+        charts.temperatureChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: hourLabels,
+                datasets: allDatasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 300
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            title: (context) => {
+                                const hour = context[0].label;
+                                return `Time: ${hour}`;
+                            },
+                            label: (context) => {
+                                const value = context.raw;
+                                if (value === null) return `${context.dataset.label}: No data`;
+                                return `Temperature: ${celsiusToFahrenheit(value)?.toFixed(1)}°F`;
+                            }
+                        },
+                        titleAlign: 'center',
+                        bodyAlign: 'left',
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: { size: 13, weight: 'bold' },
+                        bodyFont: { size: 12 },
+                        padding: 12
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Hour of Day'
+                        },
+                        grid: {
+                            display: true,
+                            drawOnChartArea: true
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: 'Temperature (°F)',
+                            font: { size: 12 }
+                        },
+                        grid: {
+                            display: true,
+                            drawOnChartArea: true
+                        },
+                        ticks: {
+                            callback: value => `${celsiusToFahrenheit(value).toFixed(1)}°F`
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+/**
+ * Processes temperature data for a specific day.
+ * @param {string[]} timestamps - Array of ISO timestamp strings.
+ * @param {number[]} tempValues - Array of temperature values (°C).
+ * @param {number} selectedDay - 0 for Today, 1 for Yesterday, etc.
+ * @returns {object} Object containing datasets for Chart.js and a noData flag.
+ */
+function processTemperatureByHour(timestamps, tempValues, selectedDay) {
+    logToConsole('Processing temperature data:', 'info');
+    logToConsole(`Timestamps received: ${timestamps.length}`, 'info');
+    logToConsole(`Temperature values received: ${tempValues.length}`, 'info');
+    logToConsole(`Selected day: ${selectedDay === 0 ? 'Today' : selectedDay === 1 ? 'Yesterday' : '2 Days Ago'}`, 'info');
+
+    if (!timestamps || !tempValues || timestamps.length === 0 || tempValues.length === 0) {
+        window.logToConsole('Empty input data for temperature processing', 'warning');
+        return { datasets: [], noData: true };
+    }
+
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    window.logToConsole(`Today in local time: ${todayStart.toLocaleString()}`, 'info');
+
+    const dayStart = new Date(todayStart);
+    dayStart.setDate(todayStart.getDate() - selectedDay);
+    
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayStart.getDate() + 1);
+
+    window.logToConsole(`Day ${selectedDay} boundaries (local): ${dayStart.toLocaleString()} to ${dayEnd.toLocaleString()}`, 'info');
+    
+    const currentHour = now.getHours();
+
+    const hourlyData = {};
+    let hasDataForDay = false;
+    let allTempsForDay = [];
+    let lastTempTime = null;
+    let dataPointsProcessed = 0;
+    let dataPointsForDay = 0;
+
+    for (let i = 0; i < timestamps.length; i++) {
+        const timestampStr = timestamps[i];
+        const temp = tempValues[i];
+        dataPointsProcessed++;
+        
+        if (temp === null || temp === undefined || !timestampStr) {
+            continue;
+        }
+        
+        const utcTimestamp = new Date(timestampStr);
+        if (isNaN(utcTimestamp.getTime())) {
+            window.logToConsole(`Invalid timestamp at index ${i}: ${timestampStr}`, 'warning');
+            continue;
+        }
+
+        const localTimestamp = new Date(utcTimestamp.getTime() + (utcTimestamp.getTimezoneOffset() * 60000));
+
+        if (i < 5 || i % 100 === 0) {
+            window.logToConsole(`Temperature timestamp ${i}: UTC=${timestampStr}, Local=${localTimestamp.toLocaleString()}`, 'info');
+        }
+
+        const timestampMs = localTimestamp.getTime();
+        const startMs = dayStart.getTime();
+        const endMs = dayEnd.getTime();
+        
+        if (timestampMs < startMs || timestampMs >= endMs) {
+            continue;
+        }
+
+        dataPointsForDay++;
+        const localHour = localTimestamp.getHours();
+
+        if (selectedDay === 0 && localHour > currentHour) {
+            continue;
+        }
+        
+        hasDataForDay = true;
+        allTempsForDay.push(temp);
+        lastTempTime = localTimestamp;
+
+        if (!hourlyData[localHour]) {
+            hourlyData[localHour] = {
+                temps: [],
+                hour: localHour,
+                date: localTimestamp
+            };
+        }
+        
+        hourlyData[localHour].temps.push(temp);
+    }
+
+    window.logToConsole(`Processed ${dataPointsProcessed} data points, found ${dataPointsForDay} for day ${selectedDay}`, 'info');
+    window.logToConsole(`Valid temperature readings for day ${selectedDay}: ${allTempsForDay.length}`, 'info');
+
+    if (!hasDataForDay) {
+        return { datasets: [], noData: true };
+    }
+
+    const hourlyAverages = Array(24).fill(null);
+    Object.values(hourlyData).forEach(hourData => {
+        if (hourData.temps.length > 0) {
+            const avgTemp = hourData.temps.reduce((a, b) => a + b, 0) / hourData.temps.length;
+            hourlyAverages[hourData.hour] = avgTemp;
+        }
+    });
+
+    const dayLabels = ['Today', 'Yesterday', '2 Days Ago'];
+    const colors = [
+        { border: 'rgb(239, 68, 68)', background: 'rgba(239, 68, 68, 0.1)' },
+        { border: 'rgb(59, 130, 246)', background: 'rgba(59, 130, 246, 0.1)' },
+        { border: 'rgb(168, 85, 247)', background: 'rgba(168, 85, 247, 0.1)' }
+    ];
+
+    const datasets = [{
+        label: `Temperature (${dayLabels[selectedDay]})`,
+        data: hourlyAverages,
+        borderColor: colors[selectedDay].border,
+        backgroundColor: colors[selectedDay].background,
+        tension: 0.1,
+        fill: true,
+        pointRadius: 3,
+        pointHoverRadius: 5
+    }];
+
+    const hourLabels = Array(24).fill().map((_, i) => {
+        const hour = i % 12 || 12;
+        const ampm = i < 12 ? 'AM' : 'PM';
+        return `${hour}${ampm}`;
+    });
+
+    return {
+        datasets,
+        noData: false,
+        hourLabels
+    };
+}
+
 // Expose necessary functions to the global scope
 window.initializeGraphs = initializeGraphs;
 window.updateStatusGraph = updateStatusGraph;
 window.updateFlowGraph = updateFlowGraph;
+window.updateTemperatureGraph = updateTemperatureGraph;
 
 // Helper function to format milliseconds into h/m/s string
 function formatDuration(ms) {
