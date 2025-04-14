@@ -394,9 +394,25 @@ function initializeGraphs(deviceIdx) {
     Object.values(charts).forEach(chart => chart?.destroy());
     charts = {};
 
+    // Reset visibility states to default
+    graphVisibility = {
+        temperature: true,
+        iceLevel: true
+    };
+
     // Initialize with today selected
     document.querySelectorAll('#temperature-time-range .time-range-button[data-days="0"], #flow-time-range .time-range-button[data-days="0"]')
         .forEach(btn => btn.classList.add('active'));
+
+    // Wait for DOM to be ready before accessing checkboxes
+    setTimeout(() => {
+        // Initialize checkbox states
+        const tempCheckbox = document.getElementById('showTemperature');
+        const iceLevelCheckbox = document.getElementById('showIceLevel');
+        
+        if (tempCheckbox) tempCheckbox.checked = graphVisibility.temperature;
+        if (iceLevelCheckbox) iceLevelCheckbox.checked = graphVisibility.iceLevel;
+    }, 0);
 
     fetchTimeSeriesData(device.id, 72).then(data => {
         if (data) {
