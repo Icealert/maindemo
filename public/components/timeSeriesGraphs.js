@@ -905,11 +905,18 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         pointHoverRadius: 5
     }];
 
-    // Create hour labels with AM/PM format
+    // Create hour labels with hour range format (e.g., "10:00-11:00 AM")
     const hourLabels = Array(24).fill().map((_, i) => {
-        const hour = i % 12 || 12;
-        const ampm = i < 12 ? 'AM' : 'PM';
-        return `${hour}${ampm}`;
+        const startHour = i;
+        const endHour = (i + 1) % 24;
+        
+        const formatHour = (hour) => {
+            const h = hour % 12 || 12;
+            const ampm = hour < 12 ? 'AM' : 'PM';
+            return `${h.toString().padStart(2, '0')}:00 ${ampm}`;
+        };
+        
+        return `${formatHour(startHour)}–${formatHour(endHour)}`;
     });
 
     return {
@@ -1068,7 +1075,7 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
                 responsive: true,
                 maintainAspectRatio: false,
                 animation: {
-                    duration: 300 // Faster animation for better responsiveness
+                    duration: 300
                 },
                 interaction: {
                     mode: 'index',
@@ -1078,13 +1085,13 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
                     tooltip: {
                         callbacks: {
                             title: (context) => {
-                                const hour = context[0].label;
-                                return `Time: ${hour}`;
+                                const timeRange = context[0].label;
+                                return `Time Range: ${timeRange}`;
                             },
                             label: (context) => {
                                 const value = context.raw;
                                 if (value === null) return `${context.dataset.label}: No data`;
-                                return `Temperature: ${value?.toFixed(1) || 'No data'}°F`;
+                                return `Average Temperature: ${value?.toFixed(1) || 'No data'}°F`;
                             }
                         },
                         titleAlign: 'center',
@@ -1098,7 +1105,22 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
                         position: 'top',
                         labels: {
                             usePointStyle: true,
-                            padding: 15
+                            padding: 15,
+                            generateLabels: (chart) => {
+                                const defaultLabels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                
+                                // Add custom label for hourly average explanation
+                                defaultLabels.push({
+                                    text: 'Each point shows the average temperature from the start of the hour to the next',
+                                    fillStyle: 'transparent',
+                                    strokeStyle: 'transparent',
+                                    lineWidth: 0,
+                                    fontStyle: 'italic',
+                                    fontColor: '#6B7280' // text-gray-500
+                                });
+                                
+                                return defaultLabels;
+                            }
                         }
                     }
                 },
@@ -1106,11 +1128,22 @@ async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData =
                     x: {
                         title: {
                             display: true,
-                            text: 'Hour of Day'
+                            text: 'Time Range (Hourly Intervals)',
+                            font: { size: 12 }
                         },
                         grid: {
                             display: true,
                             drawOnChartArea: true
+                        },
+                        ticks: {
+                            maxRotation: 45,
+                            minRotation: 45,
+                            callback: function(value, index) {
+                                // Show shorter labels on axis but keep full range in tooltips
+                                const fullLabel = this.getLabelForValue(value);
+                                const [start] = fullLabel.split('–');
+                                return start;
+                            }
                         }
                     },
                     y: {
