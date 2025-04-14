@@ -5,11 +5,8 @@ let timeSeriesDataCache = new Map();
 let currentDeviceIndex; // Store the index of the device currently shown in the modal
 let charts = {}; // Store chart instances { temperatureChart: null, flowChart: null }
 
-// Add visibility state tracking
-let graphVisibility = {
-    temperature: true,
-    iceLevel: true
-};
+// Update visibility state tracking to be device-specific
+let graphVisibility = {};
 
 /**
  * Local utility function to convert Celsius to Fahrenheit with validation
@@ -370,8 +367,20 @@ function initializeGraphs(deviceIdx) {
     Object.values(charts).forEach(chart => chart?.destroy());
     charts = {};
 
+    // Initialize visibility state for this device
+    if (!graphVisibility[deviceIdx]) {
+        graphVisibility[deviceIdx] = {
+            temperature: true,
+            iceLevel: true
+        };
+    }
+
+    // Reset checkbox states for this device
+    document.getElementById(`showTemperature_${deviceIdx}`).checked = true;
+    document.getElementById(`showIceLevel_${deviceIdx}`).checked = true;
+
     // Initialize with today selected
-    document.querySelectorAll('#temperature-time-range .time-range-button[data-days="0"], #flow-time-range .time-range-button[data-days="0"]')
+    document.querySelectorAll(`#temperature-time-range_${deviceIdx} .time-range-button[data-days="0"]`)
         .forEach(btn => btn.classList.add('active'));
 
     fetchTimeSeriesData(device.id, 72).then(data => {
@@ -380,16 +389,6 @@ function initializeGraphs(deviceIdx) {
             updateFlowGraph(deviceIdx, [0], data);
         }
     });
-
-    // Reset visibility state
-    graphVisibility = {
-        temperature: true,
-        iceLevel: true
-    };
-
-    // Reset checkbox states
-    document.getElementById('showTemperature').checked = true;
-    document.getElementById('showIceLevel').checked = true;
 }
 
 /**
@@ -978,7 +977,7 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
         pointRadius: 3,
         pointHoverRadius: 5,
         yAxisID: 'y',
-        hidden: !graphVisibility.temperature
+        hidden: !graphVisibility[currentDeviceIndex]?.temperature
     }];
 
     // Add ice level dataset
@@ -1004,7 +1003,7 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
             pointRadius: 2,
             pointHoverRadius: 4,
             yAxisID: 'y1',
-            hidden: !graphVisibility.iceLevel
+            hidden: !graphVisibility[currentDeviceIndex]?.iceLevel
         });
     }
 
@@ -1337,18 +1336,27 @@ function updateTimeRangeButtons(containerId, selectedValue) {
  * @param {number} deviceIndex - The index of the device
  */
 function handleVisibilityToggle(type, deviceIndex) {
-    const checkbox = document.getElementById(`show${type.charAt(0).toUpperCase() + type.slice(1)}`);
-    graphVisibility[type] = checkbox.checked;
+    const checkbox = document.getElementById(`show${type.charAt(0).toUpperCase() + type.slice(1)}_${deviceIndex}`);
+    
+    // Initialize visibility state for this device if it doesn't exist
+    if (!graphVisibility[deviceIndex]) {
+        graphVisibility[deviceIndex] = {
+            temperature: true,
+            iceLevel: true
+        };
+    }
+    
+    graphVisibility[deviceIndex][type] = checkbox.checked;
 
     // Update chart visibility
     if (charts.temperatureChart) {
         if (type === 'temperature') {
             // Temperature is always the first dataset
-            charts.temperatureChart.data.datasets[0].hidden = !graphVisibility.temperature;
+            charts.temperatureChart.data.datasets[0].hidden = !graphVisibility[deviceIndex].temperature;
         } else {
             // Ice level is always the second dataset if it exists
             if (charts.temperatureChart.data.datasets.length > 1) {
-                charts.temperatureChart.data.datasets[1].hidden = !graphVisibility.iceLevel;
+                charts.temperatureChart.data.datasets[1].hidden = !graphVisibility[deviceIndex].iceLevel;
             }
         }
         charts.temperatureChart.update();
@@ -1358,9 +1366,9 @@ function handleVisibilityToggle(type, deviceIndex) {
     if (charts.temperatureChart) {
         const options = charts.temperatureChart.options;
         if (type === 'temperature') {
-            options.scales.y.display = graphVisibility.temperature;
+            options.scales.y.display = graphVisibility[deviceIndex].temperature;
         } else {
-            options.scales.y1.display = graphVisibility.iceLevel;
+            options.scales.y1.display = graphVisibility[deviceIndex].iceLevel;
         }
         charts.temperatureChart.update('none'); // Update without animation
     }

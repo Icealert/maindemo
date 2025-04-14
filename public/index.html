@@ -976,7 +976,7 @@
                                         <label class="flex items-center gap-2 text-sm text-gray-600">
                                             <input type="checkbox" 
                                                 class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showTemperature" 
+                                                id="showTemperature_${index}" 
                                                 checked 
                                                 onchange="handleVisibilityToggle('temperature', ${index})">
                                             Show Temperature
@@ -984,17 +984,17 @@
                                         <label class="flex items-center gap-2 text-sm text-gray-600">
                                             <input type="checkbox" 
                                                 class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showIceLevel" 
+                                                id="showIceLevel_${index}" 
                                                 checked 
                                                 onchange="handleVisibilityToggle('iceLevel', ${index})">
                                             Show Ice Level
                                         </label>
                                     </div>
                                     <!-- Time Range Selector -->
-                                    <div class="time-range-selector" id="temperature-time-range">
-                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">Today</button>
-                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">Yesterday</button>
-                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">2 Days Ago</button>
+                                    <div class="time-range-selector" id="temperature-time-range_${index}">
+                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Today</button>
+                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Yesterday</button>
+                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${index})">2 Days Ago</button>
                                     </div>
                                 </div>
                             </div>
@@ -1396,25 +1396,25 @@
                                         <label class="flex items-center gap-2 text-sm text-gray-600">
                                             <input type="checkbox" 
                                                 class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showTemperature" 
+                                                id="showTemperature_${index}" 
                                                 checked 
-                                                onchange="handleVisibilityToggle('temperature', ${deviceIndex})">
+                                                onchange="handleVisibilityToggle('temperature', ${index})">
                                             Show Temperature
                                         </label>
                                         <label class="flex items-center gap-2 text-sm text-gray-600">
                                             <input type="checkbox" 
                                                 class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
-                                                id="showIceLevel" 
+                                                id="showIceLevel_${index}" 
                                                 checked 
-                                                onchange="handleVisibilityToggle('iceLevel', ${deviceIndex})">
+                                                onchange="handleVisibilityToggle('iceLevel', ${index})">
                                             Show Ice Level
                                         </label>
                                     </div>
                                     <!-- Time Range Selector -->
-                                    <div class="time-range-selector" id="temperature-time-range">
-                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">Today</button>
-                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">Yesterday</button>
-                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">2 Days Ago</button>
+                                    <div class="time-range-selector" id="temperature-time-range_${index}">
+                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Today</button>
+                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${index})">Yesterday</button>
+                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${index})">2 Days Ago</button>
                                     </div>
                                 </div>
                             </div>
