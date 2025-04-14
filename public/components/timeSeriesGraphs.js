@@ -421,31 +421,6 @@ function calculateTotalFlow(flowRates, intervalMinutes) {
 }
 
 /**
- * Calculates flow frequency (number of flow events per hour)
- * @param {number[]} flowRates - Array of flow rates
- * @returns {number} Average number of flow events per hour
- */
-function calculateFlowFrequency(flowRates) {
-    if (!flowRates || flowRates.length === 0) return 0;
-    
-    // Count transitions from zero to non-zero flow
-    let flowEvents = 0;
-    let wasFlowing = false;
-    
-    flowRates.forEach(rate => {
-        if (rate > 0 && !wasFlowing) {
-            flowEvents++;
-            wasFlowing = true;
-        } else if (rate === 0) {
-            wasFlowing = false;
-        }
-    });
-    
-    // Convert to events per hour (assuming 24-hour period)
-    return flowEvents / 24;
-}
-
-/**
  * Processes flow rate data for a specific day.
  * @param {string[]} timestamps - Array of ISO timestamp strings.
  * @param {number[]} flowValues - Array of flow rate values (L/min).
@@ -561,10 +536,7 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
         min: null,
         max: null,
         total: null,
-        stdDev: null,
-        frequency: null,
-        timeSinceLastFlow: null,
-        lastFlowTime: null
+        stdDev: null
     };
 
     if (allFlowsForDay.length > 0) {
@@ -577,15 +549,6 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
         
         // Calculate standard deviation
         stats.stdDev = calculateStdDev(allFlowsForDay);
-        
-        // Calculate flow frequency
-        stats.frequency = calculateFlowFrequency(allFlowsForDay);
-        
-        // Time since last flow
-        if (lastFlowTime) {
-            stats.lastFlowTime = lastFlowTime;
-            stats.timeSinceLastFlow = new Date() - lastFlowTime;
-        }
     }
 
     // Create hourly averages
@@ -658,8 +621,6 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
         document.getElementById('flowRange').textContent = '-';
         document.getElementById('flowTotal').textContent = '-';
         document.getElementById('flowStdDev').textContent = '-';
-        document.getElementById('flowFrequency').textContent = '-';
-        document.getElementById('timeSinceLastFlow').textContent = '-';
     } else {
         statsContainer.classList.remove('opacity-50', 'pointer-events-none');
     }
@@ -719,22 +680,6 @@ async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) 
                 document.getElementById('flowStdDev').textContent = 
                     stats.stdDev !== null ? 
                     `±${stats.stdDev.toFixed(2)} L/min` : '-';
-
-                // Flow Frequency
-                document.getElementById('flowFrequency').textContent = 
-                    stats.frequency !== null ? 
-                    `${stats.frequency.toFixed(1)} events/hr` : '-';
-
-                // Time Since Last Flow
-                if (stats.lastFlowTime) {
-                    const timeSinceLastFlow = formatDuration(stats.timeSinceLastFlow);
-                    document.getElementById('timeSinceLastFlow').textContent = timeSinceLastFlow;
-                    document.getElementById('lastFlowTimestamp').textContent = 
-                        new Date(stats.lastFlowTime).toLocaleString();
-                } else {
-                    document.getElementById('timeSinceLastFlow').textContent = '-';
-                    document.getElementById('lastFlowTimestamp').textContent = '-';
-                }
             }
         }
     }
