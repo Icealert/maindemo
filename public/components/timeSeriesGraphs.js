@@ -307,6 +307,47 @@ function clearDeviceCache(deviceId) {
     }
 }
 
+/**
+ * Handles time range button clicks for both temperature and flow graphs
+ * @param {Event} event - The click event
+ * @param {string} type - Either 'temperature' or 'flow'
+ * @param {number} deviceIndex - The index of the device
+ */
+function handleTimeRangeClick(event, type, deviceIndex) {
+    event.preventDefault();
+    const button = event.target;
+    
+    // Toggle active state with Ctrl/Cmd key for multi-select
+    if (event.ctrlKey || event.metaKey) {
+        button.classList.toggle('active');
+    } else {
+        // Single select - deactivate all others
+        const container = button.closest('.time-range-selector');
+        container.querySelectorAll('.time-range-button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        button.classList.add('active');
+    }
+
+    // Get all selected days
+    const selectedDays = Array.from(
+        button.closest('.time-range-selector').querySelectorAll('.time-range-button.active')
+    ).map(btn => parseInt(btn.dataset.days));
+
+    // If no days selected, select the clicked one
+    if (selectedDays.length === 0) {
+        button.classList.add('active');
+        selectedDays.push(parseInt(button.dataset.days));
+    }
+
+    // Update the appropriate graph
+    if (type === 'temperature') {
+        updateTemperatureGraph(deviceIndex, selectedDays);
+    } else if (type === 'flow') {
+        updateFlowGraph(deviceIndex, selectedDays);
+    }
+}
+
 function initializeGraphs(deviceIdx) {
     window.logToConsole(`Initializing graphs for device index: ${deviceIdx}`, 'info');
     currentDeviceIndex = deviceIdx;
@@ -323,13 +364,14 @@ function initializeGraphs(deviceIdx) {
     Object.values(charts).forEach(chart => chart?.destroy());
     charts = {};
 
-    updateTimeRangeButtons('temperature-time-range', 0);
-    updateTimeRangeButtons('flow-time-range', 0);
+    // Initialize with today selected
+    document.querySelectorAll('#temperature-time-range .time-range-button[data-days="0"], #flow-time-range .time-range-button[data-days="0"]')
+        .forEach(btn => btn.classList.add('active'));
 
     fetchTimeSeriesData(device.id, 72).then(data => {
         if (data) {
-            updateTemperatureGraph(deviceIdx, 0, data);
-            updateFlowGraph(deviceIdx, 0, data);
+            updateTemperatureGraph(deviceIdx, [0], data);
+            updateFlowGraph(deviceIdx, [0], data);
         }
     });
 }
@@ -569,22 +611,19 @@ function processFlowByHour(timestamps, flowValues, selectedDay) {
  * @param {number} deviceIdx - The index of the device.
  * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
  */
-async function updateFlowGraph(deviceIndex, selectedDay, timeSeriesData = null) {
+async function updateFlowGraph(deviceIndex, selectedDays, timeSeriesData = null) {
     const device = window.lastDevicesData[deviceIndex];
     if (!device?.id) {
         logToConsole('No device found for index ' + deviceIndex, 'error');
         return;
     }
 
-    updateTimeRangeButtons('flow-time-range', selectedDay);
+    updateTimeRangeButtons('flow-time-range', selectedDays);
     
     // Get the stats container
     const statsContainer = document.getElementById('flowStats');
 
     // Hide or show stats based on number of selected days
-    const selectedDays = Array.from(document.querySelectorAll('#flow-time-range button.active'))
-        .map(btn => parseInt(btn.dataset.days));
-    
     if (selectedDays.length > 1) {
         statsContainer.classList.add('opacity-50', 'pointer-events-none');
         // Clear stats when multiple days are selected
@@ -951,22 +990,19 @@ function processTemperatureByHour(timestamps, tempValues, selectedDay) {
  * @param {number} deviceIdx - The index of the device.
  * @param {number} selectedDay - The day index (0=Today, 1=Yesterday, ...).
  */
-async function updateTemperatureGraph(deviceIndex, selectedDay, timeSeriesData = null) {
+async function updateTemperatureGraph(deviceIndex, selectedDays, timeSeriesData = null) {
     const device = window.lastDevicesData[deviceIndex];
     if (!device?.id) {
         logToConsole('No device found for index ' + deviceIndex, 'error');
         return;
     }
 
-    updateTimeRangeButtons('temperature-time-range', selectedDay);
+    updateTimeRangeButtons('temperature-time-range', selectedDays);
     
     // Get the stats container
     const statsContainer = document.getElementById('temperatureStats');
 
     // Hide or show stats based on number of selected days
-    const selectedDays = Array.from(document.querySelectorAll('#temperature-time-range button.active'))
-        .map(btn => parseInt(btn.dataset.days));
-    
     if (selectedDays.length > 1) {
         statsContainer.classList.add('opacity-50', 'pointer-events-none');
         // Clear stats when multiple days are selected
@@ -1214,6 +1250,7 @@ function updateTimeRangeButtons(containerId, selectedValue) {
 window.initializeGraphs = initializeGraphs;
 window.updateTemperatureGraph = updateTemperatureGraph;
 window.updateFlowGraph = updateFlowGraph;
+window.handleTimeRangeClick = handleTimeRangeClick;
 
 // Helper function to format milliseconds into h/m/s string
 function formatDuration(ms) {

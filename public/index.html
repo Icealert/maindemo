@@ -1368,9 +1368,9 @@
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-sm font-medium text-gray-700">Temperature</h4>
                                 <div class="time-range-selector" id="temperature-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateTemperatureGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateTemperatureGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateTemperatureGraph(${deviceIndex}, 2)">2 Days Ago</button>
+                                    <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature', ${deviceIndex})">2 Days Ago</button>
                                 </div>
                             </div>
                             <!-- Add Temperature Statistics Summary Box -->
@@ -1452,9 +1452,9 @@
                             <div class="flex justify-between items-center mb-2">
                                 <h4 class="text-sm font-medium text-gray-700">Flow Rate</h4>
                                 <div class="time-range-selector" id="flow-time-range">
-                                    <button class="time-range-button active" data-days="0" onclick="updateFlowGraph(${deviceIndex}, 0)">Today</button>
-                                    <button class="time-range-button" data-days="1" onclick="updateFlowGraph(${deviceIndex}, 1)">Yesterday</button>
-                                    <button class="time-range-button" data-days="2" onclick="updateFlowGraph(${deviceIndex}, 2)">2 Days Ago</button>
+                                    <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'flow', ${deviceIndex})">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'flow', ${deviceIndex})">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'flow', ${deviceIndex})">2 Days Ago</button>
                                 </div>
                             </div>
                             <!-- Add Flow Rate Statistics Summary Box -->
