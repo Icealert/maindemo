@@ -1383,7 +1383,7 @@
                                     </p>
                                 </div>
                                 
-                                <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                     <div class="stat-box">
                                         <h5 class="text-xs font-medium text-gray-500">
                                             Daily Range
@@ -1392,18 +1392,38 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                                 </svg>
                                                 <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
-                                                    Shows min-max temperature from 12:01 AM to 11:59 PM. Calculated using available data for the selected day.
+                                                    Shows min-max temperature from 12:01 AM to 11:59 PM.
                                                 </span>
                                             </span>
                                         </h5>
                                         <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
                                     </div>
                                     <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Daily Average</h5>
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Daily Average
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Average temperature over the entire day.
+                                                </span>
+                                            </span>
+                                        </h5>
                                         <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
                                     </div>
                                     <div class="stat-box">
-                                        <h5 class="text-xs font-medium text-gray-500">Std Deviation</h5>
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Std Deviation
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Measure of temperature variation throughout the day.
+                                                </span>
+                                            </span>
+                                        </h5>
                                         <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
                                     </div>
                                     <div class="stat-box">
@@ -1414,7 +1434,7 @@
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                                 </svg>
                                                 <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
-                                                    Most frequent temperature value. Only shown when a value occurs more than once.
+                                                    Most frequent temperature value during the day.
                                                 </span>
                                             </span>
                                         </h5>
