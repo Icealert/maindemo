@@ -165,257 +165,246 @@ function sortProperties(properties) {
     });
 }
 
-export function renderPropertiesSection(device) {
-    if (!device || !device.properties) {
-        return '<div class="text-center text-gray-500">No properties available</div>';
+function renderPropertiesSection(device) {
+    if (!device.thing) {
+        return '<p class="text-gray-500">No thing data available</p>';
     }
 
-    const properties = device.properties;
-    const deviceId = device.id;
-
-    // Group properties by category
-    const groupedProperties = {
-        status: [],
-        settings: [],
-        maintenance: [],
-        info: []
-    };
-
-    properties.forEach(property => {
-        const name = property.name.toLowerCase();
-        if (name.includes('temp') || name.includes('flow')) {
-            groupedProperties.status.push(property);
-        } else if (name.includes('threshold') || name.includes('time') || name.includes('email')) {
-            groupedProperties.settings.push(property);
-        } else if (name.includes('maintenance')) {
-            groupedProperties.maintenance.push(property);
-        } else {
-            groupedProperties.info.push(property);
-        }
-    });
-
     return `
-        <div class="space-y-6">
-            ${Object.entries(groupedProperties).map(([category, props]) => {
-                if (props.length === 0) return '';
-                
-                const categoryTitles = {
-                    status: 'Status Monitoring',
-                    settings: 'Device Settings',
-                    maintenance: 'Maintenance',
-                    info: 'Device Information'
-                };
+        <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4">
+            <div class="flex items-center space-x-2 mb-6">
+                <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-900">Properties</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                ${sortProperties(device.thing.properties).filter(property => 
+                    !['warning', 'critical'].includes(property.name)
+                ).map(property => `
+                    <div class="property-card ${getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
+                        <div class="px-5 py-4">
+                            <div class="flex justify-between items-start mb-3">
+                                <div class="space-y-1">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="${getPropertyTextColor(property.name)} font-semibold">${
+                                            property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' :
+                                            property.name === 'cloudtemp' ? 'Temperature' :
+                                            property.name === 'cloudflowrate' ? 'Flow Rate' :
+                                            property.name === 'Last_Maintenance' ? 'Last Maintenance' :
+                                            property.name === 'location' ? 'Ice Machine Location' :
+                                            property.name === 'sensorplacement' ? 'Sensor Placement' :
+                                            property.name === 'tempThresholdMax' ? 'Temperature Threshold' :
+                                            property.name === 'noFlowCriticalTime' ? 'No Flow Critical Time' :
+                                            property.name === 'notificationEmail' ? 'Notification Email Address' :
+                                            property.name
+                                        }</h4>
+                                        <span class="px-2 py-0.5 text-xs font-medium rounded-full ${property.permission === 'READ_WRITE' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}">
+                                            ${property.permission === 'READ_WRITE' ? 'Editable' : 'Read Only'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
 
-                return `
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-semibold text-gray-800">${categoryTitles[category]}</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${props.map(property => createPropertyCard(property, deviceId, isPropertyEditable(property))).join('')}
+                            ${property.name === 'cloudtemp' ? `
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Temperature?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This is the real-time temperature reading from the sensor placed in your ice machine and helps determine the ice level in your machine.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'cloudflowrate' ? `
+                                <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-purple-800 mb-1">What is Flow Rate?</p>
+                                            <p class="text-xs text-purple-600 leading-relaxed">This measures the real-time water flow rate in your ice machine. It helps monitor water usage and detect potential issues with water supply or ice production.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'Icemachine_PN_SN' ? `
+                                <div class="mt-3 p-3 bg-rose-50 rounded-lg border border-rose-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-rose-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-rose-800 mb-1">What is Ice Machine PN/SN?</p>
+                                            <p class="text-xs text-rose-600 leading-relaxed">This field helps track which ice machine this FreezeSense device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'Last_Maintenance' ? `
+                                <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-amber-800 mb-1">What is Last Maintenance?</p>
+                                            <p class="text-xs text-amber-600 leading-relaxed">This tracks when your ice machine was last serviced. Regular maintenance every 6 months is recommended to ensure optimal performance, prevent issues, and extend the life of your machine.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'location' ? `
+                                <div class="mt-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-teal-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-teal-800 mb-1">What is Ice Machine Location?</p>
+                                            <p class="text-xs text-teal-600 leading-relaxed">This field helps identify where the ice machine is physically located. Enter a descriptive location (e.g., "Kitchen - North Wall", "Bar Area", "Cafeteria Room 101") to easily locate and service the machine.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'notificationEmail' ? `
+                                <div class="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-indigo-800 mb-1">What is Notification Email Address?</p>
+                                            <p class="text-xs text-indigo-600 leading-relaxed">This email address will receive critical alerts about your ice machine's status. Make sure to enter a valid email address that is regularly monitored to ensure timely response to any issues.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'sensorplacement' ? `
+                                <div class="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-indigo-800 mb-1">What is Sensor Placement?</p>
+                                            <p class="text-xs text-indigo-600 leading-relaxed">This setting determines where the temperature sensor is placed in your ice machine, measured as a percentage from the bottom. This helps accurately track ice levels and ensures proper monitoring of your machine's performance.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'tempThresholdMax' ? `
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Temperature Threshold Max?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This setting determines the maximum temperature threshold for your ice machine. When the temperature rises above this threshold, it indicates that ice levels have dropped below the sensor level. Adjust this value to fine-tune ice level detection and alert sensitivity.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'noFlowCriticalTime' ? `
+                                <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-purple-800 mb-1">What is No Flow Critical Time?</p>
+                                            <p class="text-xs text-purple-600 leading-relaxed">This setting determines how long (in hours) the system should wait without detecting water flow before triggering a critical alert. Adjust this value based on your ice machine's typical production cycles and usage patterns to avoid false alarms.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            ${property.permission === 'READ_WRITE' ? `
+                                <div class="mt-4">
+                                ${property.name === 'sensorplacement' ? 
+                                    getSensorPlacementSelector(device.id, property)
+                                : property.name === 'Last_Maintenance' ? `
+                                        <div class="flex space-x-3">
+                                        <input 
+                                            type="text"
+                                            class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                            value="${property.last_value || ''}"
+                                            placeholder="MM/DD/YYYY"
+                                            pattern="^(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/[0-9]{4}$"
+                                            title="Please enter date in MM/DD/YYYY format"
+                                            data-device-id="${device.id}"
+                                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                            onkeydown="handlePropertyInputKeydown(event)"
+                                        />
+                                        <button 
+                                            onclick="handleUpdateButtonClick(event)"
+                                            data-device-id="${device.id}"
+                                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                            class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-colors"
+                                            type="button"
+                                        >
+                                            Update
+                                        </button>
+                                    </div>
+                                ` : `
+                                        <div class="flex space-x-3">
+                                        <input 
+                                            type="${getPropertyInputType(property)}"
+                                            class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                            value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
+                                            placeholder="Enter new value"
+                                            data-device-id="${device.id}"
+                                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                            step="${getPropertyStep(property)}"
+                                            ${property.type === 'INT' || property.type === 'FLOAT' ? `min="0"` : ''}
+                                        />
+                                        <button 
+                                            onclick="handleUpdateButtonClick(event)"
+                                            data-device-id="${device.id}"
+                                            data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                                            type="button"
+                                        >
+                                            Update
+                                        </button>
+                                    </div>
+                                `}
+                                </div>
+                            ` : `
+                                <div class="mt-3">
+                                    <p class="text-2xl font-semibold ${getPropertyTextColor(property.name)}">
+                                        ${property.name.toLowerCase().includes('temp') ? 
+                                            `${celsiusToFahrenheit(property.last_value)?.toFixed(1)}°F` : 
+                                            property.name === 'cloudflowrate' ?
+                                            `${Number(property.last_value).toFixed(2)} L/min` :
+                                            formatPropertyValue(property)}
+                                    </p>
+                                </div>
+                                
+                                <div class="mt-4 pt-3 border-t border-gray-100">
+                                    <div class="flex items-center space-x-1 text-xs text-gray-500">
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <span>Last Updated: ${new Date(device.last_activity_at).toLocaleString('en-US', {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short'
+                                        })}</span>
+                                    </div>
+                                </div>
+                            `}
                         </div>
                     </div>
-                `;
-            }).join('')}
-        </div>
-    `;
-}
-
-function isPropertyEditable(property) {
-    const editableProperties = [
-        'location',
-        'sensorplacement',
-        'tempThresholdMax',
-        'noFlowCriticalTime',
-        'notificationEmail',
-        'Last_Maintenance'
-    ];
-    return editableProperties.includes(property.name);
-}
-
-function createPropertyCard(property, deviceId, isEditable = false) {
-    const propertyName = property.name;
-    const propertyValue = property.last_value;
-    const propertyType = property.type;
-    const bgColor = getPropertyBgColor(propertyName);
-    const textColor = getPropertyTextColor(propertyName);
-    const icon = getPropertyIcon(propertyName);
-    const formattedValue = formatPropertyValue(property);
-    const isCritical = checkIfCritical(property);
-
-    return `
-        <div class="property-card ${bgColor} rounded-xl shadow-sm border border-gray-100 p-4 relative overflow-hidden transition-all duration-200 hover:shadow-md ${isCritical ? 'border-red-500 border-2' : ''}" 
-             role="region" 
-             aria-label="${propertyName} property">
-            <div class="flex justify-between items-start mb-3">
-                <div class="flex items-center space-x-2">
-                    <div class="p-2 rounded-lg bg-white/50">
-                        ${icon}
-                    </div>
-                    <div>
-                        <h3 class="text-sm font-semibold ${textColor}">${formatPropertyName(propertyName)}</h3>
-                        <p class="text-xs text-gray-500">${getPropertyDescription(propertyName)}</p>
-                    </div>
-                </div>
-                ${isEditable ? `
-                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
-                        Editable
-                    </span>
-                ` : ''}
-            </div>
-
-            <div class="mt-2">
-                <p class="text-2xl font-semibold ${textColor} ${isCritical ? 'text-red-600' : ''}">
-                    ${formattedValue}
-                </p>
-            </div>
-
-            ${isEditable ? `
-                <div class="mt-4">
-                    ${getPropertyInput(property, deviceId)}
-                </div>
-            ` : ''}
-
-            <div class="mt-4 pt-3 border-t border-gray-100">
-                <div class="flex items-center justify-between text-xs text-gray-500">
-                    <div class="flex items-center space-x-1">
-                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <span>Last Updated: ${new Date(property.updated_at).toLocaleString()}</span>
-                    </div>
-                    ${isCritical ? `
-                        <span class="flex items-center space-x-1 text-red-500">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            <span>Critical</span>
-                        </span>
-                    ` : ''}
-                </div>
+                `).join('')}
             </div>
         </div>
     `;
 }
 
-function getPropertyIcon(propertyName) {
-    const icons = {
-        'temp': `<svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13V5a4 4 0 118 0v8a6 6 0 11-8 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13a4 4 0 118 0 4 4 0 01-8 0z"/>
-                </svg>`,
-        'flow': `<svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>`,
-        'level': `<svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                </svg>`,
-        'location': `<svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                </svg>`,
-        'maintenance': `<svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>`
-    };
-
-    for (const [key, icon] of Object.entries(icons)) {
-        if (propertyName.toLowerCase().includes(key)) {
-            return icon;
-        }
-    }
-    return `<svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>`;
-}
-
-function formatPropertyName(name) {
-    const nameMap = {
-        'Icemachine_PN_SN': 'Ice Machine Part Number and Serial Number',
-        'cloudtemp': 'Temperature',
-        'cloudflowrate': 'Flow Rate',
-        'Last_Maintenance': 'Last Maintenance',
-        'location': 'Ice Machine Location',
-        'sensorplacement': 'Sensor Placement',
-        'tempThresholdMax': 'Temperature Threshold',
-        'noFlowCriticalTime': 'No Flow Critical Time',
-        'notificationEmail': 'Notification Email Address'
-    };
-    return nameMap[name] || name;
-}
-
-function getPropertyDescription(name) {
-    const descriptions = {
-        'Icemachine_PN_SN': 'Unique identifier for your ice machine',
-        'cloudtemp': 'Current temperature reading',
-        'cloudflowrate': 'Water flow rate in liters per minute',
-        'Last_Maintenance': 'Date of last maintenance service',
-        'location': 'Physical location of the ice machine',
-        'sensorplacement': 'Height of sensor from bottom of bin',
-        'tempThresholdMax': 'Maximum allowed temperature',
-        'noFlowCriticalTime': 'Time without flow before critical alert',
-        'notificationEmail': 'Email for receiving alerts'
-    };
-    return descriptions[name] || 'Property value';
-}
-
-function checkIfCritical(property) {
-    const { name, last_value, type } = property;
-    
-    if (name === 'cloudtemp') {
-        const threshold = property.thing?.properties?.find(p => p.name === 'tempThresholdMax')?.last_value;
-        return last_value > threshold;
-    }
-    
-    if (name === 'cloudflowrate') {
-        const criticalTime = property.thing?.properties?.find(p => p.name === 'noFlowCriticalTime')?.last_value;
-        const lastUpdate = property.updated_at;
-        const timeSinceFlow = (new Date() - new Date(lastUpdate)) / (1000 * 60 * 60);
-        return timeSinceFlow >= criticalTime;
-    }
-    
-    return false;
-}
-
-// Export functions to make them available globally and as ES modules
-const exports = {
-    renderPropertiesSection,
-    createPropertyCard,
-    isPropertyEditable,
-    getPropertyIcon,
-    formatPropertyName,
-    getPropertyDescription,
-    checkIfCritical,
-    formatPropertyValue,
-    getPropertyInputType,
-    getPropertyStep,
-    getPropertyBgColor,
-    getPropertyTextColor,
-    getSensorPlacementSelector,
-    celsiusToFahrenheit,
-    sortProperties
-};
-
-// Make functions available globally
-Object.entries(exports).forEach(([key, value]) => {
-    window[key] = value;
-});
-
-// ES Module exports
-export default exports;
-export {
-    renderPropertiesSection,
-    createPropertyCard,
-    isPropertyEditable,
-    getPropertyIcon,
-    formatPropertyName,
-    getPropertyDescription,
-    checkIfCritical,
-    formatPropertyValue,
-    getPropertyInputType,
-    getPropertyStep,
-    getPropertyBgColor,
-    getPropertyTextColor,
-    getSensorPlacementSelector,
-    celsiusToFahrenheit,
-    sortProperties
-}; 
+// Export the functions
+window.formatPropertyValue = formatPropertyValue;
+window.getPropertyInputType = getPropertyInputType;
+window.getPropertyStep = getPropertyStep;
+window.getPropertyBgColor = getPropertyBgColor;
+window.getPropertyTextColor = getPropertyTextColor;
+window.getSensorPlacementSelector = getSensorPlacementSelector;
+window.renderPropertiesSection = renderPropertiesSection;
+window.celsiusToFahrenheit = celsiusToFahrenheit;
+window.sortProperties = sortProperties; 
