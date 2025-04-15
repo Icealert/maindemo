@@ -376,13 +376,46 @@ function checkIfCritical(property) {
     return false;
 }
 
-// Export the functions
-window.formatPropertyValue = formatPropertyValue;
-window.getPropertyInputType = getPropertyInputType;
-window.getPropertyStep = getPropertyStep;
-window.getPropertyBgColor = getPropertyBgColor;
-window.getPropertyTextColor = getPropertyTextColor;
-window.getSensorPlacementSelector = getSensorPlacementSelector;
-window.renderPropertiesSection = renderPropertiesSection;
-window.celsiusToFahrenheit = celsiusToFahrenheit;
-window.sortProperties = sortProperties; 
+// Export functions to make them available globally and as ES modules
+const exports = {
+    renderPropertiesSection,
+    createPropertyCard,
+    isPropertyEditable,
+    getPropertyIcon,
+    formatPropertyName,
+    getPropertyDescription,
+    checkIfCritical,
+    formatPropertyValue,
+    getPropertyInputType,
+    getPropertyStep,
+    getPropertyBgColor,
+    getPropertyTextColor,
+    getSensorPlacementSelector,
+    celsiusToFahrenheit,
+    sortProperties
+};
+
+// Make functions available globally
+Object.entries(exports).forEach(([key, value]) => {
+    window[key] = value;
+});
+
+// ES Module exports
+export default exports;
+export {
+    renderPropertiesSection,
+    createPropertyCard,
+    isPropertyEditable,
+    getPropertyIcon,
+    formatPropertyName,
+    getPropertyDescription,
+    checkIfCritical,
+    formatPropertyValue,
+    getPropertyInputType,
+    getPropertyStep,
+    getPropertyBgColor,
+    getPropertyTextColor,
+    getSensorPlacementSelector,
+    celsiusToFahrenheit,
+    sortProperties
+}; 
