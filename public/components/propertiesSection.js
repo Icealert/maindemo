@@ -337,7 +337,7 @@ function renderPropertiesSection(device) {
                                         <div class="flex space-x-3">
                                         <input 
                                             type="text"
-                                            class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 bg-white"
+                                            class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             value="${property.last_value || ''}"
                                             placeholder="MM/DD/YYYY"
                                             pattern="^(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/[0-9]{4}$"
@@ -350,7 +350,7 @@ function renderPropertiesSection(device) {
                                             onclick="handleUpdateButtonClick(event)"
                                             data-device-id="${device.id}"
                                             data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                            class="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-1 transition-colors"
+                                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
                                             type="button"
                                         >
                                             Update
