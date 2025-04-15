@@ -105,30 +105,28 @@ function getPropertyTextColor(propertyName) {
 function getSensorPlacementSelector(deviceId, property) {
     const currentValue = property.last_value ? property.last_value * 100 : null;
     return `
-        <div class="flex flex-col space-y-2">
-            <div class="flex space-x-2">
-                <select 
-                    class="w-full px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    data-device-id="${deviceId}"
-                    data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                    id="sensorPlacement_${deviceId}"
-                >
-                    <option value="" ${!currentValue ? 'selected' : ''}>Select sensor placement</option>
-                    <option value="0.10" ${currentValue === 10 ? 'selected' : ''}>10% from bottom</option>
-                    <option value="0.25" ${currentValue === 25 ? 'selected' : ''}>25% from bottom</option>
-                    <option value="0.50" ${currentValue === 50 ? 'selected' : ''}>50% from bottom</option>
-                    <option value="0.75" ${currentValue === 75 ? 'selected' : ''}>75% from bottom</option>
-                </select>
-                <button 
-                    onclick="handleUpdateButtonClick(event)"
-                    data-device-id="${deviceId}"
-                    data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                    class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
-                    type="button"
-                >
-                    Update
-                </button>
-            </div>
+        <div class="flex flex-col sm:flex-row gap-2 sm:space-x-3">
+            <select 
+                class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                data-device-id="${deviceId}"
+                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                id="sensorPlacement_${deviceId}"
+            >
+                <option value="" ${!currentValue ? 'selected' : ''} class="bg-white">Select sensor placement</option>
+                <option value="0.10" ${currentValue === 10 ? 'selected' : ''} class="bg-white">10% from bottom</option>
+                <option value="0.25" ${currentValue === 25 ? 'selected' : ''} class="bg-white">25% from bottom</option>
+                <option value="0.50" ${currentValue === 50 ? 'selected' : ''} class="bg-white">50% from bottom</option>
+                <option value="0.75" ${currentValue === 75 ? 'selected' : ''} class="bg-white">75% from bottom</option>
+            </select>
+            <button 
+                onclick="handleUpdateButtonClick(event)"
+                data-device-id="${deviceId}"
+                data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
+                class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                type="button"
+            >
+                Update
+            </button>
         </div>
     `;
 }
