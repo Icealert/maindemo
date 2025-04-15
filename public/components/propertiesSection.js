@@ -188,6 +188,7 @@ function renderPropertiesSection(device) {
                                 <div class="space-y-1">
                                     <div class="flex items-center space-x-2">
                                         <h4 class="${getPropertyTextColor(property.name)} font-semibold">${
+                                            property.name === 'devicename' ? 'Device Name' :
                                             property.name === 'Icemachine_PN_SN' ? 'Ice Machine Part Number and Serial Number' :
                                             property.name === 'cloudtemp' ? 'Temperature' :
                                             property.name === 'cloudflowrate' ? 'Flow Rate' :
@@ -206,7 +207,19 @@ function renderPropertiesSection(device) {
                                 </div>
                             </div>
 
-                            ${property.name === 'cloudtemp' ? `
+                            ${property.name === 'devicename' ? `
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                                    <div class="flex items-start space-x-2">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Device Name?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This is the unique identifier for your FreezeSense device. A descriptive name helps you easily identify and manage multiple devices in your system.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ` : property.name === 'cloudtemp' ? `
                                 <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
                                         <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
