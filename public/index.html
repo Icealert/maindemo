@@ -1397,6 +1397,14 @@
 
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+
+            // Add click event listener to close modal when clicking outside
+            modal.addEventListener('click', function(event) {
+                // Check if the click was on the modal background (not the content)
+                if (event.target === modal) {
+                    hideDeviceDetails();
+                }
+            });
         }
 
         function hideDeviceDetails() {
@@ -2172,6 +2180,14 @@
             
             modal.classList.remove('hidden');
             modal.classList.add('flex');
+
+            // Add click event listener to close modal when clicking outside
+            modal.addEventListener('click', function(event) {
+                // Check if the click was on the modal background (not the content)
+                if (event.target === modal) {
+                    hideDeviceSettings();
+                }
+            });
         }
 
         function hideDeviceSettings() {
