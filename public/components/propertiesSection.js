@@ -1,3 +1,9 @@
+// Helper function to convert Celsius to Fahrenheit
+function celsiusToFahrenheit(celsius) {
+    if (celsius === null || celsius === undefined) return null;
+    return (celsius * 9/5) + 32;
+}
+
 // Properties Section Component
 function formatPropertyValue(property) {
     if (property.last_value === undefined || property.last_value === null) {
@@ -125,6 +131,38 @@ function getSensorPlacementSelector(deviceId, property) {
             </div>
         </div>
     `;
+}
+
+function sortProperties(properties) {
+    const propertyOrder = [
+        'devicename',
+        'Icemachine_PN_SN',
+        'location',
+        'cloudtemp',
+        'cloudflowrate',
+        'sensorplacement',
+        'tempThresholdMax',
+        'noFlowCriticalTime',
+        'notificationEmail',
+        'Last_Maintenance'
+    ];
+
+    return properties.sort((a, b) => {
+        const indexA = propertyOrder.indexOf(a.name);
+        const indexB = propertyOrder.indexOf(b.name);
+        
+        // If both properties are in the order list, sort by their order
+        if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+        }
+        
+        // If only one property is in the order list, prioritize it
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        
+        // For properties not in the order list, sort alphabetically
+        return a.name.localeCompare(b.name);
+    });
 }
 
 function renderPropertiesSection(device) {
@@ -296,4 +334,6 @@ window.getPropertyStep = getPropertyStep;
 window.getPropertyBgColor = getPropertyBgColor;
 window.getPropertyTextColor = getPropertyTextColor;
 window.getSensorPlacementSelector = getSensorPlacementSelector;
-window.renderPropertiesSection = renderPropertiesSection; 
+window.renderPropertiesSection = renderPropertiesSection;
+window.celsiusToFahrenheit = celsiusToFahrenheit;
+window.sortProperties = sortProperties; 
