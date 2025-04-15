@@ -2298,6 +2298,7 @@
 
             const modalContent = document.getElementById('settings-modal-content');
             const modalTitle = document.getElementById('settings-modal-title');
+            const modal = document.getElementById('settings-modal');
             
             modalTitle.textContent = `Settings - ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name}`;
             
@@ -2309,11 +2310,14 @@
                 </div>
             `;
             
-            document.getElementById('settings-modal').classList.remove('hidden');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
         function hideDeviceSettings() {
-            document.getElementById('settings-modal').classList.add('hidden');
+            const modal = document.getElementById('settings-modal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
 
         // Helper function to convert Celsius to Fahrenheit
