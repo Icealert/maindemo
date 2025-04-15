@@ -1,10 +1,25 @@
 // Device status management
-let deviceStatusList = document.getElementById('deviceStatusList');
-let deviceListContent = document.getElementById('deviceListContent');
-let connectedDevicesCount = document.getElementById('connectedDevicesCount');
-let disconnectedBadgeCount = document.getElementById('disconnectedBadgeCount');
+let deviceStatusList;
+let deviceListContent;
+let connectedDevicesCount;
+let disconnectedBadgeCount;
+
+// Initialize DOM elements when the document is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    deviceStatusList = document.getElementById('deviceStatusList');
+    deviceListContent = document.getElementById('deviceListContent');
+    connectedDevicesCount = document.getElementById('connectedDevicesCount');
+    disconnectedBadgeCount = document.getElementById('disconnectedBadgeCount');
+
+    // Add click event listener to the button
+    const button = document.getElementById('connectedDevicesButton');
+    if (button) {
+        button.addEventListener('click', toggleDeviceStatusList);
+    }
+});
 
 function toggleDeviceStatusList() {
+    if (!deviceStatusList) return; // Safety check
     deviceStatusList.classList.toggle('hidden');
     if (!deviceStatusList.classList.contains('hidden')) {
         updateDeviceList();
@@ -12,6 +27,8 @@ function toggleDeviceStatusList() {
 }
 
 function updateDeviceList() {
+    if (!deviceListContent || !connectedDevicesCount || !disconnectedBadgeCount) return; // Safety check
+    
     // Get devices from the window.lastDevicesData (set by your existing fetchDevices function)
     const devices = window.lastDevicesData || [];
     
@@ -130,6 +147,7 @@ function createDeviceElement(device) {
 // Close the device list when clicking outside
 document.addEventListener('click', (event) => {
     const button = document.getElementById('connectedDevicesButton');
+    if (!button || !deviceStatusList) return; // Safety check
     if (!button.contains(event.target) && !deviceStatusList.contains(event.target)) {
         deviceStatusList.classList.add('hidden');
     }
