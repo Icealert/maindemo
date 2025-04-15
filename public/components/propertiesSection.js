@@ -196,7 +196,7 @@ function renderPropertiesSection(device) {
                                             property.name === 'location' ? 'Ice Machine Location' :
                                             property.name === 'sensorplacement' ? 'Sensor Placement' :
                                             property.name === 'tempThresholdMax' ? 'Temperature Threshold' :
-                                            property.name === 'noFlowCriticalTime' ? 'No Flow Critical Time' :
+                                            property.name === 'noFlowCriticalTime' ? 'Flow Alert Delay' :
                                             property.name === 'notificationEmail' ? 'Notification Email Address' :
                                             property.name
                                         }</h4>
@@ -322,8 +322,8 @@ function renderPropertiesSection(device) {
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-blue-800 mb-1">What is No Flow Critical Time?</p>
-                                            <p class="text-xs text-blue-600 leading-relaxed">This setting determines how long (in hours) the system should wait without detecting water flow before triggering a critical alert. Adjust this value based on your ice machine's typical production cycles and usage patterns to avoid false alarms.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Flow Alert Delay?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This setting determines how long to wait (in hours) before sending an alert when no water flow is detected. Adjust this value based on your ice machine's normal production cycles to avoid unnecessary alerts during regular off periods.</p>
                                         </div>
                                     </div>
                                 </div>
