@@ -14,7 +14,6 @@
     <script src="/components/recommendations.js"></script>
     <script src="/components/timeSeriesGraphs.js"></script>
     <script src="/js/deviceCard.js"></script>
-    <script src="/js/deviceStatus.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -2627,6 +2626,53 @@
 
         function fahrenheitToCelsius(fahrenheit) {
             return (fahrenheit - 32) * 5/9;
+        }
+
+        function showAllDevices() {
+            const devices = window.lastDevicesData || [];
+            const modal = document.getElementById('connected-devices-modal');
+            const devicesList = document.getElementById('connected-devices-list');
+
+            // Sort devices: disconnected first, then by name
+            const sortedDevices = [...devices].sort((a, b) => {
+                const aStatus = calculateDeviceStatus(a);
+                const bStatus = calculateDeviceStatus(b);
+                
+                // First sort by connection status (disconnected first)
+                if (!aStatus.isConnected && bStatus.isConnected) return -1;
+                if (aStatus.isConnected && !bStatus.isConnected) return 1;
+                
+                // Then sort by device name
+                const aName = a.thing?.properties?.find(p => p.name === 'devicename')?.last_value || a.name;
+                const bName = b.thing?.properties?.find(p => p.name === 'devicename')?.last_value || b.name;
+                return aName.localeCompare(bName);
+            });
+
+            devicesList.innerHTML = sortedDevices.length > 0 ? 
+                sortedDevices.map(device => {
+                    const status = calculateDeviceStatus(device);
+                    const deviceName = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device';
+                    const location = device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set';
+                    
+                    return `
+                        <div class="flex items-center justify-between p-3 ${status.isConnected ? 'bg-gray-50 hover:bg-gray-100' : 'bg-red-50 hover:bg-red-100'} rounded-lg">
+                            <div>
+                                <h3 class="font-medium ${status.isConnected ? 'text-gray-800' : 'text-red-800'}">${deviceName}</h3>
+                                <p class="text-sm ${status.isConnected ? 'text-gray-500' : 'text-red-600'}">
+                                    ${location}
+                                    ${!status.isConnected ? `<br>Last seen: ${new Date(status.lastConnectedTime).toLocaleString()}` : ''}
+                                </p>
+                            </div>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                ${status.isConnected ? 'Connected' : 'Disconnected'}
+                            </span>
+                        </div>
+                    `;
+                }).join('') 
+                : '<p class="text-gray-500 text-center py-4">No devices found</p>';
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
         }
 
     </script>
