@@ -509,50 +509,14 @@
         }
 
         function getPropertyBgColor(propertyName) {
-            const colorMap = {
-                'temp': 'bg-blue-50',
-                'temperature': 'bg-blue-50',
-                'humidity': 'bg-green-50',
-                'flow': 'bg-purple-50',
-                'pressure': 'bg-yellow-50',
-                'level': 'bg-indigo-50',
-                'status': 'bg-gray-50',
-                'Last_Maintenance': 'bg-amber-50',
-                'location': 'bg-teal-50',
-                'sensorplacement': 'bg-indigo-50'
-            };
-
-            for (const [key, color] of Object.entries(colorMap)) {
-                if (propertyName.toLowerCase().includes(key) || propertyName === key) {
-                    return color;
-                }
-            }
-            return 'bg-gray-50';
+            // Return consistent blue background for all properties
+            return 'bg-blue-50';
         }
 
         function getPropertyTextColor(propertyName) {
-            const colorMap = {
-                'temp': 'text-blue-800',
-                'temperature': 'text-blue-800',
-                'humidity': 'text-green-800',
-                'flow': 'text-purple-800',
-                'pressure': 'text-yellow-800',
-                'level': 'text-indigo-800',
-                'status': 'text-gray-800',
-                'Last_Maintenance': 'text-amber-800',
-                'location': 'text-teal-800',
-                'sensorplacement': 'text-indigo-800'
-            };
-
-            for (const [key, color] of Object.entries(colorMap)) {
-                if (propertyName.toLowerCase().includes(key) || propertyName === key) {
-                    return color;
-                }
-            }
-            return 'text-gray-800';
+            // Return consistent blue text for all properties
+            return 'text-blue-800';
         }
-
-
 
         function formatTemperature(celsius, maxThreshold = null) {
             if (celsius === undefined || celsius === null) return 'N/A';

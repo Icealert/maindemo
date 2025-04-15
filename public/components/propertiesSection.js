@@ -219,74 +219,74 @@ function renderPropertiesSection(device) {
                                     </div>
                                 </div>
                             ` : property.name === 'cloudflowrate' ? `
-                                <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-purple-800 mb-1">What is Flow Rate?</p>
-                                            <p class="text-xs text-purple-600 leading-relaxed">This measures the real-time water flow rate in your ice machine. It helps monitor water usage and detect potential issues with water supply or ice production.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Flow Rate?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This measures the real-time water flow rate in your ice machine. It helps monitor water usage and detect potential issues with water supply or ice production.</p>
                                         </div>
                                     </div>
                                 </div>
                             ` : property.name === 'Icemachine_PN_SN' ? `
-                                <div class="mt-3 p-3 bg-rose-50 rounded-lg border border-rose-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-rose-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-rose-800 mb-1">What is Ice Machine PN/SN?</p>
-                                            <p class="text-xs text-rose-600 leading-relaxed">This field helps track which ice machine this FreezeSense device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Ice Machine PN/SN?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This field helps track which ice machine this FreezeSense device is currently installed in. Enter the part number (PN) or serial number (SN) of the ice machine for easy identification and maintenance tracking.</p>
                                         </div>
                                     </div>
                                 </div>
                             ` : property.name === 'Last_Maintenance' ? `
-                                <div class="mt-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-amber-800 mb-1">What is Last Maintenance?</p>
-                                            <p class="text-xs text-amber-600 leading-relaxed">This tracks when your ice machine was last serviced. Regular maintenance every 6 months is recommended to ensure optimal performance, prevent issues, and extend the life of your machine.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Last Maintenance?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This tracks when your ice machine was last serviced. Regular maintenance every 6 months is recommended to ensure optimal performance, prevent issues, and extend the life of your machine.</p>
                                         </div>
                                     </div>
                                 </div>
                             ` : property.name === 'location' ? `
-                                <div class="mt-3 p-3 bg-teal-50 rounded-lg border border-teal-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-teal-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-teal-800 mb-1">What is Ice Machine Location?</p>
-                                            <p class="text-xs text-teal-600 leading-relaxed">This field helps identify where the ice machine is physically located. Enter a descriptive location (e.g., "Kitchen - North Wall", "Bar Area", "Cafeteria Room 101") to easily locate and service the machine.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Ice Machine Location?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This field helps identify where the ice machine is physically located. Enter a descriptive location (e.g., "Kitchen - North Wall", "Bar Area", "Cafeteria Room 101") to easily locate and service the machine.</p>
                                         </div>
                                     </div>
                                 </div>
                             ` : property.name === 'notificationEmail' ? `
-                                <div class="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-indigo-800 mb-1">What is Notification Email Address?</p>
-                                            <p class="text-xs text-indigo-600 leading-relaxed">This email address will receive critical alerts about your ice machine's status. Make sure to enter a valid email address that is regularly monitored to ensure timely response to any issues.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Notification Email Address?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This email address will receive critical alerts about your ice machine's status. Make sure to enter a valid email address that is regularly monitored to ensure timely response to any issues.</p>
                                         </div>
                                     </div>
                                 </div>
                             ` : property.name === 'sensorplacement' ? `
-                                <div class="mt-3 p-3 bg-indigo-50 rounded-lg border border-indigo-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-indigo-800 mb-1">What is Sensor Placement?</p>
-                                            <p class="text-xs text-indigo-600 leading-relaxed">This setting determines where the temperature sensor is placed in your ice machine, measured as a percentage from the bottom. This helps accurately track ice levels and ensures proper monitoring of your machine's performance.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is Sensor Placement?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This setting determines where the temperature sensor is placed in your ice machine, measured as a percentage from the bottom. This helps accurately track ice levels and ensures proper monitoring of your machine's performance.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -303,14 +303,14 @@ function renderPropertiesSection(device) {
                                     </div>
                                 </div>
                             ` : property.name === 'noFlowCriticalTime' ? `
-                                <div class="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-100">
+                                <div class="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-100">
                                     <div class="flex items-start space-x-2">
-                                        <svg class="w-4 h-4 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg class="w-4 h-4 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
                                         <div>
-                                            <p class="text-sm font-medium text-purple-800 mb-1">What is No Flow Critical Time?</p>
-                                            <p class="text-xs text-purple-600 leading-relaxed">This setting determines how long (in hours) the system should wait without detecting water flow before triggering a critical alert. Adjust this value based on your ice machine's typical production cycles and usage patterns to avoid false alarms.</p>
+                                            <p class="text-sm font-medium text-blue-800 mb-1">What is No Flow Critical Time?</p>
+                                            <p class="text-xs text-blue-600 leading-relaxed">This setting determines how long (in hours) the system should wait without detecting water flow before triggering a critical alert. Adjust this value based on your ice machine's typical production cycles and usage patterns to avoid false alarms.</p>
                                         </div>
                                     </div>
                                 </div>
