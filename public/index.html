@@ -1206,9 +1206,6 @@
             // Generate the detailed view with improved layout
             modalContent.innerHTML = `
                 <div class="space-y-6">
-                    <!-- Device Info -->
-                    ${renderDeviceInformation(device, status)}
-
                     <!-- Recommendations Section -->
                     ${generateRecommendationsHTML(status, device)}
 
@@ -1862,28 +1859,6 @@
             return '';
         }
 
-        // Add these new functions for graph handling
-        // MOVED TO timeSeriesGraphs.js
-
-        // Helper function to format temperature value with conditional red color
-        // MOVED TO timeSeriesGraphs.js
-
-        // Helper function to calculate standard deviation
-        // MOVED TO timeSeriesGraphs.js
-
-        // Helper function to calculate mode
-        // MOVED TO timeSeriesGraphs.js
-
-        // MOVED TO timeSeriesGraphs.js (fetchTimeSeriesData and helpers)
-
-        // MOVED TO timeSeriesGraphs.js (updateStatusGraph and helpers)
-
-        // Helper function to fetch property time series data
-        // MOVED TO timeSeriesGraphs.js
-
-        // MOVED TO timeSeriesGraphs.js (updateFlowGraph and helpers)
-
-        // MOVED TO timeSeriesGraphs.js (updateTimeRangeButtons)
 
         // Add refresh button to manually trigger data refresh
         function addRefreshButton() {
@@ -1909,15 +1884,7 @@
             container.parentNode.insertBefore(refreshButton, container);
         }
 
-        // Fetch devices immediately and then every 6 hours (6 * 60 * 60 * 1000 ms)
-        // REMOVED: Initial fetch and interval setup are now correctly handled within window.onload
-        // fetchDevices(); 
-        // const interval = setInterval(fetchDevices, 21600000); 
 
-        // Cleanup interval when page is unloaded - REMOVED - Handled within window.onload
-        // window.addEventListener('unload', () => { 
-        //     clearInterval(interval); 
-        // });
 
         function showDisclaimer() {
             const modal = document.getElementById('disclaimer-modal');
@@ -2058,7 +2025,6 @@
             await updatePropertyValue(deviceId, property);
         }
 
-        // Remove auto-commit function
         
         async function updatePropertyValue(deviceId, property) {
             try {
@@ -2192,12 +2158,16 @@
             const modalContent = document.getElementById('settings-modal-content');
             const modalTitle = document.getElementById('settings-modal-title');
             const modal = document.getElementById('settings-modal');
+            const status = calculateDeviceStatus(device);
             
             modalTitle.textContent = `Settings - ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name}`;
             
-            // Create settings content with properties section
+            // Create settings content with Device Information and Properties sections
             modalContent.innerHTML = `
                 <div class="space-y-6">
+                    <!-- Device Information Section -->
+                    ${renderDeviceInformation(device, status)}
+
                     <!-- Properties Section -->
                     ${renderPropertiesSection(device)}
                 </div>
