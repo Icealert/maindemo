@@ -1206,9 +1206,6 @@
             // Generate the detailed view with improved layout
             modalContent.innerHTML = `
                 <div class="space-y-6">
-                    <!-- Recommendations Section -->
-                    ${generateRecommendationsHTML(status, device)}
-
                     <!-- Time Series Graphs Section -->
                     <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
                         <div class="flex items-center space-x-2 mb-4">
@@ -1392,13 +1389,10 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Status Controls -->
-                    ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
                 </div>
             `;
 
-            // Initialize the graphs (without passing API URL)
+            // Initialize the graphs
             initializeGraphs(deviceIndex);
 
             modal.classList.remove('hidden');
@@ -2162,11 +2156,14 @@
             
             modalTitle.textContent = `Settings - ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name}`;
             
-            // Create settings content with Device Information and Properties sections
+            // Create settings content with Device Information, Recommendations, and Properties sections
             modalContent.innerHTML = `
                 <div class="space-y-6">
                     <!-- Device Information Section -->
                     ${renderDeviceInformation(device, status)}
+
+                    <!-- Recommendations Section -->
+                    ${generateRecommendationsHTML(status, device)}
 
                     <!-- Properties Section -->
                     ${renderPropertiesSection(device)}
