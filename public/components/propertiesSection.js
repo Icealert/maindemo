@@ -170,6 +170,8 @@ function renderPropertiesSection(device) {
         return '<p class="text-gray-500">No thing data available</p>';
     }
 
+    const excludedProperties = ['warning', 'critical', 'cloudtemp', 'cloudflowrate'];
+
     return `
         <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4">
             <div class="flex items-center space-x-2 mb-6">
@@ -179,9 +181,9 @@ function renderPropertiesSection(device) {
                 <h3 class="text-xl font-semibold text-gray-900">Properties</h3>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                ${sortProperties(device.thing.properties).filter(property => 
-                    !['warning', 'critical', 'cloudtemp', 'cloudflowrate'].includes(property.name)
-                ).map(property => `
+                ${sortProperties(device.thing.properties)
+                    .filter(property => !excludedProperties.includes(property.name))
+                    .map(property => `
                     <div class="property-card ${getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                         <div class="px-5 py-4">
                             <div class="flex justify-between items-start mb-3">
