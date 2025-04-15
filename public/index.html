@@ -2156,17 +2156,17 @@
             
             modalTitle.textContent = `Settings - ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name}`;
             
-            // Create settings content with Device Information, Recommendations, and Properties sections
+            // Create settings content with sections in new order: Recommendations, Properties, and Device Information at the bottom
             modalContent.innerHTML = `
                 <div class="space-y-6">
-                    <!-- Device Information Section -->
-                    ${renderDeviceInformation(device, status)}
-
                     <!-- Recommendations Section -->
                     ${generateRecommendationsHTML(status, device)}
 
                     <!-- Properties Section -->
                     ${renderPropertiesSection(device)}
+
+                    <!-- Device Information Section -->
+                    ${renderDeviceInformation(device, status)}
                 </div>
             `;
             
