@@ -180,7 +180,7 @@ function renderPropertiesSection(device) {
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 ${sortProperties(device.thing.properties).filter(property => 
-                    !['warning', 'critical'].includes(property.name)
+                    !['warning', 'critical', 'cloudtemp', 'cloudflowrate'].includes(property.name)
                 ).map(property => `
                     <div class="property-card ${getPropertyBgColor(property.name)} rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md">
                         <div class="px-5 py-4">
@@ -334,10 +334,10 @@ function renderPropertiesSection(device) {
                                 ${property.name === 'sensorplacement' ? 
                                     getSensorPlacementSelector(device.id, property)
                                 : property.name === 'Last_Maintenance' ? `
-                                        <div class="flex space-x-3">
+                                        <div class="flex flex-col sm:flex-row gap-2 sm:space-x-3">
                                         <input 
                                             type="text"
-                                            class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             value="${property.last_value || ''}"
                                             placeholder="MM/DD/YYYY"
                                             pattern="^(0[1-9]|1[0-2])/(0[1-9]|[12][0-9]|3[01])/[0-9]{4}$"
@@ -350,17 +350,17 @@ function renderPropertiesSection(device) {
                                             onclick="handleUpdateButtonClick(event)"
                                             data-device-id="${device.id}"
                                             data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                                            class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
                                             type="button"
                                         >
                                             Update
                                         </button>
                                     </div>
                                 ` : `
-                                        <div class="flex space-x-3">
+                                        <div class="flex flex-col sm:flex-row gap-2 sm:space-x-3">
                                         <input 
                                             type="${getPropertyInputType(property)}"
-                                            class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                                            class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
                                             value="${property.name.toLowerCase().includes('temp') ? celsiusToFahrenheit(property.last_value).toFixed(1) : property.last_value || ''}"
                                             placeholder="Enter new value"
                                             data-device-id="${device.id}"
@@ -372,7 +372,7 @@ function renderPropertiesSection(device) {
                                             onclick="handleUpdateButtonClick(event)"
                                             data-device-id="${device.id}"
                                             data-property='${JSON.stringify(property).replace(/'/g, "&apos;")}'
-                                            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
+                                            class="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors"
                                             type="button"
                                         >
                                             Update
