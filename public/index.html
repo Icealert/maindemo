@@ -1541,9 +1541,6 @@
 
                     <!-- Status Controls -->
                     ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
-
-                    <!-- Properties Section -->
-                    ${renderPropertiesSection(device)}
                 </div>
             `;
 
@@ -2337,48 +2334,15 @@
             
             modalTitle.textContent = `Settings - ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name}`;
             
-            // Create properties section
-            const propertiesSection = document.createElement('div');
-            propertiesSection.className = 'space-y-4';
-            propertiesSection.innerHTML = `
-                <h3 class="text-lg font-semibold mb-2">Device Properties</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${device.properties.map(property => `
-                        <div class="property-card bg-white p-4 rounded-lg shadow-sm border border-gray-100">
-                            <div class="flex justify-between items-start">
-                                <div>
-                                    <h4 class="font-medium text-gray-700">${property.name}</h4>
-                                    <p class="text-sm text-gray-500">${property.type}</p>
-                                </div>
-                                <span class="text-sm ${property.status === 'critical' ? 'text-red-500' : 'text-gray-500'}">
-                                    ${formatPropertyValue(property)}
-                                </span>
-                            </div>
-                            ${property.writable ? `
-                            <div class="mt-3">
-                                <input 
-                                    type="${getPropertyInputType(property)}"
-                                    value="${property.last_value}"
-                                    ${property.type === 'BOOL' ? 'checked' : ''}
-                                    class="w-full px-2 py-1 border rounded-md text-sm"
-                                    data-device-id="${deviceId}"
-                                    data-property='${JSON.stringify(property)}'
-                                    onkeydown="handlePropertyInputKeydown(event)"
-                                    onchange="handlePropertyInputChange(event)"
-                                    step="${getPropertyStep(property)}"
-                                >
-                            </div>
-                            ` : ''}
-                        </div>
-                    `).join('')}
+            // Create settings content with properties section
+            modalContent.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Properties Section -->
+                    ${renderPropertiesSection(device)}
                 </div>
             `;
-
-            modalContent.innerHTML = '';
-            modalContent.appendChild(propertiesSection);
             
             document.getElementById('settings-modal').classList.remove('hidden');
-            document.getElementById('settings-modal-content').innerHTML = ''; // Clear content
         }
 
         function hideDeviceSettings() {
