@@ -1,4 +1,4 @@
-// Helper functions for property formatting and styling
+// Properties Section Component
 function formatPropertyValue(property) {
     if (property.last_value === undefined || property.last_value === null) {
         return 'N/A';
@@ -127,7 +127,6 @@ function getSensorPlacementSelector(deviceId, property) {
     `;
 }
 
-// Main function to render the properties section
 function renderPropertiesSection(device) {
     if (!device.thing) {
         return '<p class="text-gray-500">No thing data available</p>';
@@ -290,11 +289,11 @@ function renderPropertiesSection(device) {
     `;
 }
 
-// Export the main function and helper functions
-window.renderPropertiesSection = renderPropertiesSection;
+// Export the functions
 window.formatPropertyValue = formatPropertyValue;
 window.getPropertyInputType = getPropertyInputType;
 window.getPropertyStep = getPropertyStep;
 window.getPropertyBgColor = getPropertyBgColor;
 window.getPropertyTextColor = getPropertyTextColor;
-window.getSensorPlacementSelector = getSensorPlacementSelector; 
+window.getSensorPlacementSelector = getSensorPlacementSelector;
+window.renderPropertiesSection = renderPropertiesSection; 

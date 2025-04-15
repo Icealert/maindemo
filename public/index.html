@@ -1352,11 +1352,198 @@
                         </div>
                     </div>
 
+                    <!-- Recommendations Section -->
+                    ${generateRecommendationsHTML(status, device)}
+
+                    <!-- Time Series Graphs Section -->
+                    <div class="bg-white rounded-lg shadow-lg border border-gray-100 p-4 mb-6">
+                        <div class="flex items-center space-x-2 mb-4">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            <h3 class="text-xl font-semibold text-gray-900">Time Series Data</h3>
+                        </div>
+
+                        <!-- Temperature Graph -->
+                        <div class="mb-6">
+                            <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Temperature</h4>
+                                <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+                                    <div class="flex items-center space-x-4">
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" 
+                                                class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                                                id="showTemperature" 
+                                                checked 
+                                                onchange="handleVisibilityToggle('temperature')">
+                                            <span class="ml-2 text-sm text-gray-700">Show Temperature</span>
+                                        </label>
+                                        <label class="inline-flex items-center">
+                                            <input type="checkbox" 
+                                                class="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" 
+                                                id="showIceLevel" 
+                                                checked 
+                                                onchange="handleVisibilityToggle('iceLevel')">
+                                            <span class="ml-2 text-sm text-gray-700">Show Ice Level</span>
+                                        </label>
+                                    </div>
+                                    <div class="time-range-selector" id="temperature-time-range">
+                                        <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'temperature')">Today</button>
+                                        <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'temperature')">Yesterday</button>
+                                        <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'temperature')">2 Days Ago</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- Add Temperature Statistics Summary Box -->
+                            <div id="temperatureStats" class="grid grid-cols-1 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                                <!-- Info Message -->
+                                <div class="col-span-full mb-2">
+                                    <p class="text-xs text-gray-600 italic">
+                                        Note: Statistics are only available when a single time period is selected.
+                                        Multi-day selections will disable these statistics.
+                                    </p>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Daily Range
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Shows min-max temperature from 12:01 AM to 11:59 PM.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempRange">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Daily Average
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Average temperature over the entire day.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempAvg">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Std Deviation
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Measure of temperature variation throughout the day.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempStdDev">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Mode
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Most frequent temperature value during the day.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="tempMode">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="temperatureChart"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- Flow Time Graph -->
+                        <div class="mb-6">
+                            <div class="flex justify-between items-center mb-2">
+                                <h4 class="text-sm font-medium text-gray-700">Flow Rate</h4>
+                                <div class="time-range-selector" id="flow-time-range">
+                                    <button class="time-range-button" data-days="0" onclick="handleTimeRangeClick(event, 'flow')">Today</button>
+                                    <button class="time-range-button" data-days="1" onclick="handleTimeRangeClick(event, 'flow')">Yesterday</button>
+                                    <button class="time-range-button" data-days="2" onclick="handleTimeRangeClick(event, 'flow')">2 Days Ago</button>
+                                </div>
+                            </div>
+                            <!-- Add Flow Rate Statistics Summary Box -->
+                            <div id="flowStats" class="grid grid-cols-1 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
+                                <!-- Info Message -->
+                                <div class="col-span-full mb-2">
+                                    <p class="text-xs text-gray-600 italic">
+                                        Note: Statistics are only available when a single time period is selected.
+                                        Multi-day selections will disable these statistics.
+                                    </p>
+                                </div>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Daily Range
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Shows minimum and maximum flow rates from 12:01 AM to 11:59 PM.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="flowRange">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Total Flow
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Total volume of water flow for the selected day.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="flowTotal">-</p>
+                                    </div>
+                                    <div class="stat-box">
+                                        <h5 class="text-xs font-medium text-gray-500">
+                                            Std Deviation
+                                            <span class="ml-1 cursor-help group relative">
+                                                <svg class="w-3 h-3 inline text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                </svg>
+                                                <span class="hidden group-hover:block absolute bottom-full left-0 w-48 p-2 bg-gray-800 text-xs text-white rounded shadow-lg mb-2">
+                                                    Measure of flow rate variation throughout the day.
+                                                </span>
+                                            </span>
+                                        </h5>
+                                        <p class="text-sm font-bold text-gray-900" id="flowStdDev">-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="chart-container">
+                                <canvas id="flowChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Status Controls -->
                     ${device.thing ? getStatusControls(device.id, device.thing.properties || []) : ''}
 
                     <!-- Properties Section -->
-                    ${device.thing ? renderPropertiesSection(device) : '<p class="text-gray-500">No thing data available</p>'}
+                    ${renderPropertiesSection(device)}
                 </div>
             `;
 
