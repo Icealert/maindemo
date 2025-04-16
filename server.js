@@ -139,6 +139,7 @@ app.use(express.static('public', {
 
 // Redirect root path to landing.html
 app.get('/', (req, res) => {
+    console.log('Redirecting root path to landing.html');
     res.redirect('/landing.html');
 });
 
