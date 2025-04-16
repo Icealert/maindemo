@@ -175,7 +175,9 @@ async function fetchTimeSeriesData(deviceId, hours) {
             headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json'
-            }
+            },
+            // Add signal for timeout
+            signal: AbortSignal.timeout(30000) // 30 second timeout
         };
 
         const queryParams = new URLSearchParams({
@@ -195,79 +197,54 @@ async function fetchTimeSeriesData(deviceId, hours) {
         let flowData = { data: [] };
         let tempData = { data: [] };
 
-        // Fetch flow data
-        if (flowProperty) {
-            const flowApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`;
-            logToConsole(`Attempting to fetch flow from: ${flowApiUrl}`, 'info');
-            
-            try {
-                const flowResponse = await fetch(flowApiUrl, fetchOptions);
-                
-                if (!flowResponse.ok) {
-                    const errorText = await flowResponse.text();
-                    logToConsole(`Flow fetch failed: ${flowResponse.status} - ${errorText}`, 'warning');
-                } else {
-                    const responseText = await flowResponse.text();
-                    logToConsole(`Flow response first 200 chars: ${responseText.substring(0, 200)}...`, 'info');
-                    
-                    try {
-                        flowData = JSON.parse(responseText);
-                    } catch (parseError) {
-                        logToConsole(`Failed to parse flow JSON: ${parseError.message}`, 'error');
-                    }
+        // Fetch flow and temperature data concurrently
+        const fetchPromises = [];
+        const flowPromise = flowProperty ? fetch(`${API_URL}/api/proxy/timeseries/${thingId}/${flowProperty.id}?${queryParams}`, fetchOptions)
+            .then(async response => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Flow fetch failed: ${response.status} - ${errorText}`);
                 }
-                
+                return response.json();
+            })
+            .then(data => {
+                flowData = data;
                 if (!flowData.data && Array.isArray(flowData.timestamps) && Array.isArray(flowData.values)) {
-                    logToConsole('Converting flow timestamps/values format to data array format', 'info');
                     const length = Math.min(flowData.timestamps.length, flowData.values.length);
                     flowData.data = Array(length).fill().map((_, i) => ({
                         time: flowData.timestamps[i],
                         value: flowData.values[i]
                     }));
                 }
-                
-                window.logToConsole('Raw flow rate response:', flowData, 'info');
-            } catch (error) {
+            })
+            .catch(error => {
                 logToConsole(`Error during flow fetch: ${error.message}`, 'error');
-            }
-        }
+            }) : Promise.resolve();
 
-        // Fetch temperature data
-        if (tempProperty) {
-            const tempApiUrl = `${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`;
-            logToConsole(`Attempting to fetch temperature from: ${tempApiUrl}`, 'info');
-            
-            try {
-                const tempResponse = await fetch(tempApiUrl, fetchOptions);
-                
-                if (!tempResponse.ok) {
-                    const errorText = await tempResponse.text();
-                    logToConsole(`Temperature fetch failed: ${tempResponse.status} - ${errorText}`, 'warning');
-                } else {
-                    const responseText = await tempResponse.text();
-                    logToConsole(`Temperature response first 200 chars: ${responseText.substring(0, 200)}...`, 'info');
-                    
-                    try {
-                        tempData = JSON.parse(responseText);
-                    } catch (parseError) {
-                        logToConsole(`Failed to parse temperature JSON: ${parseError.message}`, 'error');
-                    }
+        const tempPromise = tempProperty ? fetch(`${API_URL}/api/proxy/timeseries/${thingId}/${tempProperty.id}?${queryParams}`, fetchOptions)
+            .then(async response => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Temperature fetch failed: ${response.status} - ${errorText}`);
                 }
-                
+                return response.json();
+            })
+            .then(data => {
+                tempData = data;
                 if (!tempData.data && Array.isArray(tempData.timestamps) && Array.isArray(tempData.values)) {
-                    logToConsole('Converting temperature timestamps/values format to data array format', 'info');
                     const length = Math.min(tempData.timestamps.length, tempData.values.length);
                     tempData.data = Array(length).fill().map((_, i) => ({
                         time: tempData.timestamps[i],
                         value: tempData.values[i]
                     }));
                 }
-                
-                window.logToConsole('Raw temperature response:', tempData, 'info');
-            } catch (error) {
+            })
+            .catch(error => {
                 logToConsole(`Error during temperature fetch: ${error.message}`, 'error');
-            }
-        }
+            }) : Promise.resolve();
+
+        // Wait for both fetches to complete
+        await Promise.all([flowPromise, tempPromise]);
         
         const flowResult = parseTsArray(flowData.data || []);
         const tempResult = parseTsArray(tempData.data || []);
@@ -283,10 +260,19 @@ async function fetchTimeSeriesData(deviceId, hours) {
             }
         };
 
-        timeSeriesDataCache.set(cacheKey, result);
+        // Only cache if we have some data
+        if ((result.flow.timestamps.length > 0 || result.temperature.timestamps.length > 0)) {
+            timeSeriesDataCache.set(cacheKey, result);
+        }
+        
         return result;
     } catch (error) {
         logToConsole(`Error fetching time series: ${error.message}`, 'error');
+        // If there's cached data available, return it as fallback
+        if (timeSeriesDataCache.has(cacheKey)) {
+            logToConsole('Returning cached data as fallback after error', 'warning');
+            return timeSeriesDataCache.get(cacheKey);
+        }
         return null;
     }
 }

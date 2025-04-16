@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contact | FreezeSense</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      color: #272D2D;
+      background-color: #FFFFFF;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      background-color: #ffffff;
+      border-bottom: 3px solid #1976D2;
+    }
+    footer {
+      background-color: #0D47A1;
+      color: white;
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.9rem;
+    }
+    header .logo {
+      display: flex;
+      align-items: center;
+      font-weight: 600;
+      color: #1976D2;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+    header .logo img {
+      height: 40px;
+      margin-right: 0.5rem;
+    }
+    nav a {
+      margin-left: 2rem;
+      text-decoration: none;
+      color: black;
+    }
+    nav a.button {
+      background-color: #1976D2;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+    }
+    .contact-hero {
+      background-color: #1976D2;
+      color: white;
+      padding: 3rem 2rem;
+      text-align: center;
+    }
+    .contact-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2rem;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .contact-info, .contact-form {
+      flex: 1;
+      min-width: 300px;
+      max-width: 500px;
+    }
+    .contact-info p {
+      margin: 0.5rem 0;
+    }
+    .contact-info strong {
+      display: block;
+      margin-top: 1rem;
+      color: #800000;
+    }
+    .contact-form form {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .contact-form input,
+    .contact-form textarea,
+    .contact-form select {
+      padding: 0.8rem;
+      border: 1px solid #BBBBBB;
+      border-radius: 5px;
+      font-size: 1rem;
+      color: #272D2D;
+    }
+    .contact-form button {
+      background-color: #1976D2;
+      color: white;
+      border: none;
+      padding: 0.8rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .contact-form label {
+      font-weight: 600;
+    }
+    .faq {
+      background-color: #f4f4f4;
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+    .faq h2 {
+      font-size: 1.8rem;
+      margin-bottom: 1rem;
+      color: #1976D2;
+    }
+    .faq details {
+      margin: 1rem auto;
+      max-width: 700px;
+      text-align: left;
+      background-color: #fff;
+      padding: 1rem;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .faq summary {
+      font-weight: bold;
+      cursor: pointer;
+      color: #1976D2;
+    }
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      nav {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        margin-top: 0.5rem;
+      }
+      nav a {
+        margin: 0.5rem 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo" href="/Home.html";>
+      <img src="logo.png" alt="FreezeSense Logo">
+      FreezeSense
+    </div>
+    <nav>
+      <a href="#about">About Us</a>
+      <a class="button" href="/login">Login</a>
+    </nav>
+  </header>
+
+  <section class="contact-hero">
+    <h1>Contact FreezeSense</h1>
+    <p>Have questions about our services? We're here to help.</p>
+  </section>
+
+  <section class="contact-content">
+    <div class="contact-info">
+      <strong>Email Us</strong>
+      <p>info@freezesense.com</p>
+      <p>support@freezesense.com</p>
+
+      <strong>Call Us</strong>
+      <p>+1 (314) 800-3412</p>
+      <p>Monday-Friday, 8am-6pm CT</p>
+
+      <strong>Our Headquarters</strong>
+      <p>College Station, TX 77840<br />United States</p>
+
+      <strong>Connect With Us</strong>
+      <p>
+        <a href="mailto:freezesensedevice@gmail.com" title="Email">
+          <img src="email-icon.png" alt="Email" style="height: 24px; vertical-align: middle; margin-right: 10px;" />
+        </a>
+        <a href="#" title="LinkedIn">
+          <img src="linkedin-icon.png" alt="LinkedIn" style="height: 24px; vertical-align: middle;" />
+        </a>
+      </p>
+    </div>
+
+    <div class="contact-form">
+      <form onsubmit="event.preventDefault(); alert('Request submitted successfully!');">
+        <div style="display: flex; gap: 1rem;">
+          <input type="text" placeholder="First name" required style="flex: 1;" />
+          <input type="text" placeholder="Last name" required style="flex: 1;" />
+        </div>
+        <input type="email" placeholder="Email" required />
+        <input type="text" placeholder="Company" />
+        <select required>
+          <option value="">I'm interested in</option>
+          <option>Use Cases</option>
+          <option>Software Support</option>
+          <option>Custom/Bulk Quote</option>
+        </select>
+        <textarea placeholder="Message" rows="5" required></textarea>
+        <label>
+          <input type="checkbox" required /> I agree to the privacy policy and terms of service
+        </label>
+        <button type="submit">Submit</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="faq">
+    <h2>Frequently Asked Questions</h2>
+    <details>
+      <summary>How difficult is it to install FreezeSense sensors?</summary>
+      <p>FreezeSense sensors are designed for easy installation. Most customers can install the system themselves in under an hour with our step-by-step guide</p>
+    </details>
+    <details>
+      <summary>What type of alerts will I receive?</summary>
+      <p>You'll receive real-time alerts for temperature variations, water flow issues, power interruptions, and dropped connection. Alerts can be customized and delivered via email, or SMS.</p>
+    </details>
+    <details>
+      <summary>How many ice machines can I monitor with one account?</summary>
+      <p>Our platform scales to your needs. You can monitor a single machine or hundreds across multiple locations. All your data is accessible from a single dashboard with location-based organization.</p>
+    </details>
+    <details>
+      <summary>How can FreezeSense add value to my business?</summary>
+      <p>Each prevented failure saves over $500, about $200 in emergency ice and $300 in dispatch and labor.</p>
+    </details>
+    <details>
+      <summary>What does implementing FreezeSense cost?</summary>
+      <p>There is a one-time hardware cost, and a low monthly subscription per device for dashboard access & cloud storage. If you'd like to implement FreezeSense at scale, please reach out to discuss bulk discounts!</p>
+    </details>
+  </section>
+
+  <footer>
+    <p>
+      <a href="mailto:freezesensedevice@gmail.com" title="Email">
+        <img src="email-icon.png" alt="Email" style="height: 24px; vertical-align: middle; margin-right: 10px;" />
+      </a>
+      <a href="https://linkedin.com/in/aaryacshah" title="LinkedIn">
+        <img src="linkedin-icon.png" alt="LinkedIn" style="height: 24px; vertical-align: middle;" />
+      </a>
+    </p>
+    <p>&copy; 2025 FreezeSense. All rights reserved.</p>
+  </footer>
+</body>
+</html>
