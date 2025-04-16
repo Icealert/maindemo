@@ -137,6 +137,11 @@ app.use(express.static('public', {
     etag: true
 }));
 
+// Redirect root path to landing.html
+app.get('/', (req, res) => {
+    res.redirect('/landing.html');
+});
+
 // Explicitly serve files from components directory
 app.use('/components', express.static('public/components', {
     maxAge: '1h',
