@@ -131,17 +131,18 @@ app.use(cors({
 // Parse JSON with size limits
 app.use(express.json({ limit: '1mb' }));
 
+// Root path redirect - MOVED BEFORE STATIC MIDDLEWARE
+app.get('/', (req, res) => {
+    console.log('Redirecting root path to landing page');
+    // Use absolute redirect
+    res.redirect(301, `${req.protocol}://${req.get('host')}/landing.html`);
+});
+
 // Serve static files from public directory
 app.use(express.static('public', {
     maxAge: '1h',
     etag: true
 }));
-
-// Redirect root path to landing.html
-app.get('/', (req, res) => {
-    console.log('Redirecting root path to landing.html');
-    res.redirect('/landing.html');
-});
 
 // Explicitly serve files from components directory
 app.use('/components', express.static('public/components', {
