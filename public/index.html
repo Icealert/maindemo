@@ -2308,6 +2308,7 @@
         // Auth State Management
         function setupAuthListener() {
             // Import necessary functions directly within this scope
+            console.log("[Auth] Setting up auth listener...");
             import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js")
                 .then(({ getAuth, onAuthStateChanged, signOut }) => {
                     // Get the auth instance (assuming initialized in firebase.js or globally)
@@ -2317,19 +2318,23 @@
                     const auth = getAuth(); 
 
                     onAuthStateChanged(auth, (user) => {
+                        console.log("[Auth] onAuthStateChanged triggered.");
                         const authButton = document.getElementById('auth-button');
-                        const dashboardLink = document.getElementById('dashboard-link');
+
+                        console.log("[Auth] Found auth button:", authButton ? 'Yes' : 'No');
 
                         // If elements aren't loaded yet, just return. 
                         // The listener will run again when auth state changes or eventually find them.
-                        if (!authButton || !dashboardLink) {
-                            // console.error('Auth button or dashboard link not found in the DOM.'); // Removed error log
+                        if (!authButton) {
+                            console.warn("[Auth] Auth button not found yet. Listener will retry on next state change.");
                             return; 
                         }
 
+                        console.log("[Auth] User object:", user ? user.uid : 'null');
+
                         if (user) {
                             // User is signed in
-                            console.log('User is signed in:', user.uid);
+                            console.log("[Auth] Executing 'user is signed in' block.");
                             authButton.textContent = 'Sign Out';
                             authButton.onclick = () => {
                                 signOut(auth).then(() => {
@@ -2346,7 +2351,7 @@
                             dashboardLink.classList.remove('hidden');
                         } else {
                             // User is signed out
-                            console.log('User is signed out.');
+                            console.log("[Auth] Executing 'user is signed out' block.");
                             authButton.textContent = 'Sign In';
                             authButton.onclick = () => {
                                 // Redirect to sign-in page
