@@ -26,12 +26,16 @@
                     </div>
                 </div>
                 <div class="flex items-center space-x-4">
-                    <a href="/index.html" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <a id="dashboard-link-landing" href="/index.html" class="hidden inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
                         Go to Dashboard
                     </a>
+                    <!-- Auth Button: Added for landing page -->
+                    <button id="auth-button" class="inline-flex items-center px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 transition-colors">
+                        Sign In
+                    </button>
                 </div>
             </div>
         </div>
@@ -157,6 +161,64 @@
                 document.body.appendChild(tempDiv);
             })
             .catch(err => console.error('Failed to load modals:', err));
+    </script>
+
+    <!-- Firebase Auth for Landing Page Nav -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+        // Firebase configuration (should match other pages)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWjnJMgmAs0P8F4ALePNuFI1mggA4snzw",
+            authDomain: "freezesense-dabf4.firebaseapp.com",
+            projectId: "freezesense-dabf4",
+            storageBucket: "freezesense-dabf4.firebasestorage.app",
+            messagingSenderId: "469823188022",
+            appId: "1:469823188022:web:cf138079822a6f27077c97",
+            measurementId: "G-KV503DP24W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // Auth State Listener for Landing Page Navigation
+        onAuthStateChanged(auth, (user) => {
+            const authButton = document.getElementById('auth-button');
+            const dashboardLink = document.getElementById('dashboard-link-landing'); // Use the landing page specific ID
+
+            if (!authButton || !dashboardLink) {
+                console.error('Landing page auth button or dashboard link not found.');
+                return;
+            }
+
+            if (user) {
+                // User is signed in
+                authButton.textContent = 'Sign Out';
+                authButton.onclick = () => {
+                    signOut(auth).then(() => {
+                        console.log('User signed out from landing page.');
+                        // Stay on landing page after sign out
+                        window.location.reload(); // Reload to reflect signed-out state
+                    }).catch((error) => {
+                        console.error('Sign out error:', error);
+                        alert('Failed to sign out. Please try again.'); // Simple alert for landing page
+                    });
+                };
+                // Show dashboard link
+                dashboardLink.classList.remove('hidden');
+            } else {
+                // User is signed out
+                authButton.textContent = 'Sign In';
+                authButton.onclick = () => {
+                    // Redirect to login page
+                    window.location.href = '/login.html';
+                };
+                // Hide dashboard link
+                dashboardLink.classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html> 
