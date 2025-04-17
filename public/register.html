@@ -6,10 +6,119 @@
     <title>Register - FreezeSense</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230ea5e9'/%3E%3Cpath d='M50 20 L30 35 L50 50 L70 35 Z' fill='white'/%3E%3Cpath d='M50 40 L30 55 L50 70 L70 55 Z' fill='%23e0f2fe'/%3E%3Cpath d='M50 60 L30 75 L50 90 L70 75 Z' fill='white'/%3E%3C/svg%3E" />
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="js/firebase.js"></script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWjnJMgmAs0P8F4ALePNuFI1mggA4snzw",
+            authDomain: "freezesense-dabf4.firebaseapp.com",
+            projectId: "freezesense-dabf4",
+            storageBucket: "freezesense-dabf4.firebasestorage.app",
+            messagingSenderId: "469823188022",
+            appId: "1:469823188022:web:cf138079822a6f27077c97",
+            measurementId: "G-KV503DP24W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Get form elements
+        const registerForm = document.getElementById('registerForm');
+        const nameInput = document.getElementById('name');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
+        const errorMessage = document.getElementById('errorMessage');
+
+        // Password validation function
+        function validatePassword(password) {
+            const minLength = 8;
+            const hasUpperCase = /[A-Z]/.test(password);
+            const hasLowerCase = /[a-z]/.test(password);
+            const hasNumbers = /\d/.test(password);
+            const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+
+            if (password.length < minLength) return false;
+            if (!hasUpperCase) return false;
+            if (!hasLowerCase) return false;
+            if (!hasNumbers) return false;
+            if (!hasSpecialChar) return false;
+
+            return true;
+        }
+
+        // Handle form submission
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                // Clear previous error messages
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+
+                // Get form values
+                const name = nameInput.value;
+                const email = emailInput.value;
+                const password = passwordInput.value;
+                const confirmPassword = confirmPasswordInput.value;
+
+                // Validate passwords match
+                if (password !== confirmPassword) {
+                    throw { code: 'passwords-dont-match' };
+                }
+
+                // Validate password strength
+                if (!validatePassword(password)) {
+                    throw { code: 'weak-password' };
+                }
+
+                // Create user with Firebase
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                
+                // Update profile with name
+                await updateProfile(userCredential.user, {
+                    displayName: name
+                });
+
+                // Redirect to dashboard on success
+                window.location.href = '/index.html';
+            } catch (error) {
+                // Show error message
+                errorMessage.classList.remove('hidden');
+                switch (error.code) {
+                    case 'auth/email-already-in-use':
+                        errorMessage.textContent = 'An account with this email already exists.';
+                        break;
+                    case 'auth/invalid-email':
+                        errorMessage.textContent = 'Invalid email address format.';
+                        break;
+                    case 'passwords-dont-match':
+                        errorMessage.textContent = 'Passwords do not match.';
+                        break;
+                    case 'weak-password':
+                        errorMessage.textContent = 'Password does not meet requirements.';
+                        break;
+                    default:
+                        errorMessage.textContent = 'An error occurred. Please try again.';
+                }
+                console.error('Registration error:', error);
+            }
+        });
+
+        // Check if user is already signed in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in, redirect to dashboard
+                window.location.href = '/index.html';
+            }
+        });
+    </script>
     <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -98,120 +207,5 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Get form elements
-        const registerForm = document.getElementById('registerForm');
-        const nameInput = document.getElementById('name');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const confirmPasswordInput = document.getElementById('confirmPassword');
-        const errorMessage = document.getElementById('errorMessage');
-
-        // Password validation function
-        function validatePassword(password) {
-            const minLength = 8;
-            const hasUpperCase = /[A-Z]/.test(password);
-            const hasLowerCase = /[a-z]/.test(password);
-            const hasNumbers = /\d/.test(password);
-            const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-            if (password.length < minLength) {
-                return 'Password must be at least 8 characters long.';
-            }
-            if (!hasUpperCase) {
-                return 'Password must contain at least one uppercase letter.';
-            }
-            if (!hasLowerCase) {
-                return 'Password must contain at least one lowercase letter.';
-            }
-            if (!hasNumbers) {
-                return 'Password must contain at least one number.';
-            }
-            if (!hasSpecialChar) {
-                return 'Password must contain at least one special character.';
-            }
-            return null;
-        }
-
-        // Handle form submission
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            try {
-                // Clear previous error messages
-                errorMessage.classList.add('hidden');
-                errorMessage.textContent = '';
-
-                // Get form values
-                const name = nameInput.value.trim();
-                const email = emailInput.value.trim();
-                const password = passwordInput.value;
-                const confirmPassword = confirmPasswordInput.value;
-
-                // Validate name
-                if (name.length < 2) {
-                    throw new Error('Please enter a valid name.');
-                }
-
-                // Validate password
-                const passwordError = validatePassword(password);
-                if (passwordError) {
-                    throw new Error(passwordError);
-                }
-
-                // Check if passwords match
-                if (password !== confirmPassword) {
-                    throw new Error('Passwords do not match.');
-                }
-
-                // Create user with Firebase
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                
-                // Update user profile with name
-                await userCredential.user.updateProfile({
-                    displayName: name
-                });
-
-                // Set persistence to LOCAL by default for new users
-                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-                // Redirect to dashboard on success
-                window.location.href = '/index.html';
-            } catch (error) {
-                // Show error message
-                errorMessage.classList.remove('hidden');
-                if (error.code) {
-                    switch (error.code) {
-                        case 'auth/email-already-in-use':
-                            errorMessage.textContent = 'An account with this email already exists.';
-                            break;
-                        case 'auth/invalid-email':
-                            errorMessage.textContent = 'Invalid email address format.';
-                            break;
-                        case 'auth/operation-not-allowed':
-                            errorMessage.textContent = 'Email/password accounts are not enabled. Please contact support.';
-                            break;
-                        case 'auth/weak-password':
-                            errorMessage.textContent = 'Please choose a stronger password.';
-                            break;
-                        default:
-                            errorMessage.textContent = error.message;
-                    }
-                } else {
-                    errorMessage.textContent = error.message;
-                }
-                console.error('Registration error:', error);
-            }
-        });
-
-        // Check if user is already signed in
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // User is signed in, redirect to dashboard
-                window.location.href = '/index.html';
-            }
-        });
-    </script>
 </body>
 </html> 

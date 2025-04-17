@@ -6,10 +6,92 @@
     <title>Login - FreezeSense</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230ea5e9'/%3E%3Cpath d='M50 20 L30 35 L50 50 L70 35 Z' fill='white'/%3E%3Cpath d='M50 40 L30 55 L50 70 L70 55 Z' fill='%23e0f2fe'/%3E%3Cpath d='M50 60 L30 75 L50 90 L70 75 Z' fill='white'/%3E%3C/svg%3E" />
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-    <script src="js/firebase.js"></script>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCWjnJMgmAs0P8F4ALePNuFI1mggA4snzw",
+            authDomain: "freezesense-dabf4.firebaseapp.com",
+            projectId: "freezesense-dabf4",
+            storageBucket: "freezesense-dabf4.firebasestorage.app",
+            messagingSenderId: "469823188022",
+            appId: "1:469823188022:web:cf138079822a6f27077c97",
+            measurementId: "G-KV503DP24W"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Get form elements
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('errorMessage');
+        const rememberMe = document.getElementById('remember-me');
+
+        // Handle form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                // Clear previous error messages
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+
+                // Get form values
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                // Sign in with Firebase
+                await signInWithEmailAndPassword(auth, email, password);
+                
+                // If remember me is checked, set persistence to LOCAL
+                // Otherwise, use SESSION (cleared when browser is closed)
+                if (rememberMe.checked) {
+                    await setPersistence(auth, browserLocalPersistence);
+                } else {
+                    await setPersistence(auth, browserSessionPersistence);
+                }
+
+                // Redirect to dashboard on success
+                window.location.href = '/index.html';
+            } catch (error) {
+                // Show error message
+                errorMessage.classList.remove('hidden');
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        errorMessage.textContent = 'Invalid email address format.';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage.textContent = 'This account has been disabled.';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage.textContent = 'No account found with this email.';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage.textContent = 'Incorrect password.';
+                        break;
+                    default:
+                        errorMessage.textContent = 'An error occurred. Please try again.';
+                }
+                console.error('Login error:', error);
+            }
+        });
+
+        // Check if user is already signed in
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                // User is signed in, redirect to dashboard
+                window.location.href = '/index.html';
+            }
+        });
+    </script>
     <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -90,71 +172,5 @@
             </div>
         </div>
     </div>
-
-    <script>
-        // Get form elements
-        const loginForm = document.getElementById('loginForm');
-        const emailInput = document.getElementById('email');
-        const passwordInput = document.getElementById('password');
-        const errorMessage = document.getElementById('errorMessage');
-        const rememberMe = document.getElementById('remember-me');
-
-        // Handle form submission
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            try {
-                // Clear previous error messages
-                errorMessage.classList.add('hidden');
-                errorMessage.textContent = '';
-
-                // Get form values
-                const email = emailInput.value;
-                const password = passwordInput.value;
-
-                // Sign in with Firebase
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                
-                // If remember me is checked, set persistence to LOCAL
-                // Otherwise, use SESSION (cleared when browser is closed)
-                if (rememberMe.checked) {
-                    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-                } else {
-                    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
-                }
-
-                // Redirect to dashboard on success
-                window.location.href = '/index.html';
-            } catch (error) {
-                // Show error message
-                errorMessage.classList.remove('hidden');
-                switch (error.code) {
-                    case 'auth/invalid-email':
-                        errorMessage.textContent = 'Invalid email address format.';
-                        break;
-                    case 'auth/user-disabled':
-                        errorMessage.textContent = 'This account has been disabled.';
-                        break;
-                    case 'auth/user-not-found':
-                        errorMessage.textContent = 'No account found with this email.';
-                        break;
-                    case 'auth/wrong-password':
-                        errorMessage.textContent = 'Incorrect password.';
-                        break;
-                    default:
-                        errorMessage.textContent = 'An error occurred. Please try again.';
-                }
-                console.error('Login error:', error);
-            }
-        });
-
-        // Check if user is already signed in
-        auth.onAuthStateChanged((user) => {
-            if (user) {
-                // User is signed in, redirect to dashboard
-                window.location.href = '/index.html';
-            }
-        });
-    </script>
 </body>
 </html> 
