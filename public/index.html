@@ -26,29 +26,20 @@
 
     <!-- Inserted stub for require to avoid 'require is not defined' error in browser -->
     <script>
-      if (typeof require === 'undefined') {
-        window.require = function(moduleName) {
-          if(moduleName === '@babel/runtime/helpers/interopRequireDefault'){
-            return { default: function(x) { return x; } };
-          }
-          console.error('Dynamic require is not supported in the browser: ' + moduleName);
-          return {};
-        };
-      }
-    </script>
-</head>
-<body>
-    <div id="app" class="min-h-screen bg-gray-100">
-        <div id="nav-placeholder"></div>
-        
-        <!-- Placeholders for dynamically loaded content -->
-        <div id="main-content"></div>
-        <div id="modals-placeholder"></div>
-        <div id="footer-placeholder"></div>
+        // Initialize require stub at the very beginning
+        if (typeof require === 'undefined') {
+            window.require = function(moduleName) {
+                if (moduleName === '@babel/runtime/helpers/interopRequireDefault') {
+                    return { default: function(x) { return x; } };
+                }
+                if (moduleName === '@babel/runtime/helpers/typeof') {
+                    return function(obj) { return typeof obj; };
+                }
+                console.warn('Dynamic require is not supported in the browser:', moduleName);
+                return {};
+            };
+        }
 
-    </div> <!-- Close #app -->
-
-    <script>
         // Declare variables in outer scope
         let statusEl;
         let errorEl;
