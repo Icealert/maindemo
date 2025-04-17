@@ -210,14 +210,26 @@
         }
 
         async function fetchDevices() {
-            showLoading();
-            
             try {
                 // First check if server is healthy
                 const isHealthy = await checkServerHealth();
                 if (!isHealthy) {
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
+
+                // Wait for required elements to be available
+                const devicesContainer = document.getElementById('devices');
+                const statusEl = document.getElementById('status');
+                const errorEl = document.getElementById('error');
+
+                if (!devicesContainer || !statusEl || !errorEl) {
+                    console.log('Waiting for elements to load...');
+                    // Wait a short time and try again
+                    setTimeout(fetchDevices, 100);
+                    return;
+                }
+
+                showLoading();
 
                 const response = await fetch(`${API_URL}/api/devices`);
                 if (!response.ok) {
@@ -841,6 +853,11 @@
                 } else {
                     badgeElement.classList.add('hidden');
                 }
+            }
+
+            if (!devicesContainer) {
+                console.error('Devices container not found');
+                return;
             }
 
             if (!Array.isArray(devices) || devices.length === 0) {
