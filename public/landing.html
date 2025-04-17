@@ -52,7 +52,7 @@
                     Prevent costly failures and ensure optimal ice production with real-time monitoring and alerts.
                 </p>
                 <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="/index.html" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                    <a id="get-started-link" href="/index.html" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                         Get Started
                     </a>
                     <a href="#features" class="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
@@ -112,7 +112,7 @@
                 <p class="text-xl text-blue-100 mb-8">
                     Join hundreds of businesses already using FreezeSense to protect their ice machines.
                 </p>
-                <a href="/index.html" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors">
+                <a id="start-monitoring-link" href="/index.html" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white transition-colors">
                     Start Monitoring Now
                 </a>
             </div>
@@ -130,7 +130,7 @@
                 <div>
                     <h3 class="text-lg font-semibold mb-4">Quick Links</h3>
                     <ul class="space-y-2">
-                        <li><a href="/index.html" class="text-gray-400 hover:text-white transition-colors">Dashboard</a></li>
+                        <li><a id="footer-dashboard-link" href="/index.html" class="text-gray-400 hover:text-white transition-colors">Dashboard</a></li>
                         <li><a href="#features" class="text-gray-400 hover:text-white transition-colors">Features</a></li>
                         <li><a href="#" onclick="showContactModal()" class="text-gray-400 hover:text-white transition-colors">Contact Us</a></li>
                     </ul>
@@ -186,37 +186,60 @@
         // Auth State Listener for Landing Page Navigation
         onAuthStateChanged(auth, (user) => {
             const authButton = document.getElementById('auth-button');
-            const dashboardLink = document.getElementById('dashboard-link-landing'); // Use the landing page specific ID
+            const dashboardLinkNav = document.getElementById('dashboard-link-landing'); // Nav link
+            const getStartedLink = document.getElementById('get-started-link'); // Hero button
+            const startMonitoringLink = document.getElementById('start-monitoring-link'); // CTA button
+            const footerDashboardLink = document.getElementById('footer-dashboard-link'); // Footer link
 
-            if (!authButton || !dashboardLink) {
-                console.error('Landing page auth button or dashboard link not found.');
-                return;
+            // Check if essential elements exist
+            if (!authButton) {
+                console.error('Landing page auth button not found.');
+                // return; // Decide if execution should halt
             }
+
+            const dashboardTarget = '/index.html';
+            const loginTarget = '/login.html';
 
             if (user) {
                 // User is signed in
-                authButton.textContent = 'Sign Out';
-                authButton.onclick = () => {
-                    signOut(auth).then(() => {
-                        console.log('User signed out from landing page.');
-                        // Stay on landing page after sign out
-                        window.location.reload(); // Reload to reflect signed-out state
-                    }).catch((error) => {
-                        console.error('Sign out error:', error);
-                        alert('Failed to sign out. Please try again.'); // Simple alert for landing page
-                    });
-                };
-                // Show dashboard link
-                dashboardLink.classList.remove('hidden');
+                console.log('User signed in, updating landing page links to dashboard.');
+                if (authButton) {
+                    authButton.textContent = 'Sign Out';
+                    authButton.onclick = () => {
+                        signOut(auth).then(() => {
+                            console.log('User signed out from landing page.');
+                            window.location.reload();
+                        }).catch((error) => {
+                            console.error('Sign out error:', error);
+                            alert('Failed to sign out. Please try again.');
+                        });
+                    };
+                }
+                // Update links to point to the dashboard
+                if (dashboardLinkNav) {
+                    dashboardLinkNav.href = dashboardTarget;
+                    dashboardLinkNav.classList.remove('hidden');
+                }
+                if (getStartedLink) getStartedLink.href = dashboardTarget;
+                if (startMonitoringLink) startMonitoringLink.href = dashboardTarget;
+                if (footerDashboardLink) footerDashboardLink.href = dashboardTarget;
+
             } else {
                 // User is signed out
-                authButton.textContent = 'Sign In';
-                authButton.onclick = () => {
-                    // Redirect to login page
-                    window.location.href = '/login.html';
-                };
-                // Hide dashboard link
-                dashboardLink.classList.add('hidden');
+                console.log('User signed out, updating landing page links to login.');
+                if (authButton) {
+                    authButton.textContent = 'Sign In';
+                    authButton.onclick = () => {
+                        window.location.href = loginTarget; // Go to login page
+                    };
+                }
+                // Update links to point to the login page
+                if (dashboardLinkNav) {
+                    dashboardLinkNav.classList.add('hidden'); // Hide nav dashboard link
+                }
+                if (getStartedLink) getStartedLink.href = loginTarget;
+                if (startMonitoringLink) startMonitoringLink.href = loginTarget;
+                if (footerDashboardLink) footerDashboardLink.href = loginTarget;
             }
         });
     </script>
