@@ -23,6 +23,19 @@
     <script src="/components/deviceInformation.js"></script>
     <script src="/js/deviceCard.js"></script>
     <link rel="stylesheet" href="styles.css">
+
+    <!-- Inserted stub for require to avoid 'require is not defined' error in browser -->
+    <script>
+      if (typeof require === 'undefined') {
+        window.require = function(moduleName) {
+          if(moduleName === '@babel/runtime/helpers/interopRequireDefault'){
+            return { default: function(x) { return x; } };
+          }
+          console.error('Dynamic require is not supported in the browser: ' + moduleName);
+          return {};
+        };
+      }
+    </script>
 </head>
 <body>
     <div id="app" class="min-h-screen bg-gray-100">
