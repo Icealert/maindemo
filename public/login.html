@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - FreezeSense</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230ea5e9'/%3E%3Cpath d='M50 20 L30 35 L50 50 L70 35 Z' fill='white'/%3E%3Cpath d='M50 40 L30 55 L50 70 L70 55 Z' fill='%23e0f2fe'/%3E%3Cpath d='M50 60 L30 75 L50 90 L70 75 Z' fill='white'/%3E%3C/svg%3E" />
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
+    <script src="js/firebase.js"></script>
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <div class="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-md w-full space-y-8">
+            <!-- Logo and Title -->
+            <div class="text-center">
+                <svg class="mx-auto h-16 w-16 text-blue-600" viewBox="0 0 100 100" fill="none">
+                    <rect width="100" height="100" rx="20" fill="currentColor"/>
+                    <path d="M50 20 L30 35 L50 50 L70 35 Z" fill="white"/>
+                    <path d="M50 40 L30 55 L50 70 L70 55 Z" fill="#e0f2fe"/>
+                    <path d="M50 60 L30 75 L50 90 L70 75 Z" fill="white"/>
+                </svg>
+                <h2 class="mt-6 text-3xl font-extrabold text-gray-900">Sign in to FreezeSense</h2>
+                <p class="mt-2 text-sm text-gray-600">
+                    Or
+                    <a href="/register.html" class="font-medium text-blue-600 hover:text-blue-500">
+                        create a new account
+                    </a>
+                </p>
+            </div>
+
+            <!-- Login Form -->
+            <form id="loginForm" class="mt-8 space-y-6">
+                <div class="rounded-md shadow-sm -space-y-px">
+                    <div>
+                        <label for="email" class="sr-only">Email address</label>
+                        <input id="email" name="email" type="email" required 
+                            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                            placeholder="Email address">
+                    </div>
+                    <div>
+                        <label for="password" class="sr-only">Password</label>
+                        <input id="password" name="password" type="password" required 
+                            class="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm" 
+                            placeholder="Password">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <input id="remember-me" name="remember-me" type="checkbox" 
+                            class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                        <label for="remember-me" class="ml-2 block text-sm text-gray-900">
+                            Remember me
+                        </label>
+                    </div>
+
+                    <div class="text-sm">
+                        <a href="/reset-password.html" class="font-medium text-blue-600 hover:text-blue-500">
+                            Forgot your password?
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="text-red-500 text-sm text-center hidden"></div>
+
+                <div>
+                    <button type="submit" 
+                        class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+                            <svg class="h-5 w-5 text-blue-500 group-hover:text-blue-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                        Sign in
+                    </button>
+                </div>
+            </form>
+
+            <!-- Back to Home -->
+            <div class="text-center">
+                <a href="/landing.html" class="text-sm font-medium text-blue-600 hover:text-blue-500">
+                    ← Back to Home
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get form elements
+        const loginForm = document.getElementById('loginForm');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+        const errorMessage = document.getElementById('errorMessage');
+        const rememberMe = document.getElementById('remember-me');
+
+        // Handle form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            try {
+                // Clear previous error messages
+                errorMessage.classList.add('hidden');
+                errorMessage.textContent = '';
+
+                // Get form values
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                // Sign in with Firebase
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                
+                // If remember me is checked, set persistence to LOCAL
+                // Otherwise, use SESSION (cleared when browser is closed)
+                if (rememberMe.checked) {
+                    await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+                } else {
+                    await auth.setPersistence(firebase.auth.Auth.Persistence.SESSION);
+                }
+
+                // Redirect to dashboard on success
+                window.location.href = '/index.html';
+            } catch (error) {
+                // Show error message
+                errorMessage.classList.remove('hidden');
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        errorMessage.textContent = 'Invalid email address format.';
+                        break;
+                    case 'auth/user-disabled':
+                        errorMessage.textContent = 'This account has been disabled.';
+                        break;
+                    case 'auth/user-not-found':
+                        errorMessage.textContent = 'No account found with this email.';
+                        break;
+                    case 'auth/wrong-password':
+                        errorMessage.textContent = 'Incorrect password.';
+                        break;
+                    default:
+                        errorMessage.textContent = 'An error occurred. Please try again.';
+                }
+                console.error('Login error:', error);
+            }
+        });
+
+        // Check if user is already signed in
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                // User is signed in, redirect to dashboard
+                window.location.href = '/index.html';
+            }
+        });
+    </script>
+</body>
+</html> 
