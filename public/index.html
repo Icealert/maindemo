@@ -2310,10 +2310,10 @@
                         const authButton = document.getElementById('auth-button');
                         const dashboardLink = document.getElementById('dashboard-link');
 
+                        // If elements aren't loaded yet, just return. 
+                        // The listener will run again when auth state changes or eventually find them.
                         if (!authButton || !dashboardLink) {
-                            console.error('Auth button or dashboard link not found in the DOM.');
-                            // Retry after a short delay if elements aren't loaded yet
-                            // setTimeout(setupAuthListener, 200);
+                            // console.error('Auth button or dashboard link not found in the DOM.'); // Removed error log
                             return; 
                         }
 
