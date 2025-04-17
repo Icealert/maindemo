@@ -2334,11 +2334,12 @@
                             authButton.onclick = () => {
                                 signOut(auth).then(() => {
                                     console.log('User signed out.');
-                                    // Redirect to landing page after sign out
-                                    window.location.href = '/landing.html'; 
+                                    // Redirect to landing page after sign out (as per user request)
+                                    window.location.href = '/landing.html';
                                 }).catch((error) => {
                                     console.error('Sign out error:', error);
-                                    showError('Failed to sign out. Please try again.');
+                                    // Use alert for consistency with landing page
+                                    alert('Failed to sign out. Please try again.');
                                 });
                             };
                             // Show dashboard link
