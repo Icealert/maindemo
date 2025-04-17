@@ -825,16 +825,19 @@
             const activeDevices = devices.length;
             const deviceStatuses = devices.map(device => calculateDeviceStatus(device));
             const connectedDevices = deviceStatuses.filter(status => status.isConnected).length;
-            const greatDevices = deviceStatuses.filter(status => status.isGreat).length;
             const warningDevices = deviceStatuses.filter(status => status.isWarning).length;
             const criticalDevices = deviceStatuses.filter(status => status.isCritical).length;
-            const disconnectedDevices = activeDevices - connectedDevices;
             
-            document.getElementById('connectedDevicesCount').textContent = `${connectedDevices} / ${activeDevices}`;
+            // Update status counts
+            document.getElementById('totalDevicesCount').textContent = activeDevices;
+            document.getElementById('connectedDevicesCount').textContent = connectedDevices;
+            document.getElementById('warningDevicesCount').textContent = warningDevices;
+            document.getElementById('criticalDevicesCount').textContent = criticalDevices;
 
             // Update disconnected badge
             const badgeElement = document.getElementById('disconnectedBadgeCount');
             if (badgeElement) {
+                const disconnectedDevices = activeDevices - connectedDevices;
                 if (disconnectedDevices > 0) {
                     badgeElement.textContent = disconnectedDevices;
                     badgeElement.classList.remove('hidden');
@@ -848,7 +851,7 @@
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
                             <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
                             </svg>
                             <p class="mt-4 text-gray-500 text-lg">No devices found</p>
                             <p class="mt-2 text-gray-400 text-sm">Connect a device to get started</p>
@@ -859,345 +862,69 @@
                 return;
             }
 
-            // Log each device's data individually with more detail
-            devices.forEach((device, idx) => {
-                logToConsole(`Device ${idx + 1} (${device.name || device.id}):`);
-                if (device.thing && device.thing.properties) {
-                    logToConsole('Properties found:');
-                    device.thing.properties.forEach(prop => {
-                        logToConsole(`- ${prop.name}: ${prop.last_value} (${prop.type})`);
-                    });
-                } else {
-                    logToConsole('No properties found for this device');
-                }
+            // Sort devices by name
+            devices.sort((a, b) => {
+                const aName = a.thing?.properties?.find(p => p.name === 'devicename')?.last_value || a.name;
+                const bName = b.thing?.properties?.find(p => p.name === 'devicename')?.last_value || b.name;
+                return aName.localeCompare(bName);
             });
 
-            devicesContainer.innerHTML = devices.map((device, index) => {
+            // Display devices
+            devicesContainer.innerHTML = devices.map(device => {
                 const status = calculateDeviceStatus(device);
-
-                // Determine conditional border classes
-                const isTempCritical = status.cloudTemp !== undefined && status.tempThresholdMax !== undefined && status.cloudTemp >= status.tempThresholdMax;
-                const isIceLevelCritical = !status.iceLevel.isAboveSensor && status.sensorPlacement !== undefined;
-
-                const tempBorderClass = isTempCritical ? 'border-red-500 border-2' : '';
-                const iceLevelBorderClass = isIceLevelCritical ? 'border-red-500 border-2' : '';
-                const statusBorderClass = status.isCritical ? 'border-red-500 border-2' : '';
-
-                // Determine conditional text classes
-                // const iceLevelTextClass = isIceLevelCritical ? 'text-red-700' : 'text-blue-900'; // Removed: Handled by parent class
-                // const tempTextClass = isTempCritical ? 'text-red-700' : 'text-blue-900'; // Removed: Handled by parent class
-                // Status text color is handled inline based on isGreat/isWarning/isCritical
-
-                // Determine parent-level style class for Ice Level card when critical
-                const iceLevelParentStyleClass = isIceLevelCritical ? '[&_svg]:text-red-600 [&_p]:text-red-700' : '';
-                // Determine parent-level style class for Temperature card when critical
-                const tempParentStyleClass = isTempCritical ? '[&_svg]:text-red-600 [&_p]:text-red-700' : '';
-                // Determine parent-level style class for Status card when critical
-                const statusParentStyleClass = status.isCritical ? '[&_svg]:text-red-600 [&_p]:text-red-700' : '';
-
+                const deviceName = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || 'Unnamed Device';
+                const location = device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set';
+                
                 return `
-                <div class="device-card bg-white rounded-xl shadow-sm border border-gray-200 p-4 relative overflow-hidden">
-                    <!-- Device Header -->
-                    <div class="flex justify-between items-start mb-3">
-                        <div>
-                            <h3 class="text-base font-bold text-gray-800 mb-0.5">
-                                ${device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || `Device ${device.name.replace(/[^0-9]/g, '')}`}
-                            </h3>
-                            <p class="text-xs text-gray-600 flex items-center">
-                                <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                </svg>
-                                ${device.thing?.properties?.find(p => p.name === 'location')?.last_value || 'Location not set'}
-                            </p>
-                        </div>
-                        <div class="flex flex-col items-end">
-                            <span class="connected-badge px-2 py-0.5 text-xs font-medium rounded-full ${status.isConnected ? 'bg-green-100 text-green-800 border border-green-200' : 'bg-red-100 text-red-800 border border-red-200'} shadow-sm">
-                        <div class="flex items-center">
-                                    <div class="w-1.5 h-1.5 rounded-full ${status.isConnected ? 'bg-green-500' : 'bg-red-500'} mr-1"></div>
-                                ${status.isConnected ? 'Connected' : 'Disconnected'}
-                                </div>
-                            </span>
-                            ${!status.isConnected && status.lastConnectedTime ? `
-                                <p class="text-[10px] text-red-600 mt-1">Last Connected:<br>${new Date(status.lastConnectedTime).toLocaleString()}</p>
-                            ` : ''}
-                        </div>
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-2 mb-3">
-                        <!-- Ice Level -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${isIceLevelCritical ? 'border-2 border-red-500' : ''} ${iceLevelParentStyleClass}">
-                            <div class="flex items-center mb-1">
-                                <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                                </svg>
-                            <p class="text-blue-800 font-medium text-xs">Ice Level</p>
-                            </div>
-                            <p class="text-sm font-bold leading-tight text-blue-900">
-                                ${getIceLevelText(status)}
-                            </p>
-                        </div>
-                        
-                        <!-- Temperature -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${isTempCritical ? 'border-2 border-red-500' : ''} ${tempParentStyleClass}">
-                            <div class="flex items-center mb-1">
-                                <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13V5a4 4 0 118 0v8a6 6 0 11-8 0z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 13a4 4 0 118 0 4 4 0 01-8 0z" />
-                                </svg>
-                            <p class="text-blue-800 font-medium text-xs">Temperature</p>
-                            </div>
-                            <p class="text-sm font-bold leading-tight text-blue-900">${formatTemperature(status.cloudTemp)}</p>
-                            <p class="text-[10px] text-blue-600 mt-0.5 flex items-center">
-                                <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
-                                </svg>
-                                Max: ${formatTemperature(status.tempThresholdMax)}
-                            </p>
-                        </div>
-                        
-                        <!-- Time Since Flow -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg">
-                            <div class="flex items-center mb-1">
-                                <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            <p class="text-blue-800 font-medium text-xs">Time Since Flow</p>
-                            </div>
-                            <p class="text-sm font-bold text-blue-900 leading-tight time-since-flow"  
-                               data-start-time="${status.flowLastUpdate || ''}"
-                               data-critical-time="${status.noFlowCriticalTime || ''}"
-                               data-device-id="${device.id}">
-                                ${formatTimeDuration(status.timeSinceFlowMs)}
-                            </p>
-                            <div class="text-[10px] text-blue-600 mt-0.5">
-                                <div class="flex items-center">
-                                    <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                    Critical: ${status.noFlowCriticalTime !== undefined ? status.noFlowCriticalTime + 'h' : 'N/A'}
-                                </div>
-                                <div class="flex items-center mt-0.5">
-                                    <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                    </svg>
-                                Last: ${status.flowLastUpdate ? new Date(status.flowLastUpdate).toLocaleString('en-US', {
-                                    year: 'numeric',
-                                    month: 'numeric',
-                                    day: 'numeric',
-                                    hour: 'numeric',
-                                    minute: 'numeric',
-                                    hour12: true
-                                }) : 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Status -->
-                        <div class="property-card bg-gradient-to-br from-blue-50 to-blue-100 p-2.5 rounded-lg ${status.isCritical ? 'border-2 border-red-500' : ''} ${statusParentStyleClass}">
-                            <div class="flex items-center mb-1">
-                                <svg class="w-4 h-4 text-blue-600 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"> 
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            <p class="text-blue-800 font-medium text-xs">Status</p> 
-                            </div>
-                            <p class="text-sm font-bold leading-tight ${ /* Default colors here, overridden by parent when critical */
-                                status.isGreat ? 'text-emerald-600' :
-                                status.isWarning ? 'text-yellow-600' :
-                                /* status.isCritical ? 'text-red-700' : */ /* Handled by parent */
-                                'text-blue-900' /* Default if not Great/Warning */
+                    <div class="bg-white rounded-lg shadow-sm border ${status.isCritical ? 'border-red-200' : status.isWarning ? 'border-yellow-200' : 'border-gray-200'} p-4">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-lg font-medium text-gray-800">${deviceName}</h3>
+                            <span class="px-2 py-1 text-xs font-medium rounded-full ${
+                                status.isCritical ? 'bg-red-100 text-red-800' :
+                                status.isWarning ? 'bg-yellow-100 text-yellow-800' :
+                                status.isConnected ? 'bg-green-100 text-green-800' :
+                                'bg-gray-100 text-gray-800'
                             }">
-                                ${ status.isGreat ? 'Great' : status.isWarning ? 'Warning' : status.isCritical ? 'Critical' : 'Not Available' }
-                            </p>
-                            <div class="text-[10px] mt-0.5">
-                                ${(() => {
-                                    const issues = [];
-                                    if (!status.isConnected) {
-                                        issues.push('Disconnected');
-                                    }
-                                    if (status.cloudTemp > status.tempThresholdMax) {
-                                        issues.push('Temperature High');
-                                    }
-                                    if (status.timeSinceFlowHours >= status.noFlowCriticalTime) {
-                                        issues.push('No Flow');
-                                    }
-                                    return issues.length > 0 ? /* Issue list is already red or green */
-                                        `<div class="flex items-center text-red-600">
-                                            <svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">  
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                                            </svg>
-                                            ${issues.join(', ')}
-                                        </div>` :
-                                        status.isGreat ? '<div class="flex items-center text-emerald-600"><svg class="w-2.5 h-2.5 mr-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>All Systems Normal</div>' : '';
-                                })()}
+                                ${status.isCritical ? 'Critical' :
+                                  status.isWarning ? 'Warning' :
+                                  status.isConnected ? 'Connected' :
+                                  'Disconnected'}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-500 mb-2">${location}</p>
+                        <div class="space-y-2">
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Cloud Temp</span>
+                                <span class="text-sm font-medium ${
+                                    status.cloudTemp > status.tempThresholdMax ? 'text-red-600' :
+                                    status.cloudTemp > status.tempThresholdMin ? 'text-yellow-600' :
+                                    'text-green-600'
+                                }">
+                                    ${formatTemperature(status.cloudTemp)}
+                                </span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-sm text-gray-600">Time Since Flow</span>
+                                <span class="text-sm font-medium ${
+                                    status.timeSinceFlowMs > status.noFlowCriticalTime * 3600000 ? 'text-red-600' :
+                                    status.timeSinceFlowMs > status.noFlowWarningTime * 3600000 ? 'text-yellow-600' :
+                                    'text-green-600'
+                                }">
+                                    ${formatTimeDuration(status.timeSinceFlowMs)}
+                                </span>
                             </div>
                         </div>
+                        <div class="mt-4 flex justify-end">
+                            <button onclick="showDeviceDetails('${device.id}')" class="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                                View Details
+                            </button>
+                        </div>
                     </div>
-
-                    <div class="flex justify-between items-center border-t pt-2">
-                        <button 
-                            onclick="showDeviceSettings('${device.id}')"
-                            class="inline-flex items-center px-2 py-1 bg-gray-600 text-white text-xs font-medium rounded-lg hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-500 transition-colors shadow-sm"
-                        >
-                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                            </svg>
-                            <span>Settings</span>
-                        </button>
-                        <button 
-                            onclick="showDeviceDetails(${index})"
-                            class="inline-flex items-center px-2 py-1 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500 transition-colors shadow-sm"
-                        >
-                            <span>More Details</span>
-                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
                 `;
             }).join('');
 
-            // Start timers for all time-since-flow elements
-            document.querySelectorAll('.time-since-flow').forEach(element => {
-                const startTime = element.dataset.startTime;
-                if (startTime) {
-                    logToConsole(`Starting flow timer for device ${element.dataset.deviceId} with start time ${startTime}`);
-                }
-                updateTimeSinceFlow(element, startTime);
-            });
-
-            // Add the modal container if it doesn't exist
-            if (!document.getElementById('device-modal')) {
-                const modalContainer = document.createElement('div');
-                modalContainer.id = 'device-modal';
-                modalContainer.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
-                modalContainer.style.position = 'fixed';
-                modalContainer.style.top = '0';
-                modalContainer.style.left = '0';
-                modalContainer.style.right = '0';
-                modalContainer.style.bottom = '0';
-                modalContainer.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-4xl w-full max-h-[90vh] overflow-y-auto relative">
-                        <div class="flex justify-between items-start mb-4">
-                            <h2 id="modal-title" class="text-2xl font-bold text-gray-800"></h2>
-                            <button onclick="hideDeviceDetails()" class="text-gray-500 hover:text-gray-700">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="modal-content"></div>
-                    </div>
-                `;
-                document.body.appendChild(modalContainer);
-            }
-
-            // Add the active devices modal if it doesn't exist
-            if (!document.getElementById('active-devices-modal')) {
-                const activeDevicesModal = document.createElement('div');
-                activeDevicesModal.id = 'active-devices-modal';
-                activeDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
-                activeDevicesModal.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-gray-800">Active Devices</h2>
-                            <button onclick="hideActiveDevices()" class="text-gray-500 hover:text-gray-700">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="active-devices-list" class="space-y-2"></div>
-                    </div>
-                `;
-                document.body.appendChild(activeDevicesModal);
-            }
-
-            // Add the connected devices modal if it doesn't exist
-            if (!document.getElementById('connected-devices-modal')) {
-                const connectedDevicesModal = document.createElement('div');
-                connectedDevicesModal.id = 'connected-devices-modal';
-                connectedDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
-                connectedDevicesModal.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-gray-800">Connected Devices</h2>
-                            <button onclick="hideConnectedDevices()" class="text-gray-500 hover:text-gray-700">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="connected-devices-list" class="space-y-2"></div>
-                    </div>
-                `;
-                document.body.appendChild(connectedDevicesModal);
-            }
-
-            // Add the great devices modal if it doesn't exist
-            if (!document.getElementById('great-devices-modal')) {
-                const greatDevicesModal = document.createElement('div');
-                greatDevicesModal.id = 'great-devices-modal';
-                greatDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
-                greatDevicesModal.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-gray-800">Devices in Great Condition</h2>
-                            <button onclick="hideGreatDevices()" class="text-gray-500 hover:text-gray-700">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="great-devices-list" class="space-y-2"></div>
-                    </div>
-                `;
-                document.body.appendChild(greatDevicesModal);
-            }
-
-            // Add the warning devices modal if it doesn't exist
-            if (!document.getElementById('warning-devices-modal')) {
-                const warningDevicesModal = document.createElement('div');
-                warningDevicesModal.id = 'warning-devices-modal';
-                warningDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
-                warningDevicesModal.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-gray-800">Devices with Warnings</h2>
-                            <button onclick="hideWarningDevices()" class="text-gray-500 hover:text-gray-700">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="warning-devices-list" class="space-y-2"></div>
-                    </div>
-                `;
-                document.body.appendChild(warningDevicesModal);
-            }
-
-            // Add the critical devices modal if it doesn't exist
-            if (!document.getElementById('critical-devices-modal')) {
-                const criticalDevicesModal = document.createElement('div');
-                criticalDevicesModal.id = 'critical-devices-modal';
-                criticalDevicesModal.className = 'fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50';
-                criticalDevicesModal.innerHTML = `
-                    <div class="bg-white rounded-lg shadow-xl p-6 m-4 max-w-xl w-full max-h-[90vh] overflow-y-auto">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-gray-800">Devices in Critical State</h2>
-                            <button onclick="hideCriticalDevices()" class="text-gray-500 hover:text-gray-700">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
-                                </svg>
-                            </button>
-                        </div>
-                        <div id="critical-devices-list" class="space-y-2"></div>
-                    </div>
-                `;
-                document.body.appendChild(criticalDevicesModal);
-            }
+            // Log device data to console
+            logToConsole('Devices displayed successfully', 'info');
         }
 
         function showDeviceDetails(deviceIndex) {
