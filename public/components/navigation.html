@@ -25,8 +25,8 @@
                         </svg>
                         Home
                     </a>
-                    <button id="auth-button" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                        Sign In
+                    <button id="authButton" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        <span id="authButtonText">Sign In</span>
                     </button>
                     <a href="/index.html" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,35 +44,31 @@
 </nav>
 
 <script type="module">
-    import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
+    import { auth } from '/js/firebase.js';
+    import { signOut } from "https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js";
 
-    const auth = getAuth();
-    const authButton = document.getElementById('auth-button');
+    const authButton = document.getElementById('authButton');
+    const authButtonText = document.getElementById('authButtonText');
 
-    // Function to handle sign out
-    async function handleSignOut() {
-        try {
-            await signOut(auth);
-            window.location.href = '/landing.html';
-        } catch (error) {
-            console.error('Error signing out:', error);
-        }
-    }
-
-    // Update UI based on auth state
-    onAuthStateChanged(auth, (user) => {
+    // Handle auth state changes
+    auth.onAuthStateChanged((user) => {
         if (user) {
             // User is signed in
-            authButton.textContent = 'Sign Out';
-            authButton.onclick = handleSignOut;
-            authButton.classList.remove('border-gray-300', 'text-gray-700', 'bg-white', 'hover:bg-gray-50');
-            authButton.classList.add('bg-red-600', 'text-white', 'hover:bg-red-700');
+            authButtonText.textContent = 'Sign Out';
+            authButton.onclick = async () => {
+                try {
+                    await signOut(auth);
+                    window.location.href = '/landing.html';
+                } catch (error) {
+                    console.error('Error signing out:', error);
+                }
+            };
         } else {
             // User is signed out
-            authButton.textContent = 'Sign In';
-            authButton.onclick = () => window.location.href = '/login.html';
-            authButton.classList.remove('bg-red-600', 'text-white', 'hover:bg-red-700');
-            authButton.classList.add('border-gray-300', 'text-gray-700', 'bg-white', 'hover:bg-gray-50');
+            authButtonText.textContent = 'Sign In';
+            authButton.onclick = () => {
+                window.location.href = '/login.html';
+            };
         }
     });
 </script>
