@@ -111,6 +111,16 @@
             ]).then(() => {
                 console.log("Essential components loaded.");
 
+                // Remove 'Go to Dashboard' button specifically on the dashboard page
+                const dashboardButton = document.getElementById('dashboard-link');
+                if (dashboardButton) {
+                    dashboardButton.remove();
+                    console.log("Removed 'Go to Dashboard' button from dashboard page.");
+                } else {
+                    // This might happen briefly during load, not necessarily an error.
+                    // console.warn("'dashboard-link' button not found immediately after component load.");
+                }
+
                 // Assign element variables now that components are loaded
                 statusEl = document.getElementById('status');
                 errorEl = document.getElementById('error');
