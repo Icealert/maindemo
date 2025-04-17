@@ -5,10 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Register - FreezeSense</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%230ea5e9'/%3E%3Cpath d='M50 20 L30 35 L50 50 L70 35 Z' fill='white'/%3E%3Cpath d='M50 40 L30 55 L50 70 L70 55 Z' fill='%23e0f2fe'/%3E%3Cpath d='M50 60 L30 75 L50 90 L70 75 Z' fill='white'/%3E%3C/svg%3E" />
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js"></script>
-    <script src="js/firebase.js"></script>
     <!-- TailwindCSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -98,7 +94,10 @@
         </div>
     </div>
 
-    <script>
+    <script type="module">
+        import { auth } from '/js/firebase.js';
+        import { createUserWithEmailAndPassword, updateProfile, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
         // Get form elements
         const registerForm = document.getElementById('registerForm');
         const nameInput = document.getElementById('name');
@@ -164,16 +163,16 @@
                     throw new Error('Passwords do not match.');
                 }
 
+                // Set persistence to LOCAL by default for new users
+                await setPersistence(auth, browserLocalPersistence);
+
                 // Create user with Firebase
-                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 
                 // Update user profile with name
-                await userCredential.user.updateProfile({
+                await updateProfile(userCredential.user, {
                     displayName: name
                 });
-
-                // Set persistence to LOCAL by default for new users
-                await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
                 // Redirect to dashboard on success
                 window.location.href = '/index.html';
