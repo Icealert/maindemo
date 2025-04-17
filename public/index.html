@@ -2297,51 +2297,59 @@
 
         // Auth State Management
         function setupAuthListener() {
-            // Ensure auth is imported before using it
-            import('./js/firebase.js').then(({ auth }) => {
-                onAuthStateChanged(auth, (user) => {
-                    const authButton = document.getElementById('auth-button');
-                    const dashboardLink = document.getElementById('dashboard-link');
+            // Import necessary functions directly within this scope
+            import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js")
+                .then(({ getAuth, onAuthStateChanged, signOut }) => {
+                    // Get the auth instance (assuming initialized in firebase.js or globally)
+                    // If auth isn't globally available, you might need to import and initialize here
+                    // or ensure firebase.js exports it and import it.
+                    // Let's assume auth is accessible via getAuth() after initialization.
+                    const auth = getAuth(); 
 
-                    if (!authButton || !dashboardLink) {
-                        console.error('Auth button or dashboard link not found in the DOM.');
-                        // Retry after a short delay if elements aren't loaded yet
-                        // setTimeout(setupAuthListener, 200);
-                        return; 
-                    }
+                    onAuthStateChanged(auth, (user) => {
+                        const authButton = document.getElementById('auth-button');
+                        const dashboardLink = document.getElementById('dashboard-link');
 
-                    if (user) {
-                        // User is signed in
-                        console.log('User is signed in:', user.uid);
-                        authButton.textContent = 'Sign Out';
-                        authButton.onclick = () => {
-                            signOut(auth).then(() => {
-                                console.log('User signed out.');
-                                // Redirect to landing page after sign out
-                                window.location.href = '/landing.html'; 
-                            }).catch((error) => {
-                                console.error('Sign out error:', error);
-                                showError('Failed to sign out. Please try again.');
-                            });
-                        };
-                        // Show dashboard link
-                        dashboardLink.classList.remove('hidden');
-                    } else {
-                        // User is signed out
-                        console.log('User is signed out.');
-                        authButton.textContent = 'Sign In';
-                        authButton.onclick = () => {
-                            // Redirect to sign-in page
-                            window.location.href = '/login.html'; // Changed from /signin.html
-                        };
-                        // Hide dashboard link
-                        dashboardLink.classList.add('hidden');
-                    }
+                        if (!authButton || !dashboardLink) {
+                            console.error('Auth button or dashboard link not found in the DOM.');
+                            // Retry after a short delay if elements aren't loaded yet
+                            // setTimeout(setupAuthListener, 200);
+                            return; 
+                        }
+
+                        if (user) {
+                            // User is signed in
+                            console.log('User is signed in:', user.uid);
+                            authButton.textContent = 'Sign Out';
+                            authButton.onclick = () => {
+                                signOut(auth).then(() => {
+                                    console.log('User signed out.');
+                                    // Redirect to landing page after sign out
+                                    window.location.href = '/landing.html'; 
+                                }).catch((error) => {
+                                    console.error('Sign out error:', error);
+                                    showError('Failed to sign out. Please try again.');
+                                });
+                            };
+                            // Show dashboard link
+                            dashboardLink.classList.remove('hidden');
+                        } else {
+                            // User is signed out
+                            console.log('User is signed out.');
+                            authButton.textContent = 'Sign In';
+                            authButton.onclick = () => {
+                                // Redirect to sign-in page
+                                window.location.href = '/login.html'; // Changed from /signin.html
+                            };
+                            // Hide dashboard link
+                            dashboardLink.classList.add('hidden');
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error importing Firebase auth functions:', error);
+                    showError('Authentication system failed to load.');
                 });
-            }).catch(error => {
-                console.error('Error importing Firebase auth:', error);
-                showError('Authentication system failed to load.');
-            });
         }
 
     </script>
