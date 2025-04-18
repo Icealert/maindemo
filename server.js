@@ -7,6 +7,26 @@ const compression = require('compression');
 const rp = require('request-promise');
 require('winston-daily-rotate-file');
 
+// ---- Firebase Admin SDK Initialization ----
+const admin = require('firebase-admin');
+try {
+    // Make sure the path to your service account key is correct
+    const serviceAccount = require('./serviceAccountKey.json'); 
+
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+
+    // Get Firestore instance (used later)
+    const db = admin.firestore(); 
+    console.log("Firebase Admin SDK initialized successfully.");
+} catch (error) {
+    console.error("Error initializing Firebase Admin SDK:", error);
+    console.error("Ensure serviceAccountKey.json is in the root directory and is valid.");
+    process.exit(1); // Exit if Firebase Admin cannot be initialized
+}
+// ---- End Firebase Admin SDK Initialization ----
+
 // Load environment variables
 dotenv.config();
 

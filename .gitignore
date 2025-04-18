@@ -40,4 +40,7 @@ build/
 .npm
 
 # Optional eslint cache
-.eslintcache 
+.eslintcache
+
+# Service Account Key
+serviceAccountKey.json 
