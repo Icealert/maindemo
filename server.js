@@ -9,6 +9,7 @@ require('winston-daily-rotate-file');
 
 // ---- Firebase Admin SDK Initialization ----
 const admin = require('firebase-admin');
+let db; // Declare db in a broader scope
 try {
     // Get credentials from environment variable
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
@@ -29,7 +30,7 @@ try {
     }
 
     // Get Firestore instance (used later)
-    const db = admin.firestore(); 
+    db = admin.firestore(); // Assign to the db variable declared outside
     console.log("Firebase Admin SDK initialized successfully.");
 } catch (error) {
     console.error("Error initializing Firebase Admin SDK:", error);
