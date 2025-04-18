@@ -162,6 +162,42 @@ app.use(cors({
 // Parse JSON with size limits
 app.use(express.json({ limit: '1mb' }));
 
+// ---- Authentication Middleware ----
+async function authenticateUser(req, res, next) {
+    const authorizationHeader = req.headers.authorization;
+
+    if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
+        console.warn('Authentication middleware: No or invalid Authorization header.');
+        return res.status(401).json({ error: 'Unauthorized', message: 'No token provided.' });
+    }
+
+    const idToken = authorizationHeader.split('Bearer ')[1];
+
+    if (!idToken) {
+         console.warn('Authentication middleware: Bearer token missing.');
+        return res.status(401).json({ error: 'Unauthorized', message: 'Token missing.' });
+    }
+
+    try {
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+        // Attach user information (specifically the UID) to the request object
+        req.user = { 
+            uid: decodedToken.uid,
+            email: decodedToken.email // Optional: include email if needed
+        }; 
+        console.log(`Authenticated user: ${req.user.uid}`);
+        next(); // Proceed to the next middleware or route handler
+    } catch (error) {
+        console.error('Authentication middleware: Token verification failed:', error);
+        // Differentiate between expired token and other errors if needed
+        if (error.code === 'auth/id-token-expired') {
+             return res.status(401).json({ error: 'Unauthorized', message: 'Token expired.' });
+        }
+        return res.status(403).json({ error: 'Forbidden', message: 'Invalid token.' });
+    }
+}
+// ---- End Authentication Middleware ----
+
 // Root path redirect - MOVED BEFORE STATIC MIDDLEWARE
 app.get('/', (req, res) => {
     console.log('Redirecting root path to landing page');
