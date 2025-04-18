@@ -158,6 +158,14 @@
                     console.warn('Claim device button (submit-add-device) not found after component load.');
                 }
 
+                // Add event listener for the new confirmation modal's confirm button
+                const confirmBtn = document.getElementById('confirmation-confirm-button');
+                if (confirmBtn) {
+                    confirmBtn.addEventListener('click', handleConfirmAction);
+                } else {
+                     console.warn('Confirmation modal confirm button not found after component load.');
+                }
+
                 // Set up the refresh interval (can start after initial load)
                 const interval = setInterval(fetchDevices, 21600000); // 6 hours
 
@@ -291,53 +299,89 @@
 
         // Function to handle removing (unclaiming) a device
         async function handleRemoveDevice(deviceId) {
-            if (!deviceId) return;
+            if (!deviceId) return; 
 
-            if (!confirm(`Are you sure you want to remove device ${deviceId}? This action cannot be undone.`)) {
-                return;
-            }
+            // Define the actual removal logic as a separate function
+            const performRemoval = async () => {
+                console.log(`Confirmed removal for device: ${deviceId}`);
+                // Optionally disable the specific remove button here
 
-            console.log(`Attempting to remove device: ${deviceId}`);
-            // Optionally disable the specific remove button here
-
-            try {
-                // Get ID token
-                let auth, user, idToken;
                 try {
-                    const { getAuth } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js");
-                    auth = getAuth();
-                    user = auth.currentUser;
-                    if (!user) throw new Error('User not logged in.');
-                    idToken = await user.getIdToken(true);
-                } catch (authError) {
-                    console.error("Failed to get auth/token in handleRemoveDevice:", authError);
-                    throw new Error('Authentication failed. Please log in again.');
-                }
-
-                const response = await fetch(`${API_URL}/api/devices/${deviceId}`, { // Note the deviceId in the URL
-                    method: 'DELETE',
-                    headers: {
-                        'Authorization': `Bearer ${idToken}`
+                    // Get ID token
+                    let auth, user, idToken;
+                    try {
+                        const { getAuth } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js");
+                        auth = getAuth();
+                        user = auth.currentUser;
+                        if (!user) throw new Error('User not logged in.');
+                        idToken = await user.getIdToken(true);
+                    } catch (authError) {
+                        console.error("Failed to get auth/token in handleRemoveDevice:", authError);
+                        throw new Error('Authentication failed. Please log in again.');
                     }
-                });
 
-                const result = await response.json();
+                    const response = await fetch(`${API_URL}/api/devices/${deviceId}`, { // Note the deviceId in the URL
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`
+                        }
+                    });
 
-                if (!response.ok) {
-                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                    }
+
+                    showToast('Device removed successfully!', 'success');
+                    fetchDevices(); // Refresh the main device list
+                    populateManageDeviceList(); // Refresh the list within the modal
+
+                } catch (error) {
+                    console.error('Error removing device:', error);
+                    showToast(`Error removing device: ${error.message}`, 'error');
+                } finally {
+                     // Re-enable the specific remove button if disabled earlier
                 }
+            };
 
-                showToast('Device removed successfully!', 'success');
-                fetchDevices(); // Refresh the main device list
-                populateManageDeviceList(); // Refresh the list within the modal
+            // Show the custom confirmation modal instead of browser confirm
+            showConfirmationModal(`Are you sure you want to remove device ${deviceId}? This action cannot be undone.`, performRemoval);
+        }
 
-            } catch (error) {
-                console.error('Error removing device:', error);
-                showToast(`Error removing device: ${error.message}`, 'error');
-            } finally {
-                 // Re-enable the specific remove button if disabled earlier
+        // --- Confirmation Modal Logic ---
+        let confirmActionCallback = null; // Store the action to perform on confirm
+
+        function showConfirmationModal(message, onConfirm) {
+            const modal = document.getElementById('confirmation-modal');
+            const messageElement = document.getElementById('confirmation-message');
+            
+            if(modal && messageElement) {
+                messageElement.textContent = message;
+                confirmActionCallback = onConfirm; // Store the function to call if confirmed
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                console.error('Confirmation modal elements not found.');
             }
         }
+
+        function hideConfirmationModal() {
+            const modal = document.getElementById('confirmation-modal');
+            if(modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+            confirmActionCallback = null; // Clear the callback
+        }
+
+        function handleConfirmAction() {
+             if (typeof confirmActionCallback === 'function') {
+                confirmActionCallback(); // Execute the stored action
+            }
+            hideConfirmationModal(); // Close modal after action
+        }
+        // --- End Confirmation Modal Logic ---
 
         // Function to handle claiming a new device (using the new modal's elements)
         async function handleClaimDevice() {
