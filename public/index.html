@@ -276,10 +276,20 @@
             submitButton.textContent = 'Claiming...';
 
             try {
-                 // Get ID token
-                const user = auth.currentUser; // Assumes auth is accessible via previous import in fetchDevices
-                if (!user) throw new Error('User not logged in.');
-                const idToken = await user.getIdToken(true);
+                // Dynamically import getAuth and get user/token
+                let auth;
+                let user;
+                let idToken;
+                try {
+                    const { getAuth } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js");
+                    auth = getAuth();
+                    user = auth.currentUser;
+                    if (!user) throw new Error('User not logged in.');
+                    idToken = await user.getIdToken(true);
+                } catch (authError) {
+                    console.error("Failed to get auth/token in handleClaimDevice:", authError);
+                    throw new Error('Authentication failed. Please log in again.'); // Throw error to be caught below
+                }
 
                 const response = await fetch(`${API_URL}/api/devices/claim`, {
                     method: 'POST',
