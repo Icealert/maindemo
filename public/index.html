@@ -180,6 +180,7 @@
 
         // Add refresh button to manually trigger data refresh
         function addRefreshButton() {
+            console.log("[UI] addRefreshButton function called.");
             const refreshButton = document.createElement('button');
             refreshButton.innerHTML = `
                 <span class="flex items-center gap-2">
@@ -218,8 +219,12 @@
 
             // Add the button container at the top of the page
             const container = document.querySelector('#devices');
-            if (container) {
+            console.log("[UI] Found #devices container:", container ? 'Yes' : 'No');
+            if (container && container.parentNode) {
+                console.log("[UI] Inserting button container before #devices.");
                 container.parentNode.insertBefore(buttonContainer, container);
+            } else {
+                console.error("[UI] Could not find #devices container or its parent to insert buttons.");
             }
         }
 
@@ -2072,29 +2077,7 @@
         }
 
 
-        // Add refresh button to manually trigger data refresh
-        function addRefreshButton() {
-            const refreshButton = document.createElement('button');
-            refreshButton.innerHTML = `
-                <span class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
-                    </svg>
-                    Refresh Data
-                </span>
-            `;
-            refreshButton.className = 'bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2 mb-4';
-            refreshButton.onclick = function() {
-                // Clear the cache
-                timeSeriesDataCache.clear();
-                // Reload the page
-                window.location.reload();
-            };
 
-            // Add the button at the top of the page
-            const container = document.querySelector('#devices');
-            container.parentNode.insertBefore(refreshButton, container);
-        }
 
 
 
