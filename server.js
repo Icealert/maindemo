@@ -419,6 +419,41 @@ app.post('/api/devices/claim', authenticateUser, async (req, res) => {
     }
 });
 
+// API endpoint for a user to remove (unclaim) a device
+app.delete('/api/devices/:deviceId', authenticateUser, async (req, res) => {
+    const userId = req.user.uid;
+    const { deviceId } = req.params; // Get deviceId from URL parameter
+
+    console.log(`User ${userId} attempting to remove device: ${deviceId}`);
+
+    // Basic validation
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.trim() === '') {
+        return res.status(400).json({ error: 'Bad Request', message: 'Valid deviceId must be provided in the URL path.' });
+    }
+
+    const trimmedDeviceId = deviceId.trim();
+    const userDeviceDocRef = db.collection('userDevices').doc(userId);
+
+    try {
+        // Atomically remove the deviceId from the user's deviceIds array.
+        // This won't cause an error if the deviceId isn't in the array.
+        // It also won't cause an error if the document doesn't exist,
+        // but it's good practice to ensure the user has a document if needed elsewhere.
+        await userDeviceDocRef.update({
+            deviceIds: admin.firestore.FieldValue.arrayRemove(trimmedDeviceId)
+        });
+
+        console.log(`Successfully removed device ${trimmedDeviceId} for user ${userId}`);
+        // Send 200 OK with a success message, or 204 No Content
+        res.status(200).json({ success: true, message: 'Device removed successfully.' });
+
+    } catch (error) {
+        // Firestore update errors might occur (e.g., permissions if rules are wrong)
+        console.error(`Error removing device ${trimmedDeviceId} for user ${userId}:`, error);
+        res.status(500).json({ error: 'Internal Server Error', message: 'Failed to remove device.' });
+    }
+});
+
 // API endpoint to update device properties
 app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
