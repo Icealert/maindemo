@@ -150,6 +150,14 @@
                 // Set up the auth listener AFTER components are loaded
                 setupAuthListener();
 
+                // Add event listener for the claim device button
+                const claimButton = document.getElementById('submit-add-device');
+                if (claimButton) {
+                    claimButton.addEventListener('click', handleClaimDevice);
+                } else {
+                    console.warn('Claim device button (submit-add-device) not found after component load.');
+                }
+
                 // Set up the refresh interval (can start after initial load)
                 const interval = setInterval(fetchDevices, 21600000); // 6 hours
 
@@ -216,10 +224,87 @@
         }
 
         // Placeholder function for showing the Add Device modal
-        function showAddDeviceModal() {
-            // TODO: Implement logic to show the modal (created later)
-            console.log('showAddDeviceModal called - Modal UI not yet implemented.');
-            // Example: document.getElementById('add-device-modal').classList.remove('hidden');
+        function showAddDeviceModal() { 
+            const modal = document.getElementById('add-device-modal');
+            if (modal) {
+                // Clear previous input/errors
+                document.getElementById('add-device-id-input').value = '';
+                document.getElementById('add-device-error').classList.add('hidden');
+                document.getElementById('add-device-error').textContent = '';
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex'); // Use flex for centering
+            } else {
+                console.error('Add Device modal element not found.');
+                showError('Could not open the Add Device dialog.');
+            }
+        }
+
+        // Function to hide the Add Device modal
+        function hideAddDeviceModal() {
+            const modal = document.getElementById('add-device-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        // Function to handle claiming a new device
+        async function handleClaimDevice() {
+            const deviceIdInput = document.getElementById('add-device-id-input');
+            const errorElement = document.getElementById('add-device-error');
+            const submitButton = document.getElementById('submit-add-device');
+
+            const deviceId = deviceIdInput.value.trim();
+
+            // Basic validation
+            if (!deviceId) {
+                errorElement.textContent = 'Please enter a Device ID.';
+                errorElement.classList.remove('hidden');
+                return;
+            }
+            
+            // Clear previous errors
+            errorElement.classList.add('hidden');
+            errorElement.textContent = '';
+            submitButton.disabled = true;
+            submitButton.textContent = 'Claiming...';
+
+            try {
+                 // Get ID token
+                const user = auth.currentUser; // Assumes auth is accessible via previous import in fetchDevices
+                if (!user) throw new Error('User not logged in.');
+                const idToken = await user.getIdToken(true);
+
+                const response = await fetch(`${API_URL}/api/devices/claim`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${idToken}`
+                    },
+                    body: JSON.stringify({ deviceId: deviceId })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                }
+
+                showToast('Device claimed successfully!', 'success');
+                hideAddDeviceModal();
+                fetchDevices(); // Refresh the device list
+
+            } catch (error) {
+                console.error('Error claiming device:', error);
+                errorElement.textContent = `Error: ${error.message}`; 
+                errorElement.classList.remove('hidden');
+                // showToast(`Error claiming device: ${error.message}`, 'error'); // Alternative error display
+            } finally {
+                // Re-enable button
+                submitButton.disabled = false;
+                submitButton.textContent = 'Claim Device';
+            }
         }
 
         // Debug Console Functions
@@ -967,7 +1052,7 @@
                     <div class="col-span-full text-center py-8">
                         <div class="max-w-sm mx-auto">
                             <svg class="w-12 h-12 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01M12 12h.01" />
                             </svg>
                             <p class="mt-4 text-gray-500 text-lg">No devices found</p>
                             <p class="mt-2 text-gray-400 text-sm">Connect a device to get started</p>
