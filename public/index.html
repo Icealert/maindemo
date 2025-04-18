@@ -202,14 +202,12 @@
             const addButton = document.createElement('button');
             addButton.innerHTML = `
                 <span class="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                    </svg>
-                    Add Device
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"> <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" /> </svg>
+                    Manage Devices
                 </span>
             `;
-            addButton.className = 'bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2';
-            addButton.onclick = showAddDeviceModal; // Call function to show the modal
+            addButton.className = 'bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2'; // Changed color
+            addButton.onclick = showManageDevicesModal; // Point to new function
 
             // Create a container for the buttons
             const buttonContainer = document.createElement('div');
@@ -228,58 +226,136 @@
             }
         }
 
-        // Placeholder function for showing the Add Device modal
-        function showAddDeviceModal() { 
-            const modal = document.getElementById('add-device-modal');
+        // Function to show the Manage Devices modal
+        function showManageDevicesModal() { 
+            const modal = document.getElementById('manage-devices-modal');
             if (modal) {
-                // Clear previous input/errors
-                document.getElementById('add-device-id-input').value = '';
-                document.getElementById('add-device-error').classList.add('hidden');
-                document.getElementById('add-device-error').textContent = '';
+                // Clear previous input/errors in Add section
+                document.getElementById('manage-add-device-id-input').value = '';
+                const addErrorEl = document.getElementById('manage-add-device-error');
+                addErrorEl.classList.add('hidden');
+                addErrorEl.textContent = '';
 
+                // Populate the list of devices to remove
+                populateManageDeviceList();
+ 
                 modal.classList.remove('hidden');
                 modal.classList.add('flex'); // Use flex for centering
             } else {
-                console.error('Add Device modal element not found.');
-                showError('Could not open the Add Device dialog.');
+                console.error('Manage Devices modal element not found.');
+                showError('Could not open the Manage Devices dialog.');
             }
         }
 
-        // Function to hide the Add Device modal
-        function hideAddDeviceModal() {
-            const modal = document.getElementById('add-device-modal');
+        // Function to hide the Manage Devices modal
+        function hideManageDevicesModal() {
+            const modal = document.getElementById('manage-devices-modal');
             if (modal) {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
             }
         }
 
-        // Function to handle claiming a new device
+        // Function to populate the list in the Manage Devices modal
+        function populateManageDeviceList() {
+            const listContainer = document.getElementById('manage-devices-list');
+            if (!listContainer) return;
+
+            const devices = window.lastDevicesData || []; // Use cached data
+            listContainer.innerHTML = ''; // Clear previous list
+
+            if (devices.length === 0) {
+                listContainer.innerHTML = '<p class="text-sm text-gray-500 italic">You haven\'t claimed any devices yet.</p>';
+                return;
+            }
+
+            devices.forEach(device => {
+                const deviceName = device.thing?.properties?.find(p => p.name === 'devicename')?.last_value || device.name || device.id;
+                const deviceId = device.id;
+
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-gray-100 rounded-md';
+                item.innerHTML = `
+                    <span class="text-sm font-medium text-gray-800 truncate mr-4" title="${deviceName} (ID: ${deviceId})">
+                        ${deviceName}
+                    </span>
+                    <button 
+                        onclick="handleRemoveDevice('${deviceId}')" 
+                        class="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-red-500 whitespace-nowrap">
+                        Remove
+                    </button>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        // Function to handle removing (unclaiming) a device
+        async function handleRemoveDevice(deviceId) {
+            if (!deviceId) return;
+
+            if (!confirm(`Are you sure you want to remove device ${deviceId}? This action cannot be undone.`)) {
+                return;
+            }
+
+            console.log(`Attempting to remove device: ${deviceId}`);
+            // Optionally disable the specific remove button here
+
+            try {
+                // Get ID token
+                let auth, user, idToken;
+                try {
+                    const { getAuth } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js");
+                    auth = getAuth();
+                    user = auth.currentUser;
+                    if (!user) throw new Error('User not logged in.');
+                    idToken = await user.getIdToken(true);
+                } catch (authError) {
+                    console.error("Failed to get auth/token in handleRemoveDevice:", authError);
+                    throw new Error('Authentication failed. Please log in again.');
+                }
+
+                const response = await fetch(`${API_URL}/api/devices/${deviceId}`, { // Note the deviceId in the URL
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || `HTTP error! status: ${response.status}`);
+                }
+
+                showToast('Device removed successfully!', 'success');
+                fetchDevices(); // Refresh the main device list
+                populateManageDeviceList(); // Refresh the list within the modal
+
+            } catch (error) {
+                console.error('Error removing device:', error);
+                showToast(`Error removing device: ${error.message}`, 'error');
+            } finally {
+                 // Re-enable the specific remove button if disabled earlier
+            }
+        }
+
+        // Function to handle claiming a new device (using the new modal's elements)
         async function handleClaimDevice() {
-            const deviceIdInput = document.getElementById('add-device-id-input');
-            const errorElement = document.getElementById('add-device-error');
-            const submitButton = document.getElementById('submit-add-device');
+            const deviceIdInput = document.getElementById('manage-add-device-id-input'); // Updated ID
+            const errorElement = document.getElementById('manage-add-device-error'); // Updated ID
+            const submitButton = document.getElementById('submit-claim-device-manage'); // Updated ID
 
             const deviceId = deviceIdInput.value.trim();
 
-            // Basic validation
             if (!deviceId) {
-                errorElement.textContent = 'Please enter a Device ID.';
+                errorElement.textContent = 'Please enter a valid device ID.';
                 errorElement.classList.remove('hidden');
                 return;
             }
-            
-            // Clear previous errors
-            errorElement.classList.add('hidden');
-            errorElement.textContent = '';
-            submitButton.disabled = true;
-            submitButton.textContent = 'Claiming...';
 
             try {
-                // Dynamically import getAuth and get user/token
-                let auth;
-                let user;
-                let idToken;
+                // Get ID token
+                let auth, user, idToken;
                 try {
                     const { getAuth } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js");
                     auth = getAuth();
@@ -307,8 +383,10 @@
                 }
 
                 showToast('Device claimed successfully!', 'success');
-                hideAddDeviceModal();
+                // Don't hide modal automatically, just clear input and refresh lists
+                deviceIdInput.value = ''; 
                 fetchDevices(); // Refresh the device list
+                populateManageDeviceList(); // Refresh the list within the modal
 
             } catch (error) {
                 console.error('Error claiming device:', error);
