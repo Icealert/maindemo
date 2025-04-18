@@ -133,7 +133,7 @@
                 if (devicesContainer) {
                     addRefreshButton(); // Only add refresh button if devices container exists
                 }
-                fetchDevices(); // Initial fetch depends on nav potentially (lastUpdateTime)
+                // fetchDevices(); // Removed: Initial fetch triggered by auth listener
 
                 // Corrected Modal Check (run AFTER modals are loaded)
                 setTimeout(() => { // Use setTimeout to ensure DOM has rendered
@@ -2398,6 +2398,10 @@
                             };
                             // Show dashboard link
                             //dashboardLink.classList.remove('hidden');
+
+                            // Fetch devices now that we know the user is signed in
+                            console.log("[Auth] User is confirmed signed in. Fetching devices...");
+                            fetchDevices(); 
                         } else {
                             // User is signed out
                             console.log("[Auth] Executing 'user is signed out' block.");
@@ -2407,7 +2411,7 @@
                                 window.location.href = '/login.html'; // Changed from /signin.html
                             };
                             // Show dashboard link
-                            // dashboardLink.classList.remove('hidden'); // Commented out: Keep hidden on dashboard page
+                           // dashboardLink.classList.remove('hidden'); // Commented out: Keep hidden on dashboard page
                         }
                     });
                 })
