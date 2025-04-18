@@ -10,19 +10,30 @@ require('winston-daily-rotate-file');
 // ---- Firebase Admin SDK Initialization ----
 const admin = require('firebase-admin');
 try {
-    // Make sure the path to your service account key is correct
-    const serviceAccount = require('./serviceAccountKey.json'); 
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount)
-    });
+    // Get credentials from environment variable
+    const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+        throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON environment variable is not set.');
+    }
+    
+    const serviceAccount = JSON.parse(serviceAccountJson);
+    
+    // Check if already initialized to prevent errors on hot-reloads
+    if (admin.apps.length === 0) { 
+        admin.initializeApp({
+            credential: admin.credential.cert(serviceAccount)
+        });
+    } else {
+        // Use the already initialized default app
+        admin.app(); 
+    }
 
     // Get Firestore instance (used later)
     const db = admin.firestore(); 
     console.log("Firebase Admin SDK initialized successfully.");
 } catch (error) {
     console.error("Error initializing Firebase Admin SDK:", error);
-    console.error("Ensure serviceAccountKey.json is in the root directory and is valid.");
+    console.error("Ensure FIREBASE_SERVICE_ACCOUNT_JSON environment variable is set and contains valid JSON.");
     process.exit(1); // Exit if Firebase Admin cannot be initialized
 }
 // ---- End Firebase Admin SDK Initialization ----
