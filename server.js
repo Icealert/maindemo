@@ -403,6 +403,32 @@ app.post('/api/devices/claim', authenticateUser, async (req, res) => {
     const userDeviceDocRef = db.collection('userDevices').doc(userId);
 
     try {
+        // --- Step 1: Validate device existence in Arduino Cloud --- 
+        let arduinoDeviceExists = false;
+        try {
+            const token = await getToken();
+            const client = IotApi.ApiClient.instance; // Use the existing IotApi require
+            const oauth2 = client.authentications['oauth2'];
+            oauth2.accessToken = token;
+            const devicesApi = new IotApi.DevicesV2Api(client);
+
+            console.log(`Checking Arduino Cloud for device ID: ${trimmedDeviceId}`);
+            await devicesApi.devicesV2Show(trimmedDeviceId);
+            arduinoDeviceExists = true; // If no error, device exists
+            console.log(`Device ID ${trimmedDeviceId} found in Arduino Cloud.`);
+
+        } catch (arduinoApiError) {
+            if (arduinoApiError.status === 404) {
+                console.log(`Device ID ${trimmedDeviceId} not found in Arduino Cloud.`);
+                return res.status(404).json({ error: 'Not Found', message: 'Device ID not found. Please check your FreezeSense Device ID and try again.' });
+            } else {
+                // Log other Arduino API errors and treat as server error
+                console.error(`Error checking device ${trimmedDeviceId} in Arduino Cloud:`, arduinoApiError);
+                throw new Error('Failed to verify device with Arduino Cloud.'); // Propagate to outer catch
+            }
+        }
+
+        // --- Step 2: Claim device in Firestore (only if validation passed) ---
         // Atomically add the deviceId to the user's deviceIds array.
         // arrayUnion prevents duplicates within the same array.
         // Using set with merge: true handles cases where the document or field doesn't exist yet.
