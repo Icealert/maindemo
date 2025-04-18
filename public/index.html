@@ -256,8 +256,20 @@
         async function fetchDevices() {
             showLoading();
             
+            // Dynamically import getAuth if needed (ensure firebase app is initialized before this runs)
+            let auth;
+            try {
+                const { getAuth } = await import("https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js");
+                auth = getAuth();
+            } catch (importError) {
+                console.error("Failed to import Firebase Auth functions in fetchDevices:", importError);
+                showError('Failed to load authentication module.');
+                hideLoading();
+                return;
+            }
+
             // Get the current user and their ID token
-            const user = firebase.auth().currentUser;
+            const user = auth.currentUser; // Use the auth instance
             let idToken = null;
 
             if (user) {
