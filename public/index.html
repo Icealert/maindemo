@@ -256,6 +256,29 @@
         async function fetchDevices() {
             showLoading();
             
+            // Get the current user and their ID token
+            const user = firebase.auth().currentUser;
+            let idToken = null;
+
+            if (user) {
+                try {
+                    idToken = await user.getIdToken(true); // Force refresh if needed
+                } catch (error) {
+                    console.error('Error getting ID token:', error);
+                    showError('Authentication error. Please try logging out and back in.');
+                    hideLoading();
+                    return; // Stop if token cannot be retrieved
+                }
+            } else {
+                // Handle case where user is not logged in (shouldn't happen if auth listener redirects)
+                console.warn('fetchDevices called but no user is logged in.');
+                showError('You must be logged in to view devices.'); 
+                // Optionally redirect to login:
+                // window.location.href = '/login.html';
+                hideLoading();
+                return; // Stop if no user
+            }
+
             try {
                 // First check if server is healthy
                 const isHealthy = await checkServerHealth();
@@ -263,8 +286,22 @@
                     throw new Error('Server is not responding. Please make sure the server is running.');
                 }
 
-                const response = await fetch(`${API_URL}/api/devices`);
+                // Add Authorization header to the fetch request
+                const response = await fetch(`${API_URL}/api/devices`, {
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`
+                    }
+                });
+                
                 if (!response.ok) {
+                    // Handle specific auth errors
+                    if (response.status === 401 || response.status === 403) {
+                        console.error('Authentication failed:', response.status);
+                        showError('Authentication failed. Please log out and log back in.');
+                        // Optionally redirect to login
+                        // window.location.href = '/login.html';
+                        return;
+                    }
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const devices = await response.json();
