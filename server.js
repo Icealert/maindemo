@@ -387,6 +387,38 @@ app.get('/api/devices', authenticateUser, async (req, res) => {
     }
 });
 
+// API endpoint for a user to claim a device
+app.post('/api/devices/claim', authenticateUser, async (req, res) => {
+    const userId = req.user.uid;
+    const { deviceId } = req.body; // Expecting { "deviceId": "some-arduino-id" }
+
+    console.log(`User ${userId} attempting to claim device: ${deviceId}`);
+
+    // Basic validation
+    if (!deviceId || typeof deviceId !== 'string' || deviceId.trim() === '') {
+        return res.status(400).json({ error: 'Bad Request', message: 'Valid deviceId must be provided in the request body.' });
+    }
+
+    const trimmedDeviceId = deviceId.trim();
+    const userDeviceDocRef = db.collection('userDevices').doc(userId);
+
+    try {
+        // Atomically add the deviceId to the user's deviceIds array.
+        // arrayUnion prevents duplicates within the same array.
+        // Using set with merge: true handles cases where the document or field doesn't exist yet.
+        await userDeviceDocRef.set({
+            deviceIds: admin.firestore.FieldValue.arrayUnion(trimmedDeviceId)
+        }, { merge: true });
+
+        console.log(`Successfully claimed device ${trimmedDeviceId} for user ${userId}`);
+        res.status(200).json({ success: true, message: 'Device claimed successfully.' });
+
+    } catch (error) {
+        console.error(`Error claiming device ${trimmedDeviceId} for user ${userId}:`, error);
+        res.status(500).json({ error: 'Internal Server Error', message: 'Failed to claim device.' });
+    }
+});
+
 // API endpoint to update device properties
 app.put('/api/iot/v2/devices/:id/properties', async (req, res) => {
     try {
