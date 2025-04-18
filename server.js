@@ -294,8 +294,31 @@ app.get('/health', (req, res) => {
 });
 
 // API endpoint to get devices data
-app.get('/api/devices', async (req, res) => {
+app.get('/api/devices', authenticateUser, async (req, res) => {
     try {
+        // Get the authenticated user's ID
+        const userId = req.user.uid;
+        console.log(`Fetching devices for user: ${userId}`);
+
+        // Get the user's claimed device IDs from Firestore
+        const userDevicesRef = db.collection('userDevices').doc(userId);
+        const userDevicesDoc = await userDevicesRef.get();
+
+        let claimedDeviceIds = [];
+        if (userDevicesDoc.exists && userDevicesDoc.data().deviceIds) {
+            claimedDeviceIds = userDevicesDoc.data().deviceIds;
+            console.log(`User ${userId} has claimed devices:`, claimedDeviceIds);
+        } else {
+            console.log(`User ${userId} has no claimed devices.`);
+            return res.json([]); // Return empty array if user has no devices
+        }
+
+        // If user has no claimed devices, return early
+        if (claimedDeviceIds.length === 0) {
+             console.log(`User ${userId} has an empty device list.`);
+            return res.json([]);
+        }
+
         console.log('Fetching devices...');
         var client = IotApi.ApiClient.instance;
         var oauth2 = client.authentications['oauth2'];
@@ -337,9 +360,20 @@ app.get('/api/devices', async (req, res) => {
             }
         }));
         
-        console.log(`Found ${detailedDevices.length} devices with connection status`);
-        res.json(detailedDevices);
+        // Filter the detailed devices based on the user's claimed list
+        const userOwnedDetailedDevices = detailedDevices.filter(device => 
+            claimedDeviceIds.includes(device.id)
+        );
+        
+        console.log(`Found ${userOwnedDetailedDevices.length} owned devices for user ${userId}`);
+        res.json(userOwnedDetailedDevices);
     } catch (error) {
+        // Check for Firestore specific errors if needed
+        if (error.code && error.code.startsWith('firestore/')) {
+            console.error('Firestore error fetching user devices:', error);
+            return res.status(500).json({ error: 'Database error', details: 'Could not retrieve user device list.' });
+        }
+
         console.error('Error fetching devices:', {
             status: error.statusCode,
             message: error.message,
